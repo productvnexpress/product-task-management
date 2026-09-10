@@ -1200,7 +1200,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         />
 
         {/* Main Body */}
-        <main className="flex-1 px-4 md:px-0 py-6 md:py-8 w-full max-w-[800px] mx-auto">
+        <main className="flex-1 px-4 md:px-6 py-6 md:py-8 w-full max-w-[900px] mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -1428,46 +1428,139 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     </p>
                   </div>
                 ) : filterState.projectId === 'all' ? (
-                  // Grouped by Project Name for clear organization
-                  <div className="divide-y divide-[#e0e0e0]">
+                  // Grouped by Project Name - 2-Column Split Layout
+                  <div className="divide-y divide-[#e5e7eb] bg-[#fafbfc]/50">
                     {Object.entries(activeTasksByProject).map(
                       ([projName, projTasks]) => {
                         const targetProj = projects.find(
                           (p) => p.name === projName || p.id === projTasks[0]?.projectId
                         );
                         return (
-                          <div key={projName}>
-                            <div className="bg-[#fcfaf6] px-6 py-2.5 border-y border-[#e0e0e0] text-xs font-ui font-normal text-[#5f5f5f] flex items-center justify-between">
+                          <div key={projName} className="p-4 sm:p-5 lg:p-6 transition-colors">
+                            <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                              {/* Left Column: Project Anchor Rail */}
+                              <div className="w-full md:w-52 lg:w-56 shrink-0 md:sticky md:top-24">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (targetProj) {
+                                      handleOpenProjectDetail(targetProj.id);
+                                    }
+                                  }}
+                                  className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-[#f1f5f9]/80 transition-colors"
+                                  title={`Bấm để xem chi tiết dự án: ${projName}`}
+                                >
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="font-title text-[13px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                        {projName}
+                                      </span>
+                                    </div>
+                                    {targetProj?.isStrategic && (
+                                      <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                    {targetProj?.code && (
+                                      <span className="font-num text-[10px] text-[#64748b] bg-[#f1f5f9] border border-[#e2e8f0] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                        {targetProj.code}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] font-ui text-[#94a3b8]">
+                                      {projTasks.length} việc
+                                    </span>
+                                  </div>
+                                  <div className="pl-6 pt-1">
+                                    <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                                      <span>Chi tiết</span>
+                                      <span>→</span>
+                                    </span>
+                                  </div>
+                                </button>
+                              </div>
+
+                              {/* Right Column: Task List Card */}
+                              <div className="flex-1 w-full min-w-0">
+                                <div className="bg-white rounded-[8px] border border-[#e2e8f0] divide-y divide-[#f1f5f9] shadow-2xs overflow-hidden">
+                                  {projTasks.map((task) => (
+                                    <TaskItemRow
+                                      key={task.id}
+                                      task={task}
+                                      members={members}
+                                      currentAuthUser={currentAuthUser}
+                                      isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
+                                      onToggleComplete={handleToggleComplete}
+                                      onSelectTask={(t) => {
+                                        setSelectedTask(t);
+                                        setIsDrawerOpen(true);
+                                      }}
+                                      onUpdateStatus={handleUpdateTaskStatus}
+                                      onDeleteTask={handleDeleteTask}
+                                      onOpenProjectDetail={handleOpenProjectDetail}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                ) : (
+                  // Single project list - 2-Column Split Layout
+                  <div className="p-4 sm:p-5 lg:p-6 bg-[#fafbfc]/50">
+                    {(() => {
+                      const curProj = projects.find((p) => p.id === filterState.projectId);
+                      return (
+                        <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                          {/* Left Column: Project Anchor Rail */}
+                          <div className="w-full md:w-52 lg:w-56 shrink-0 md:sticky md:top-24">
+                            {curProj ? (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (targetProj) {
-                                    handleOpenProjectDetail(targetProj.id);
-                                  }
-                                }}
-                                className="group flex items-center gap-2 text-left cursor-pointer hover:bg-white/80 px-1.5 py-0.5 rounded-[6px] transition-all -ml-1.5"
-                                title={`Bấm để xem chi tiết dự án: ${projName}`}
+                                onClick={() => handleOpenProjectDetail(curProj.id)}
+                                className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-[#f1f5f9]/80 transition-colors"
+                                title={`Bấm để xem chi tiết dự án: ${curProj.name}`}
                               >
-                                <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0" />
-                                <span className="font-title text-[13px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-4 transition-colors">
-                                  {projName}
-                                </span>
-                                {targetProj?.code && (
-                                  <span className="font-num text-[10px] bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] px-1.5 py-0.2 rounded-[4px] font-normal">
-                                    {targetProj.code}
+                                <div className="flex items-start gap-2 min-w-0">
+                                  <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="font-title text-[13px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                      {curProj.name}
+                                    </span>
+                                  </div>
+                                  {curProj.isStrategic && (
+                                    <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                  {curProj.code && (
+                                    <span className="font-num text-[10px] text-[#64748b] bg-[#f1f5f9] border border-[#e2e8f0] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                      {curProj.code}
+                                    </span>
+                                  )}
+                                  <span className="text-[11px] font-ui text-[#94a3b8]">
+                                    {activeTasks.length} việc
                                   </span>
-                                )}
-                                <span className="text-[11px] text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity font-ui flex items-center gap-0.5 ml-1">
-                                  <span>Chi tiết</span>
-                                  <span>→</span>
-                                </span>
+                                </div>
+                                <div className="pl-6 pt-1">
+                                  <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                                    <span>Chi tiết</span>
+                                    <span>→</span>
+                                  </span>
+                                </div>
                               </button>
-                              <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#d6d6d6] text-[#5f5f5f]">
-                                {projTasks.length} việc
-                              </span>
-                            </div>
-                            <div className="divide-y divide-[#f0f0f0]">
-                              {projTasks.map((task) => (
+                            ) : (
+                              <div className="text-xs font-ui text-[#64748b] p-2">Dự án</div>
+                            )}
+                          </div>
+
+                          {/* Right Column: Task List Card */}
+                          <div className="flex-1 w-full min-w-0">
+                            <div className="bg-white rounded-[8px] border border-[#e2e8f0] divide-y divide-[#f1f5f9] shadow-2xs overflow-hidden">
+                              {activeTasks.map((task) => (
                                 <TaskItemRow
                                   key={task.id}
                                   task={task}
@@ -1486,63 +1579,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                               ))}
                             </div>
                           </div>
-                        );
-                      }
-                    )}
-                  </div>
-                ) : (
-                  // Single project list
-                  <div>
-                    {(() => {
-                      const curProj = projects.find((p) => p.id === filterState.projectId);
-                      if (!curProj) return null;
-                      return (
-                        <div className="bg-[#fcfaf6] px-6 py-2.5 border-b border-[#e0e0e0] text-xs font-ui font-bold text-[#5f5f5f] flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenProjectDetail(curProj.id)}
-                            className="group flex items-center gap-2 text-left cursor-pointer hover:bg-white/80 px-1.5 py-0.5 rounded-[6px] transition-all -ml-1.5"
-                            title={`Bấm để xem chi tiết dự án: ${curProj.name}`}
-                          >
-                            <span className="text-base group-hover:scale-110 transition-transform">📁</span>
-                            <span className="font-title text-[13px] font-bold text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-4 transition-colors">
-                              {curProj.name}
-                            </span>
-                            {curProj.code && (
-                              <span className="font-num text-[10px] bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] px-1.5 py-0.2 rounded-[4px] font-bold">
-                                {curProj.code}
-                              </span>
-                            )}
-                            <span className="text-[11px] text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity font-ui flex items-center gap-0.5 ml-1">
-                              <span>Chi tiết</span>
-                              <span>→</span>
-                            </span>
-                          </button>
-                          <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#d6d6d6] text-[#5f5f5f]">
-                            {activeTasks.length} việc
-                          </span>
                         </div>
                       );
                     })()}
-                    <div className="divide-y divide-[#f0f0f0]">
-                      {activeTasks.map((task) => (
-                        <TaskItemRow
-                          key={task.id}
-                          task={task}
-                          members={members}
-                          currentAuthUser={currentAuthUser}
-                          isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                          onToggleComplete={handleToggleComplete}
-                          onSelectTask={(t) => {
-                            setSelectedTask(t);
-                            setIsDrawerOpen(true);
-                          }}
-                          onUpdateStatus={handleUpdateTaskStatus}
-                          onDeleteTask={handleDeleteTask}
-                          onOpenProjectDetail={handleOpenProjectDetail}
-                        />
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>

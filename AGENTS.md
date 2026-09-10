@@ -100,6 +100,9 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 4. **Quy chuẩn Tiêu đề Khối Công việc Đang thực hiện & Phân nhóm Dự án**:
    - Tiêu đề danh sách: Text **`Công việc đang thực hiện (xx)`** sử dụng kiểu chữ thường (`font-normal`), không in đậm (`font-bold`) để tạo cảm giác nhẹ nhàng, tinh gọn cho giao diện.
    - Tiêu đề nhóm dự án: Tên dự án sử dụng `font-normal` (bỏ `font-bold`), sử dụng biểu tượng thư mục đơn giản (`Folder` icon thanh mảnh từ bộ Lucide) thay cho emoji thư mục vàng cũ.
+5. **Bố cục 2 Cột Phân nhóm Dự án (2-Column Project Grouping Layout)**:
+   - **Cột Trái (Project Anchor Rail ~220px)**: Đặt tên dự án lệch hẳn sang trái bên ngoài body công việc (`font-title` Merriweather Sans, `font-normal`, text `#202020`), icon thư mục `Folder` thanh mảnh, nhãn mã dự án (`code`), số lượng việc (`xx việc`), và link mở nhanh Drawer chi tiết dự án (`Chi tiết →`). Cố định hoặc dính (`sticky md:top-24`) khi cuộn.
+   - **Cột Phải (Task List Card - Flex-1)**: Khối card nền trắng riêng biệt (`bg-white rounded-[8px] border border-[#e2e8f0] shadow-2xs`), chứa các hàng công việc (`TaskItemRow`), giải phóng hoàn toàn các thanh bar ngang cắt vụn giao diện giúp người dùng không bị ngắt quãng nhịp thị giác khi theo dõi công việc.
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
 1. **Tự động ánh xạ Nhóm (No Team Selector)**: Bỏ hoàn toàn ô chọn Nhóm (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`). Nhóm chuyên môn (`team`) được hệ thống tự động suy ra dựa trên Nhân sự được chọn (`assignee`).

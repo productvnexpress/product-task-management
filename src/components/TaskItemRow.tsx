@@ -69,7 +69,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
 
   return (
     <div
-      className={`group bg-[#ffffff] border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-all p-3.5 sm:p-4 flex flex-col gap-2 ${
+      className={`group bg-[#ffffff] border-b border-[#f0f0f0] last:border-b-0 hover:bg-[#fafafa] transition-all p-3.5 sm:p-4 flex flex-col gap-2 ${
         isCompleted ? 'opacity-65' : ''
       } ${isMyTask && !isCompleted ? 'border-l-4 border-l-[#963861] bg-[#fffbfd]' : ''}`}
     >
