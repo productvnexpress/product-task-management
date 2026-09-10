@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   const userTeamCol = userToShow ? getTeamColor(userToShow.team) : null;
   return (
     <header className="bg-[#ffffff] border-b border-[#e0e0e0] px-4 md:px-6 py-4 sticky top-0 z-20 shadow-2xs">
-      <div className="flex flex-wrap items-center justify-between gap-4 max-w-[800px] w-full mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-4 max-w-[960px] lg:max-w-[1020px] w-full mx-auto">
         {/* Left title & timestamp */}
         <div className="space-y-0.5">
           <div className="flex items-center gap-3">

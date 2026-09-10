@@ -80,7 +80,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
   return (
     <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all">
-      <div className="max-w-[800px] w-full mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div className="max-w-[960px] lg:max-w-[1020px] w-full mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-ui font-semibold text-[#64748b] flex items-center gap-1 shrink-0 mr-1">
             <Filter className="w-3 h-3 text-[#64748b]" />
