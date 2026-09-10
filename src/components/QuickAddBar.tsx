@@ -1,0 +1,238 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ProjectItem, MemberItem, TeamType, PriorityLevel } from '../types';
+import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers } from 'lucide-react';
+import { formatDateWithEnDay } from '../utils/formatters';
+import { getProductMembers } from '../utils/memberPersonalization';
+
+interface QuickAddBarProps {
+  projects: ProjectItem[];
+  members: MemberItem[];
+  onAddTask: (task: {
+    title: string;
+    projectId: string;
+    projectName: string;
+    phaseId?: string;
+    phaseName?: string;
+    team: TeamType;
+    assignee: string;
+    dueDate: string;
+    priority: PriorityLevel;
+    details?: string;
+  }) => void;
+  defaultProjectId?: string;
+  defaultAssignee?: string;
+}
+
+export const QuickAddBar: React.FC<QuickAddBarProps> = ({
+  projects,
+  members,
+  onAddTask,
+  defaultProjectId,
+  defaultAssignee,
+}) => {
+  const productMembers = getProductMembers(members);
+  const [title, setTitle] = useState('');
+  const [projectId, setProjectId] = useState<string>(defaultProjectId || (projects[0]?.id || 'proj-1'));
+  const [phaseId, setPhaseId] = useState<string>('');
+  const [assignee, setAssignee] = useState(defaultAssignee || productMembers[0]?.name || 'Hệ thống');
+  const [dueDate, setDueDate] = useState('2026-09-08');
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (defaultAssignee) {
+      setAssignee(defaultAssignee);
+    }
+  }, [defaultAssignee]);
+
+  useEffect(() => {
+    if (defaultProjectId) {
+      setProjectId(defaultProjectId);
+    }
+  }, [defaultProjectId]);
+
+  const selectedProj = projects.find((p) => p.id === projectId);
+  const availablePhases = selectedProj?.phases || [];
+
+  const handleProjectSelect = (pId: string) => {
+    setProjectId(pId);
+    const p = projects.find((item) => item.id === pId);
+    if (p && p.phases && p.phases.length > 0) {
+      setPhaseId(p.phases[0].id);
+    } else {
+      setPhaseId('');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const projName = selectedProj ? selectedProj.name : 'Dự án VnExpress Premium';
+    const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
+    const selectedMember = members.find((m) => m.name === assignee);
+    const team: TeamType = selectedMember?.team || 'Product Manager';
+
+    onAddTask({
+      title: title.trim(),
+      projectId,
+      projectName: projName,
+      phaseId: foundPhase ? foundPhase.id : undefined,
+      phaseName: foundPhase ? foundPhase.name : undefined,
+      team,
+      assignee,
+      dueDate,
+      priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
+    });
+
+    setTitle('');
+    setIsUrgent(false);
+    setIsExpanded(false);
+  };
+
+  return (
+    <div className="bg-[#ffffff] border border-[#d6d6d6] focus-within:border-[#b13460] rounded-[10px] transition-all p-4 shadow-2xs">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 rounded-full border border-[#a8a8a8] flex items-center justify-center text-[#7f7f7f] shrink-0">
+            <Plus className="w-4 h-4" />
+          </div>
+          <input
+            id="quick-add-input"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onFocus={() => setIsExpanded(true)}
+            placeholder="Thêm công việc mới... (Nhập tên công việc & nhấn Enter)"
+            className="w-full text-sm font-body text-[#202020] placeholder-[#7f7f7f] focus:outline-hidden bg-transparent"
+          />
+          {title.trim() && (
+            <motion.button
+              type="submit"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
+              className="h-[32px] px-4 rounded-[6px] bg-[#b13460] text-white text-xs font-ui font-bold flex items-center gap-1.5 shrink-0 hover:bg-[#8f274c] transition-colors shadow-2xs cursor-pointer"
+            >
+              <span>Thêm</span>
+              <CornerDownLeft className="w-3.5 h-3.5" />
+            </motion.button>
+          )}
+        </div>
+
+        {/* Options Row when expanded */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#f0f0f0] text-xs font-ui">
+                <div className="flex flex-wrap items-center gap-2">
+              {/* Project selector */}
+              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
+                <Briefcase className="w-3.5 h-3.5 text-[#b13460]" />
+                <select
+                  value={projectId}
+                  onChange={(e) => handleProjectSelect(e.target.value)}
+                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name.replace('Dự án ', '')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Phase selector if available */}
+              {availablePhases.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
+                  <Layers className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                  <select
+                    value={phaseId}
+                    onChange={(e) => setPhaseId(e.target.value)}
+                    className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[160px] truncate"
+                  >
+                    <option value="">-- Toàn dự án --</option>
+                    {availablePhases.map((ph) => (
+                      <option key={ph.id} value={ph.id}>
+                        {ph.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Assignee selector */}
+              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
+                <User className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                <select
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
+                >
+                  {productMembers.map((m) => (
+                    <option key={m.id} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Due date with full date label preview */}
+              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
+                <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
+                />
+                {dueDate && (
+                  <span className="text-[#52525b] text-xs font-ui font-medium">
+                    ({formatDateWithEnDay(dueDate)})
+                  </span>
+                )}
+              </div>
+
+              {/* Priority Checkbox */}
+              <label className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0] cursor-pointer text-xs font-ui text-[#202020] select-none hover:bg-[#f4f4f5]">
+                <input
+                  type="checkbox"
+                  checked={isUrgent}
+                  onChange={(e) => setIsUrgent(e.target.checked)}
+                  className="w-3.5 h-3.5 text-[#b13460] rounded border-[#d6d6d6] focus:ring-[#b13460] cursor-pointer"
+                />
+                <span className={isUrgent ? 'font-bold text-[#be123c]' : 'text-[#52525b]'}>
+                  🚨 Khẩn cấp
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              className="text-[#7f7f7f] hover:text-[#202020] px-2 py-1 cursor-pointer"
+            >
+              Thu gọn
+            </button>
+          </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </form>
+    </div>
+  );
+};
