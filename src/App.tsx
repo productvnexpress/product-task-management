@@ -344,9 +344,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
         if (mems && mems.length > 0) setMembers(mems);
         if (projs && projs.length > 0) setProjects(projs);
-        if (tsks && tsks.length > 0) setTasks(tsks);
+        if (tsks) setTasks(tsks);
         if (trsh) setTrash(trsh);
-        if (notifs && notifs.length > 0) setNotifications(notifs);
+        if (notifs) setNotifications(notifs);
 
         setIsDbConnected(true);
         console.log(
@@ -366,7 +366,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       onTasksChange: async () => {
         try {
           const freshTasks = await wmsDataService.fetchTasks();
-          if (freshTasks && freshTasks.length > 0) setTasks(freshTasks);
+          if (freshTasks) setTasks(freshTasks);
         } catch (e) {}
       },
       onProjectsChange: async () => {
@@ -384,7 +384,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       onNotificationsChange: async () => {
         try {
           const freshNotifs = await wmsDataService.fetchNotifications();
-          if (freshNotifs && freshNotifs.length > 0) setNotifications(freshNotifs);
+          if (freshNotifs) setNotifications(freshNotifs);
         } catch (e) {}
       },
     });
