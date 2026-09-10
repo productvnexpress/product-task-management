@@ -205,16 +205,105 @@ export function formatMemberWithPhone(
   return includeSalutation ? raw : cleanName;
 }
 
-/**
- * Format a Product member for project views (ProjectsManager, ProjectDetailsDrawer):
- * Removes salutation prefix ("Anh", "Chị") for Product members,
- * keeping "Tên - Phone" (or just "Tên" if phone not available).
- */
 export function formatProductMemberWithPhone(
-  nameOrMember: { name: string; salutation?: string; ipPhone?: string } | string | undefined | null,
-  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string }>
+  nameOrMember: { name: string; salutation?: string; ipPhone?: string; group?: string; department?: string; team?: string } | string | undefined | null,
+  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string; group?: string; department?: string; team?: string }>
 ): string {
+  if (!nameOrMember) return '';
+
+  if (typeof nameOrMember === 'object') {
+    const cleanName = (nameOrMember.name || '').replace(/^(Anh|Chị)\s+/i, '').trim();
+    const phone = nameOrMember.ipPhone ? ` - ${nameOrMember.ipPhone}` : '';
+    return `${cleanName}${phone}`;
+  }
+
+  const raw = nameOrMember.trim();
+  if (!raw) return '';
+
+  // If phone is already included in raw (e.g. "Nguyễn Trung Hiếu - 4887"), clean salutation and return
+  if (/ - \d{3,5}$/.test(raw)) {
+    return raw.replace(/^(Anh|Chị)\s+/i, '');
+  }
+
+  if (membersList && membersList.length > 0) {
+    const cleanRaw = raw.replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+
+    // 1. Prioritize Product members (Ban Sản phẩm - Công nghệ) to avoid collision with stakeholders having the exact same name
+    const productMember = membersList.find((m) => {
+      const isProd =
+        m.group === 'Product' ||
+        (m.department && m.department.toLowerCase().includes('sản phẩm')) ||
+        (m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team));
+      if (!isProd) return false;
+
+      const cleanMName = (m.name || '').replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+      return (
+        cleanMName === cleanRaw ||
+        cleanRaw.includes(cleanMName) ||
+        cleanRaw.endsWith(cleanMName)
+      );
+    });
+
+    if (productMember) {
+      const cleanName = productMember.name.replace(/^(Anh|Chị)\s+/i, '').trim();
+      const phone = productMember.ipPhone ? ` - ${productMember.ipPhone}` : '';
+      return `${cleanName}${phone}`;
+    }
+  }
+
   return formatMemberWithPhone(nameOrMember, membersList, false);
+}
+
+/**
+ * Format a Stakeholder member (Product Owner) for project views:
+ * Keeps salutation prefix ("Anh", "Chị") and strictly prioritizes Stakeholders
+ * (e.g. "Anh Nguyễn Trung Hiếu - 8503", Trưởng ban Thời sự TP HCM).
+ */
+export function formatStakeholderMemberWithPhone(
+  nameOrMember: { name: string; salutation?: string; ipPhone?: string; group?: string; department?: string; team?: string } | string | undefined | null,
+  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string; group?: string; department?: string; team?: string }>
+): string {
+  if (!nameOrMember) return '';
+
+  if (typeof nameOrMember === 'object') {
+    return formatMemberWithPhone(nameOrMember, membersList, true);
+  }
+
+  const raw = nameOrMember.trim();
+  if (!raw) return '';
+
+  if (/ - \d{3,5}$/.test(raw)) {
+    return raw;
+  }
+
+  if (membersList && membersList.length > 0) {
+    const cleanRaw = raw.replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+
+    // Prioritize Stakeholders/Ban Biên tập over Product members
+    const stakeholder = membersList.find((m) => {
+      const isStakeholder =
+        m.group === 'Stakeholder' ||
+        m.team === 'Stakeholder' ||
+        (m.department && !m.department.toLowerCase().includes('sản phẩm'));
+      if (!isStakeholder) return false;
+
+      const cleanMName = (m.name || '').replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+      return (
+        cleanMName === cleanRaw ||
+        cleanRaw.includes(cleanMName) ||
+        cleanRaw.endsWith(cleanMName)
+      );
+    });
+
+    if (stakeholder) {
+      const cleanName = stakeholder.name.replace(/^(Anh|Chị)\s+/i, '').trim();
+      const prefix = stakeholder.salutation ? `${stakeholder.salutation} ` : '';
+      const phone = stakeholder.ipPhone ? ` - ${stakeholder.ipPhone}` : '';
+      return `${prefix}${cleanName}${phone}`;
+    }
+  }
+
+  return formatMemberWithPhone(nameOrMember, membersList, true);
 }
 
 /**

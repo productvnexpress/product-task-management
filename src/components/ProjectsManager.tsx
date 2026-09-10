@@ -50,7 +50,7 @@ import {
   Filter,
   Sparkles,
 } from 'lucide-react';
-import { formatDateShort, formatMemberWithPhone, formatProductMemberWithPhone } from '../utils/formatters';
+import { formatDateShort, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone } from '../utils/formatters';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
 
@@ -342,7 +342,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
-      .map((rawPo) => formatMemberWithPhone(rawPo, members))
+      .map((rawPo) => formatStakeholderMemberWithPhone(rawPo, members))
       .join(', ');
   };
 

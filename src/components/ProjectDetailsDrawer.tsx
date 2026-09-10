@@ -50,7 +50,7 @@ import {
   Send,
   History,
 } from 'lucide-react';
-import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
+import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
 import { ProjectTimelineView } from './ProjectTimelineView';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
@@ -356,7 +356,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const candidateStakeholders = stakeholderMembers.length > 0 ? stakeholderMembers : members;
 
   const getFormattedPoName = (rawPo: string) => {
-    return formatMemberWithPhone(rawPo, members);
+    return formatStakeholderMemberWithPhone(rawPo, members);
   };
 
   // Distinct departments for filter tabs
@@ -372,7 +372,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   ];
 
   const availableStakeholders = candidateStakeholders.filter((m) => {
-    const fullNameWithSalutation = formatMemberWithPhone(m);
+    const fullNameWithSalutation = formatStakeholderMemberWithPhone(m, members);
     const isAlreadySelected =
       selectedPoList.includes(m.name) ||
       selectedPoList.includes(fullNameWithSalutation) ||

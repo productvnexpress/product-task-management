@@ -31,7 +31,7 @@ export const wmsDataService = {
       throw error;
     }
 
-    return (data || []).map((m: any) => ({
+    const mapped = (data || []).map((m: any) => ({
       id: m.id,
       name: m.name,
       salutation: m.salutation || undefined,
@@ -49,6 +49,17 @@ export const wmsDataService = {
       joinDate: m.join_date || undefined,
       status: m.status || 'Sẵn sàng',
     }));
+
+    // Sắp xếp ưu tiên: Ban Sản phẩm - Công nghệ (Product) lên đầu, tiếp theo là ID số tăng dần
+    return mapped.sort((a: any, b: any) => {
+      const aIsProd = a.group === 'Product' || (a.department && a.department.toLowerCase().includes('sản phẩm')) ? 0 : 1;
+      const bIsProd = b.group === 'Product' || (b.department && b.department.toLowerCase().includes('sản phẩm')) ? 0 : 1;
+      if (aIsProd !== bIsProd) return aIsProd - bIsProd;
+
+      const aNum = parseInt((a.id || '').replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt((b.id || '').replace(/\D/g, ''), 10) || 0;
+      return aNum - bNum;
+    });
   },
 
   async saveMember(member: MemberItem): Promise<void> {
