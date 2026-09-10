@@ -97,6 +97,9 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - **Không dùng tag `⭐ Việc của bạn`**: Bỏ tag riêng biệt cạnh tiêu đề để tránh rác giao diện.
    - **Nhận diện nhẹ nhàng, tinh tế tại phần Nhân sự (`assignee`)**: Chữ đổi sang màu mận VnExpress `#963861 font-semibold` kèm chip `Tôi` nhỏ gọn (`bg-[#963861]/10 text-[#963861]`).
    - Giữ dải màu viền trái `border-l-4 border-l-[#963861]` and nền phớt nhẹ `bg-[#fffbfd]` trên toàn bộ thẻ hàng công việc để nhận diện ngoại vi tức thì mà không gây rối mắt.
+4. **Quy chuẩn Tiêu đề Khối Công việc Đang thực hiện & Phân nhóm Dự án**:
+   - Tiêu đề danh sách: Text **`Công việc đang thực hiện (xx)`** sử dụng kiểu chữ thường (`font-normal`), không in đậm (`font-bold`) để tạo cảm giác nhẹ nhàng, tinh gọn cho giao diện.
+   - Tiêu đề nhóm dự án: Tên dự án sử dụng `font-normal` (bỏ `font-bold`), sử dụng biểu tượng thư mục đơn giản (`Folder` icon thanh mảnh từ bộ Lucide) thay cho emoji thư mục vàng cũ.
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
 1. **Tự động ánh xạ Nhóm (No Team Selector)**: Bỏ hoàn toàn ô chọn Nhóm (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`). Nhóm chuyên môn (`team`) được hệ thống tự động suy ra dựa trên Nhân sự được chọn (`assignee`).

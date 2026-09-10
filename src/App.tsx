@@ -44,7 +44,7 @@ import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
 import { normalizeProjectStatus } from './utils/projectSortingUtils';
-import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase } from 'lucide-react';
+import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder } from 'lucide-react';
 
 export function App() {
   // Current time state
@@ -1306,7 +1306,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                 <div className="bg-[#fafafa] px-6 py-4 border-b border-[#e0e0e0] flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-5 h-5 text-[#b13460]" />
-                    <h3 className="font-title text-base font-bold text-[#202020]">
+                    <h3 className="font-title text-base font-normal text-[#202020]">
                       Công việc đang thực hiện ({activeTasks.length})
                     </h3>
                   </div>
@@ -1437,7 +1437,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         );
                         return (
                           <div key={projName}>
-                            <div className="bg-[#fcfaf6] px-6 py-2.5 border-y border-[#e0e0e0] text-xs font-ui font-bold text-[#5f5f5f] flex items-center justify-between">
+                            <div className="bg-[#fcfaf6] px-6 py-2.5 border-y border-[#e0e0e0] text-xs font-ui font-normal text-[#5f5f5f] flex items-center justify-between">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1448,12 +1448,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                 className="group flex items-center gap-2 text-left cursor-pointer hover:bg-white/80 px-1.5 py-0.5 rounded-[6px] transition-all -ml-1.5"
                                 title={`Bấm để xem chi tiết dự án: ${projName}`}
                               >
-                                <span className="text-base group-hover:scale-110 transition-transform">📁</span>
-                                <span className="font-title text-[13px] font-bold text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-4 transition-colors">
+                                <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0" />
+                                <span className="font-title text-[13px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-4 transition-colors">
                                   {projName}
                                 </span>
                                 {targetProj?.code && (
-                                  <span className="font-num text-[10px] bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] px-1.5 py-0.2 rounded-[4px] font-bold">
+                                  <span className="font-num text-[10px] bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] px-1.5 py-0.2 rounded-[4px] font-normal">
                                     {targetProj.code}
                                   </span>
                                 )}

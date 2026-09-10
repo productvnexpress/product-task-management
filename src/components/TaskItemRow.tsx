@@ -16,6 +16,7 @@ import {
   User,
   Tag,
   Briefcase,
+  Folder,
   Layers,
   Link,
   ExternalLink,
@@ -186,22 +187,22 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
         {/* Project Name */}
         {showProjectBadge && (
           <>
-            {onOpenProjectDetail ? (
+            {onOpenProjectDetail && task.projectId ? (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenProjectDetail(task.projectId);
                 }}
-                className="inline-flex items-center gap-1 text-[#52525b] hover:text-[#b13460] hover:underline cursor-pointer font-bold"
+                className="inline-flex items-center gap-1 text-[#52525b] hover:text-[#b13460] hover:underline cursor-pointer font-normal"
                 title={`Bấm để xem chi tiết dự án ${task.projectName} (Right Sidebar)`}
               >
-                <Briefcase className="w-3 h-3 text-[#a1a1aa]" />
+                <Folder className="w-3 h-3 text-[#a1a1aa]" />
                 <span>{task.projectName}</span>
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[#52525b]">
-                <Briefcase className="w-3 h-3 text-[#a1a1aa]" />
+              <span className="inline-flex items-center gap-1 text-[#52525b] font-normal">
+                <Folder className="w-3 h-3 text-[#a1a1aa]" />
                 <span>{task.projectName}</span>
               </span>
             )}
