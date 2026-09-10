@@ -15,6 +15,7 @@ import {
   TrashItem,
   NotificationItem,
 } from '../types';
+import { normalizeProjectStatus } from '../utils/projectSortingUtils';
 
 export const wmsDataService = {
   // ==========================================
@@ -154,7 +155,8 @@ export const wmsDataService = {
         productOwner: p.product_owner || undefined,
         startDate: p.start_date || undefined,
         targetDate: p.target_date,
-        status: p.status,
+        status: normalizeProjectStatus(p.status),
+        createdAt: p.created_at || undefined,
         isStrategic: Boolean(p.is_strategic),
         leadName: p.lead_name || undefined,
         roles: p.roles || { pm: [], designer: [], seo: [], data: [] },
@@ -194,7 +196,7 @@ export const wmsDataService = {
       lead_name: project.leadName || null,
       start_date: project.startDate ? project.startDate.slice(0, 10) : null,
       target_date: project.targetDate ? project.targetDate.slice(0, 10) : '2026-12-31',
-      status: project.status,
+      status: normalizeProjectStatus(project.status),
       is_strategic: Boolean(project.isStrategic),
       roles: project.roles || { pm: [], designer: [], seo: [], data: [] },
       link_order_tech: project.linkOrderTech || null,

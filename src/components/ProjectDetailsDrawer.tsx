@@ -67,6 +67,7 @@ import {
   normalizeAndNumberPhases,
 } from '../utils/phaseUtils';
 import { canEditProject } from '../utils/rbac';
+import { normalizeProjectStatus } from '../utils/projectSortingUtils';
 
 interface ProjectDetailsDrawerProps {
   project: ProjectItem | null;
@@ -111,7 +112,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const [isPoDropdownOpen, setIsPoDropdownOpen] = useState(false);
   const [poFilterDept, setPoFilterDept] = useState<string>('Tất cả');
 
-  const [status, setStatus] = useState<ProjectStatus>(project?.status || 'Đang triển khai');
+  const [status, setStatus] = useState<ProjectStatus>(normalizeProjectStatus(project?.status) || 'Đang triển khai');
   const [isStrategic, setIsStrategic] = useState<boolean>(project?.isStrategic || false);
   const [startDate, setStartDate] = useState(project?.startDate || '2026-09-01');
   const [targetDate, setTargetDate] = useState(project?.targetDate || '2026-11-30');
@@ -243,7 +244,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setPoSearchQuery('');
       setIsPoDropdownOpen(false);
       setPoFilterDept('Tất cả');
-      setStatus(project.status);
+      setStatus(normalizeProjectStatus(project.status));
       setIsStrategic(project.isStrategic || false);
       setStartDate(project.startDate || '2026-09-01');
       setTargetDate(project.targetDate || '2026-11-30');
@@ -318,7 +319,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setPoSearchQuery('');
       setIsPoDropdownOpen(false);
       setPoFilterDept('Tất cả');
-      setStatus(project.status);
+      setStatus(normalizeProjectStatus(project.status));
       setStartDate(project.startDate || '2026-09-01');
       setTargetDate(project.targetDate || '2026-11-30');
 
@@ -730,7 +731,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       startDate,
       targetDate,
       isStrategic,
-      status,
+      status: normalizeProjectStatus(status),
       leadName: leadNameSummary,
       roles,
       phases: normalizedPhases,
@@ -738,6 +739,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       customLinks: validCustomLinks,
       notes,
       history: [initialLog],
+      createdAt: new Date().toISOString(),
     };
 
     if (onCreateProject) {
@@ -794,7 +796,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       startDate,
       targetDate,
       isStrategic,
-      status,
+      status: normalizeProjectStatus(status),
       leadName: leadNameSummary,
       roles,
       phases,
@@ -1028,16 +1030,16 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             {/* Tag Status */}
             <span
               className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
-                status === 'Chưa triển khai'
+                normalizeProjectStatus(status) === 'Chưa triển khai'
                   ? 'bg-[#f4f4f5] text-[#52525b] border-[#e4e4e7]'
-                  : status === 'Đang triển khai'
+                  : normalizeProjectStatus(status) === 'Đang triển khai'
                   ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
-                  : status === 'Tạm dừng'
+                  : normalizeProjectStatus(status) === 'Tạm dừng'
                   ? 'bg-[#fff0f1] text-[#da1e28] border-[#ffd0d3]'
                   : 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
               }`}
             >
-              ● {status}
+              ● {normalizeProjectStatus(status)}
             </span>
 
             {/* Button Close kèm text "ESC để đóng" */}
@@ -1156,8 +1158,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     Trạng thái:
                   </label>
                   <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+                    value={normalizeProjectStatus(status)}
+                    onChange={(e) => setStatus(normalizeProjectStatus(e.target.value))}
                     className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white font-ui focus:border-[#1d508d]"
                   >
                     <option value="Chưa triển khai">⚪ Chưa triển khai</option>
@@ -1199,16 +1201,16 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <span className="text-[11px] text-[#7f7f7f] font-ui block mb-1">Trạng thái</span>
                   <span
                     className={`inline-block text-xs font-ui font-semibold px-2.5 py-1 rounded-full border ${
-                      status === 'Chưa triển khai'
+                      normalizeProjectStatus(status) === 'Chưa triển khai'
                         ? 'bg-[#f4f4f5] text-[#52525b] border-[#e4e4e7]'
-                        : status === 'Đang triển khai'
+                        : normalizeProjectStatus(status) === 'Đang triển khai'
                         ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
-                        : status === 'Tạm dừng'
+                        : normalizeProjectStatus(status) === 'Tạm dừng'
                         ? 'bg-[#fff0f1] text-[#da1e28] border-[#ffd0d3]'
                         : 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
                     }`}
                   >
-                    ● {status}
+                    ● {normalizeProjectStatus(status)}
                   </span>
                 </div>
 

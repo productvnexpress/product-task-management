@@ -3,11 +3,86 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ProjectItem, TaskItem, MemberItem } from '../types';
+import { ProjectItem, TaskItem, MemberItem, ProjectStatus } from '../types';
 import { getMemberProjectRelation } from './memberPersonalization';
 
 export const OTHERS_PROJECT_ID = 'proj-others';
 export const OTHERS_PROJECT_NAME = 'Chưa xác định (Others)';
+
+/**
+ * Normalizes project status to one of 4 standard statuses:
+ * 'Chưa triển khai' | 'Đang triển khai' | 'Tạm dừng' | 'Hoàn thành'
+ * Converts legacy or alternative 'Đã hoàn thành' to 'Hoàn thành'.
+ */
+export function normalizeProjectStatus(status?: string): ProjectStatus {
+  if (!status) return 'Chưa triển khai';
+  if (status === 'Đã hoàn thành' || status === 'Hoàn thành') return 'Hoàn thành';
+  if (status === 'Đang triển khai') return 'Đang triển khai';
+  if (status === 'Tạm dừng') return 'Tạm dừng';
+  if (status === 'Chưa triển khai') return 'Chưa triển khai';
+  return 'Chưa triển khai';
+}
+
+/**
+ * Checks whether a project was created within the last N days (default 7 days).
+ * Evaluates project.createdAt, history logs, or timestamp embedded in ID.
+ */
+export function isProjectNew(project: ProjectItem, daysThreshold: number = 7): boolean {
+  if (!project) return false;
+  const now = Date.now();
+  const maxDiffMs = daysThreshold * 24 * 60 * 60 * 1000;
+
+  // 1. Check project.createdAt
+  if (project.createdAt) {
+    const createdTime = new Date(project.createdAt).getTime();
+    if (!isNaN(createdTime)) {
+      const diff = now - createdTime;
+      if (diff >= -86400000 && diff <= maxDiffMs) {
+        return true;
+      }
+    }
+  }
+
+  // 2. Check project.history logs for earliest creation timestamp
+  if (project.history && project.history.length > 0) {
+    for (const log of project.history) {
+      if (log.timestamp) {
+        const logTime = new Date(log.timestamp).getTime();
+        if (!isNaN(logTime)) {
+          const diff = now - logTime;
+          if (diff >= -86400000 && diff <= maxDiffMs) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Check client-generated ID pattern `proj-172...`
+  if (project.id && project.id.startsWith('proj-')) {
+    const rawNum = project.id.replace('proj-', '');
+    const idTime = Number(rawNum);
+    if (!isNaN(idTime) && idTime > 1600000000000) {
+      const diff = now - idTime;
+      if (diff >= -86400000 && diff <= maxDiffMs) {
+        return true;
+      }
+    }
+  }
+
+  // 4. Check project.startDate if it falls within the last 7 days
+  if (project.startDate) {
+    const startTime = new Date(project.startDate).getTime();
+    if (!isNaN(startTime)) {
+      const diff = now - startTime;
+      if (diff >= 0 && diff <= maxDiffMs) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 /**
  * Checks if a project is the special "Chưa xác định (Others)" project

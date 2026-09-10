@@ -6,7 +6,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ActiveTab, ProjectItem, MemberItem, TeamType, TaskStatus, DueFilterType } from '../types';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
-import { sortProjectsAlphabetically, isOthersProject } from '../utils/projectSortingUtils';
+import {
+  sortProjectsAlphabetically,
+  isOthersProject,
+  normalizeProjectStatus,
+  isProjectNew,
+} from '../utils/projectSortingUtils';
 import {
   CheckSquare,
   FolderKanban,
@@ -126,7 +131,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const baseProjects = currentMember ? memberRelatedProjects : projects;
 
   const inProgressProjects = useMemo(() => {
-    return baseProjects.filter((p) => p.status === 'Đang triển khai');
+    return baseProjects.filter(
+      (p) =>
+        normalizeProjectStatus(p.status) === 'Đang triển khai' ||
+        normalizeProjectStatus(p.status) === 'Chưa triển khai'
+    );
   }, [baseProjects]);
 
   const displayedProjects = useMemo(() => {
@@ -134,7 +143,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (showAllProjectsInSidebar) {
       list = baseProjects;
     } else {
-      const active = baseProjects.filter((p) => p.status === 'Đang triển khai');
+      const active = baseProjects.filter(
+        (p) =>
+          normalizeProjectStatus(p.status) === 'Đang triển khai' ||
+          normalizeProjectStatus(p.status) === 'Chưa triển khai'
+      );
       if (selectedProjectId !== 'all' && !active.some((p) => p.id === selectedProjectId)) {
         const selProj = baseProjects.find((p) => p.id === selectedProjectId);
         if (selProj) active.push(selProj);
@@ -555,6 +568,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {displayedProjects.map((p) => {
                 const isSel = selectedProjectId === p.id;
                 const count = taskCountsByProject[p.id] || 0;
+                const isNew = isProjectNew(p);
                 return (
                   <button
                     key={p.id}
@@ -571,6 +585,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="truncate" title={p.name}>
                         {p.name.replace(/^Dự án\s+/i, '')}
                       </span>
+                      {isNew && (
+                        <span
+                          className="px-1.5 py-0.5 rounded-[3px] text-[9px] font-ui font-extrabold bg-[#ef4444] text-white leading-none shrink-0 shadow-2xs tracking-wider uppercase"
+                          title="Dự án mới tạo trong 7 ngày"
+                        >
+                          NEW
+                        </span>
+                      )}
                       {p.isStrategic && (
                         <span className="text-[#d97706] text-[11px] leading-none shrink-0" title="Dự án chiến lược">
                           ⭐

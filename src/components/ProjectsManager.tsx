@@ -8,7 +8,7 @@ import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRo
 import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
-import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
+import { sortProjectsAlphabetically, normalizeProjectStatus, isProjectNew } from '../utils/projectSortingUtils';
 import {
   FolderKanban,
   History,
@@ -241,10 +241,10 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
 
   // Status counts for Quick Navigator
   const strategicCount = projects.filter((p) => p.isStrategic).length;
-  const notStartedCount = projects.filter((p) => p.status === 'Chưa triển khai').length;
-  const inProgressCount = projects.filter((p) => p.status === 'Đang triển khai').length;
-  const pausedCount = projects.filter((p) => p.status === 'Tạm dừng').length;
-  const completedCount = projects.filter((p) => p.status === 'Hoàn thành' || (p.status as string) === 'Đã hoàn thành').length;
+  const notStartedCount = projects.filter((p) => normalizeProjectStatus(p.status) === 'Chưa triển khai').length;
+  const inProgressCount = projects.filter((p) => normalizeProjectStatus(p.status) === 'Đang triển khai').length;
+  const pausedCount = projects.filter((p) => normalizeProjectStatus(p.status) === 'Tạm dừng').length;
+  const completedCount = projects.filter((p) => normalizeProjectStatus(p.status) === 'Hoàn thành').length;
 
   const filteredProjects = useMemo(() => {
     const result = projects.filter((p) => {
@@ -311,7 +311,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
       if (statusFilter === 'strategic') {
         if (!p.isStrategic) return false;
       } else if (statusFilter !== 'all') {
-        if (p.status !== statusFilter && !(statusFilter === 'Hoàn thành' && (p.status as string) === 'Đã hoàn thành')) {
+        if (normalizeProjectStatus(p.status) !== statusFilter) {
           return false;
         }
       }
@@ -544,6 +544,14 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                         </span>
                       )}
                       <span>{proj.name}</span>
+                      {isProjectNew(proj) && (
+                        <span
+                          className="px-1.5 py-0.5 rounded-[3px] text-[9px] font-ui font-extrabold bg-[#ef4444] text-white leading-none shrink-0 shadow-2xs tracking-wider uppercase"
+                          title="Dự án mới tạo trong 7 ngày"
+                        >
+                          NEW
+                        </span>
+                      )}
                       <PanelRight className="w-4 h-4 text-[#b13460] opacity-0 group-hover:opacity-100 transition-opacity" />
                     </h3>
 
@@ -574,16 +582,16 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                     )}
                     <span
                       className={`text-xs font-ui font-bold px-2.5 py-1 rounded-[4px] border ${
-                        proj.status === 'Đang triển khai'
+                        normalizeProjectStatus(proj.status) === 'Đang triển khai'
                           ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
-                          : proj.status === 'Chưa triển khai'
+                          : normalizeProjectStatus(proj.status) === 'Chưa triển khai'
                           ? 'bg-[#f4f4f5] text-[#52525b] border-[#e4e4e7]'
-                          : proj.status === 'Tạm dừng'
+                          : normalizeProjectStatus(proj.status) === 'Tạm dừng'
                           ? 'bg-[#fff0f1] text-[#da1e28] border-[#ffd0d3]'
                           : 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
                       }`}
                     >
-                      {proj.status}
+                      {normalizeProjectStatus(proj.status)}
                     </span>
                   </div>
                 </div>

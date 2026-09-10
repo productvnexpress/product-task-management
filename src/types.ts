@@ -69,6 +69,7 @@ export interface ProjectItem {
   phases?: ProjectPhase[];
   isStrategic?: boolean;      // Dự án chiến lược (Cấp Toà soạn / Công ty, ưu tiên triển khai)
   status: ProjectStatus;
+  createdAt?: string;         // Thời điểm tạo dự án (ISO timestamp)
   links?: ProjectLinks;
   linkOrderTech?: string;            // Link Order Tech (chuẩn AGENTS.md)
   linkChat?: string;                 // Link Chat Group (chuẩn AGENTS.md)

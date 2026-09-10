@@ -43,6 +43,7 @@ import { isTaskOverdue, isTaskDueToday, isTaskDueSoon } from './utils/dateUtils'
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
+import { normalizeProjectStatus } from './utils/projectSortingUtils';
 import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase } from 'lucide-react';
 
 export function App() {
@@ -55,7 +56,11 @@ export function App() {
   // Main persistence states
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
     const saved = localStorage.getItem('vne_projects_v9');
-    return saved ? JSON.parse(saved) : INITIAL_PROJECTS;
+    const rawList: ProjectItem[] = saved ? JSON.parse(saved) : INITIAL_PROJECTS;
+    return rawList.map((p) => ({
+      ...p,
+      status: normalizeProjectStatus(p.status),
+    }));
   });
 
   const [members, setMembers] = useState<MemberItem[]>(() => {
@@ -343,7 +348,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         if (!isMounted) return;
 
         if (mems && mems.length > 0) setMembers(mems);
-        if (projs && projs.length > 0) setProjects(projs);
+        if (projs && projs.length > 0) {
+          setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+        }
         if (tsks) setTasks(tsks);
         if (trsh) setTrash(trsh);
         if (notifs) setNotifications(notifs);
@@ -372,7 +379,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       onProjectsChange: async () => {
         try {
           const freshProjects = await wmsDataService.fetchProjects();
-          if (freshProjects && freshProjects.length > 0) setProjects(freshProjects);
+          if (freshProjects && freshProjects.length > 0) {
+            setProjects(freshProjects.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+          }
         } catch (e) {}
       },
       onTrashChange: async () => {
