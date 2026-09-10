@@ -1200,7 +1200,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         />
 
         {/* Main Body */}
-        <main className="flex-1 px-4 md:px-6 py-6 md:py-8 w-full max-w-[960px] lg:max-w-[1020px] mx-auto">
+        <main className="flex-1 px-4 md:px-6 py-6 md:py-8 w-full max-w-[1040px] mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -1213,353 +1213,414 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               {/* VIEW 1: TASKS LIST VIEW */}
               {activeTab === 'tasks' && (
                 <div className="space-y-6 animate-fade-in">
-              {/* Perspective Control Bar: Fast 1-click access to Toàn ban, Việc của tôi, Dự án của tôi */}
-              {!activeProductMember ? (
-                <div className="bg-white border border-[#e2e8f0] rounded-[10px] p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-ui font-bold text-[#64748b] flex items-center gap-1.5">
-                      <Filter className="w-3.5 h-3.5 text-[#963861]" />
-                      <span>Lọc:</span>
-                    </span>
+                  {/* TOP CONTROLS: Filter 1, Filter 2, Search (QuickAddBar), and Section Header */}
+                  {/* Aligned in the 800px column with left gutter spacer (192px/208px) on desktop, exactly as user's sketch */}
+                  <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                    <div className="hidden md:block w-48 lg:w-52 shrink-0" />
+                    <div className="w-full max-w-[800px] space-y-6">
+                      {/* Perspective Control Bar: Fast 1-click access to Toàn ban, Việc của tôi, Dự án của tôi */}
+                      {!activeProductMember ? (
+                        <div className="bg-white border border-[#e2e8f0] rounded-[10px] p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-ui font-bold text-[#64748b] flex items-center gap-1.5">
+                              <Filter className="w-3.5 h-3.5 text-[#963861]" />
+                              <span>Lọc:</span>
+                            </span>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSelectProductMember(null)}
-                      className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#1e293b] text-white shadow-2xs cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Globe className="w-3.5 h-3.5" />
-                      <span>Toàn bộ phận</span>
-                    </button>
-
-                    {currentAuthUser && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectProductMember(currentAuthUser)}
-                          className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#fcf0f5] text-[#963861] hover:bg-[#fae6ee] border border-[#f3c2d4] transition-all cursor-pointer flex items-center gap-1.5"
-                          title="Lọc nhanh danh sách công việc do bạn phụ trách"
-                        >
-                          <Star className="w-3.5 h-3.5 fill-current" />
-                          <span>Của tôi ({myActiveTasksCount})</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveProductMember(currentAuthUser);
-                            setFilterState((prev) => ({ ...prev, assignee: 'Tất cả' }));
-                            setTaskPersonalScope('my_projects_tasks');
-                          }}
-                          className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] border border-[#bfdbfe] transition-all cursor-pointer flex items-center gap-1.5"
-                          title="Lọc các công việc nằm trong những dự án bạn tham gia"
-                        >
-                          <Briefcase className="w-3.5 h-3.5" />
-                          <span>Dự án của tôi ({myProjectsCount})</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="text-xs font-ui text-[#64748b] hidden sm:block">
-                    <strong className="text-[#1e293b]">{tasks.length} công việc</strong>
-                  </div>
-                </div>
-              ) : (
-                <PersonalizationBanner
-                  member={activeProductMember}
-                  currentAuthUser={currentAuthUser}
-                  tasks={tasks}
-                  projects={projects}
-                  personalScope={taskPersonalScope}
-                  onChangeScope={setTaskPersonalScope}
-                  onClearMember={() => handleSelectProductMember(null)}
-                  onSelectMyTasks={() => currentAuthUser && handleSelectProductMember(currentAuthUser)}
-                />
-              )}
-
-              {/* Reminder & Urge Control Panel */}
-              <ReminderPanel
-                tasks={scopedTasksForDue}
-                activeDueFilter={filterState.dueFilter}
-                onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
-                onSelectTask={(task) => {
-                  setSelectedTask(task);
-                  setIsDrawerOpen(true);
-                }}
-              />
-
-              {/* Quick Add Form Box */}
-              <QuickAddBar
-                projects={projects}
-                tasks={tasks}
-                members={members}
-                onAddTask={handleAddTask}
-                defaultProjectId={
-                  filterState.projectId !== 'all' ? filterState.projectId : undefined
-                }
-                defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
-              />
-
-              {/* Active Tasks Section Header */}
-              <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5 text-[#963861]" />
-                  <h3 className="font-title text-base font-normal text-[#202020]">
-                    Công việc đang thực hiện ({activeTasks.length})
-                  </h3>
-                </div>
-
-                {/* Active Filter Badges */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {filterState.projectId !== 'all' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fcf0f5] text-[#b13460] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenProjectDetail(filterState.projectId)}
-                        className="hover:underline flex items-center gap-1 cursor-pointer"
-                        title="Bấm để xem chi tiết dự án này"
-                      >
-                        <span>Dự án: {projects.find((p) => p.id === filterState.projectId)?.name}</span>
-                        <span className="text-[10px] text-[#b13460]">↗</span>
-                      </button>
-                      <button
-                        onClick={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
-                        className="hover:text-[#8f274c] text-[10px] ml-1"
-                        title="Bỏ lọc theo dự án"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {filterState.assignee && filterState.assignee !== 'Tất cả' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f0f8f1] text-[#24a148] px-3 py-1 rounded-full border border-[#c3e6cb] font-bold">
-                      <span>Nhân sự: {filterState.assignee}</span>
-                      <button
-                        onClick={() => setFilterState((f) => ({ ...f, assignee: 'Tất cả' }))}
-                        className="hover:text-[#187230] text-[10px]"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {filterState.team !== 'Tất cả' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#eef4fb] text-[#1d508d] px-3 py-1 rounded-full border border-[#c3d9f0] font-bold">
-                      <span>Nhóm: {filterState.team}</span>
-                      <button
-                        onClick={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
-                        className="hover:text-[#133763] text-[10px]"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {filterState.status !== 'Tất cả' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f4f4f4] text-[#202020] px-3 py-1 rounded-full border border-[#d6d6d6] font-bold">
-                      <span>Trạng thái: {filterState.status}</span>
-                      <button
-                        onClick={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
-                        className="hover:text-[#000000] text-[10px]"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {filterState.dueFilter !== 'all' && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fff7ed] text-[#ea580c] px-3 py-1 rounded-full border border-[#fed7aa] font-bold">
-                      <span>
-                        Thời hạn:{' '}
-                        {filterState.dueFilter === 'today'
-                          ? 'Hạn hôm nay'
-                          : filterState.dueFilter === 'overdue'
-                          ? 'Quá hạn'
-                          : 'Sắp đến hạn'}
-                      </span>
-                      <button
-                        onClick={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
-                        className="hover:text-[#c2410c] text-[10px]"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  )}
-
-                  {(filterState.projectId !== 'all' ||
-                    filterState.assignee !== 'Tất cả' ||
-                    filterState.team !== 'Tất cả' ||
-                    filterState.status !== 'Tất cả' ||
-                    filterState.dueFilter !== 'all' ||
-                    filterState.searchQuery) && (
-                    <button
-                      onClick={() =>
-                        setFilterState({
-                          projectId: 'all',
-                          team: 'Tất cả',
-                          status: 'Tất cả',
-                          assignee: 'Tất cả',
-                          dueFilter: 'all',
-                          searchQuery: '',
-                        })
-                      }
-                      className="text-[11px] font-ui text-[#b13460] hover:underline px-1 font-bold"
-                    >
-                      Xóa tất cả bộ lọc
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Active Tasks Content */}
-              {activeTasks.length === 0 ? (
-                <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs p-12 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-[#f4f4f4] text-[#7f7f7f] flex items-center justify-center mx-auto text-xl">
-                    ✓
-                  </div>
-                  <p className="font-title text-base font-bold text-[#202020]">
-                    Không có công việc nào trong danh sách
-                  </p>
-                  <p className="text-xs font-body text-[#7f7f7f] max-w-md mx-auto">
-                    Hãy tạo công việc mới hoặc thử bỏ các bộ lọc trên thanh bên (sidebar).
-                  </p>
-                </div>
-              ) : filterState.projectId === 'all' ? (
-                // Grouped by Project Name: Project Name on the Left (Pinned), Tasks on the Right (as before)
-                <div className="space-y-6 md:space-y-8">
-                  {Object.entries(activeTasksByProject).map(
-                    ([projName, projTasks]) => {
-                      const targetProj = projects.find(
-                        (p) => p.name === projName || p.id === projTasks[0]?.projectId
-                      );
-                      return (
-                        <div
-                          key={projName}
-                          className="flex flex-col md:flex-row items-start gap-4 lg:gap-6"
-                        >
-                          {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                          <div className="w-full md:w-52 lg:w-56 shrink-0 md:sticky md:top-24 self-start pt-1">
                             <button
                               type="button"
-                              onClick={() => {
-                                if (targetProj) {
-                                  handleOpenProjectDetail(targetProj.id);
-                                }
-                              }}
-                              className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
-                              title={`Bấm để xem chi tiết dự án: ${projName}`}
+                              onClick={() => handleSelectProductMember(null)}
+                              className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#1e293b] text-white shadow-2xs cursor-pointer flex items-center gap-1.5"
                             >
-                              <div className="flex items-start gap-2 min-w-0">
-                                <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
-                                <div className="min-w-0 flex-1">
-                                  <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
-                                    {projName}
-                                  </span>
-                                </div>
-                                {targetProj?.isStrategic && (
-                                  <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
-                                {targetProj?.code && (
-                                  <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
-                                    {targetProj.code}
-                                  </span>
-                                )}
-                                <span className="text-[11px] font-ui text-[#64748b]">
-                                  {projTasks.length} việc
-                                </span>
-                              </div>
-                              <div className="pl-6 pt-1">
-                                <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-                                  <span>Chi tiết</span>
-                                  <span>→</span>
-                                </span>
-                              </div>
+                              <Globe className="w-3.5 h-3.5" />
+                              <span>Toàn bộ phận</span>
                             </button>
+
+                            {currentAuthUser && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectProductMember(currentAuthUser)}
+                                  className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#fcf0f5] text-[#963861] hover:bg-[#fae6ee] border border-[#f3c2d4] transition-all cursor-pointer flex items-center gap-1.5"
+                                  title="Lọc nhanh danh sách công việc do bạn phụ trách"
+                                >
+                                  <Star className="w-3.5 h-3.5 fill-current" />
+                                  <span>Của tôi ({myActiveTasksCount})</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveProductMember(currentAuthUser);
+                                    setFilterState((prev) => ({ ...prev, assignee: 'Tất cả' }));
+                                    setTaskPersonalScope('my_projects_tasks');
+                                  }}
+                                  className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] border border-[#bfdbfe] transition-all cursor-pointer flex items-center gap-1.5"
+                                  title="Lọc các công việc nằm trong những dự án bạn tham gia"
+                                >
+                                  <Briefcase className="w-3.5 h-3.5" />
+                                  <span>Dự án của tôi ({myProjectsCount})</span>
+                                </button>
+                              </>
+                            )}
                           </div>
 
-                          {/* Cột phải: Danh sách công việc trình bày như cũ (card trắng bo tròn 12px, viền e0e0e0, divide-y f0f0f0) */}
-                          <div className="flex-1 w-full min-w-0">
-                            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                              {projTasks.map((task) => (
-                                <TaskItemRow
-                                  key={task.id}
-                                  task={task}
-                                  members={members}
-                                  currentAuthUser={currentAuthUser}
-                                  isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                                  onToggleComplete={handleToggleComplete}
-                                  onSelectTask={(t) => {
-                                    setSelectedTask(t);
-                                    setIsDrawerOpen(true);
-                                  }}
-                                  onUpdateStatus={handleUpdateTaskStatus}
-                                  onDeleteTask={handleDeleteTask}
-                                  onOpenProjectDetail={handleOpenProjectDetail}
-                                />
-                              ))}
+                          <div className="text-xs font-ui text-[#64748b] hidden sm:block">
+                            <strong className="text-[#1e293b]">{tasks.length} công việc</strong>
+                          </div>
+                        </div>
+                      ) : (
+                        <PersonalizationBanner
+                          member={activeProductMember}
+                          currentAuthUser={currentAuthUser}
+                          tasks={tasks}
+                          projects={projects}
+                          personalScope={taskPersonalScope}
+                          onChangeScope={setTaskPersonalScope}
+                          onClearMember={() => handleSelectProductMember(null)}
+                          onSelectMyTasks={() => currentAuthUser && handleSelectProductMember(currentAuthUser)}
+                        />
+                      )}
+
+                      {/* Reminder & Urge Control Panel */}
+                      <ReminderPanel
+                        tasks={scopedTasksForDue}
+                        activeDueFilter={filterState.dueFilter}
+                        onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
+                        onSelectTask={(task) => {
+                          setSelectedTask(task);
+                          setIsDrawerOpen(true);
+                        }}
+                      />
+
+                      {/* Quick Add Form Box */}
+                      <QuickAddBar
+                        projects={projects}
+                        tasks={tasks}
+                        members={members}
+                        onAddTask={handleAddTask}
+                        defaultProjectId={
+                          filterState.projectId !== 'all' ? filterState.projectId : undefined
+                        }
+                        defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
+                      />
+
+                      {/* Active Tasks Section Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
+                        <div className="flex items-center gap-2">
+                          <CheckSquare className="w-5 h-5 text-[#963861]" />
+                          <h3 className="font-title text-base font-normal text-[#202020]">
+                            Công việc đang thực hiện ({activeTasks.length})
+                          </h3>
+                        </div>
+
+                        {/* Active Filter Badges */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {filterState.projectId !== 'all' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fcf0f5] text-[#b13460] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenProjectDetail(filterState.projectId)}
+                                className="hover:underline flex items-center gap-1 cursor-pointer"
+                                title="Bấm để xem chi tiết dự án này"
+                              >
+                                <span>Dự án: {projects.find((p) => p.id === filterState.projectId)?.name}</span>
+                                <span className="text-[10px] text-[#b13460]">↗</span>
+                              </button>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
+                                className="hover:text-[#8f274c] text-[10px] ml-1"
+                                title="Bỏ lọc theo dự án"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
+                          {filterState.assignee && filterState.assignee !== 'Tất cả' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f0f8f1] text-[#24a148] px-3 py-1 rounded-full border border-[#c3e6cb] font-bold">
+                              <span>Nhân sự: {filterState.assignee}</span>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, assignee: 'Tất cả' }))}
+                                className="hover:text-[#187230] text-[10px]"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
+                          {filterState.team !== 'Tất cả' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#eef4fb] text-[#1d508d] px-3 py-1 rounded-full border border-[#c3d9f0] font-bold">
+                              <span>Nhóm: {filterState.team}</span>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
+                                className="hover:text-[#133763] text-[10px]"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
+                          {filterState.status !== 'Tất cả' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f4f4f4] text-[#202020] px-3 py-1 rounded-full border border-[#d6d6d6] font-bold">
+                              <span>Trạng thái: {filterState.status}</span>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
+                                className="hover:text-[#000000] text-[10px]"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
+                          {filterState.dueFilter !== 'all' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fff7ed] text-[#ea580c] px-3 py-1 rounded-full border border-[#fed7aa] font-bold">
+                              <span>
+                                Thời hạn:{' '}
+                                {filterState.dueFilter === 'today'
+                                  ? 'Hạn hôm nay'
+                                  : filterState.dueFilter === 'overdue'
+                                  ? 'Quá hạn'
+                                  : 'Sắp đến hạn'}
+                              </span>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
+                                className="hover:text-[#c2410c] text-[10px]"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
+                          {(filterState.projectId !== 'all' ||
+                            filterState.assignee !== 'Tất cả' ||
+                            filterState.team !== 'Tất cả' ||
+                            filterState.status !== 'Tất cả' ||
+                            filterState.dueFilter !== 'all' ||
+                            filterState.searchQuery) && (
+                            <button
+                              onClick={() =>
+                                setFilterState({
+                                  projectId: 'all',
+                                  team: 'Tất cả',
+                                  status: 'Tất cả',
+                                  assignee: 'Tất cả',
+                                  dueFilter: 'all',
+                                  searchQuery: '',
+                                })
+                              }
+                              className="text-[11px] font-ui text-[#b13460] hover:underline px-1 font-bold"
+                            >
+                              Xóa tất cả bộ lọc
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Tasks Content */}
+                  {activeTasks.length === 0 ? (
+                    <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                      <div className="hidden md:block w-48 lg:w-52 shrink-0" />
+                      <div className="w-full max-w-[800px]">
+                        <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs p-12 text-center space-y-3">
+                          <div className="w-12 h-12 rounded-full bg-[#f4f4f4] text-[#7f7f7f] flex items-center justify-center mx-auto text-xl">
+                            ✓
+                          </div>
+                          <p className="font-title text-base font-bold text-[#202020]">
+                            Không có công việc nào trong danh sách
+                          </p>
+                          <p className="text-xs font-body text-[#7f7f7f] max-w-md mx-auto">
+                            Hãy tạo công việc mới hoặc thử bỏ các bộ lọc trên thanh bên (sidebar).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : filterState.projectId === 'all' ? (
+                    // Grouped by Project Name: Project Name on Left (Pinned), 800px Tasks Card on Right
+                    <div className="space-y-6 md:space-y-8">
+                      {Object.entries(activeTasksByProject).map(
+                        ([projName, projTasks], idx) => {
+                          const targetProj = projects.find(
+                            (p) => p.name === projName || p.id === projTasks[0]?.projectId
+                          );
+                          return (
+                            <div
+                              key={projName}
+                              className={idx > 0 ? 'border-t border-[#e5e7eb] pt-6 md:pt-8' : ''}
+                            >
+                              <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                                {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
+                                <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (targetProj) {
+                                        handleOpenProjectDetail(targetProj.id);
+                                      }
+                                    }}
+                                    className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
+                                    title={`Bấm để xem chi tiết dự án: ${projName}`}
+                                  >
+                                    <div className="flex items-start gap-2 min-w-0">
+                                      <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                          {projName}
+                                        </span>
+                                      </div>
+                                      {targetProj?.isStrategic && (
+                                        <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                      {targetProj?.code && (
+                                        <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                          {targetProj.code}
+                                        </span>
+                                      )}
+                                      <span className="text-[11px] font-ui text-[#64748b]">
+                                        {projTasks.length} việc
+                                      </span>
+                                    </div>
+                                    <div className="pl-6 pt-1">
+                                      <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                                        <span>Chi tiết</span>
+                                        <span>→</span>
+                                      </span>
+                                    </div>
+                                  </button>
+                                </div>
+
+                                {/* Cột phải: 800px Card công việc trình bày như cũ (card trắng bo tròn 12px, viền e0e0e0, divide-y f0f0f0) */}
+                                <div className="w-full max-w-[800px]">
+                                  <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
+                                    {projTasks.map((task) => (
+                                      <TaskItemRow
+                                        key={task.id}
+                                        task={task}
+                                        members={members}
+                                        currentAuthUser={currentAuthUser}
+                                        isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
+                                        onToggleComplete={handleToggleComplete}
+                                        onSelectTask={(t) => {
+                                          setSelectedTask(t);
+                                          setIsDrawerOpen(true);
+                                        }}
+                                        onUpdateStatus={handleUpdateTaskStatus}
+                                        onDeleteTask={handleDeleteTask}
+                                        onOpenProjectDetail={handleOpenProjectDetail}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  ) : (
+                    // Single project list
+                    <div>
+                      {(() => {
+                        const curProj = projects.find((p) => p.id === filterState.projectId);
+                        return (
+                          <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                            {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
+                            <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                              {curProj ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenProjectDetail(curProj.id)}
+                                  className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
+                                  title={`Bấm để xem chi tiết dự án: ${curProj.name}`}
+                                >
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                        {curProj.name}
+                                      </span>
+                                    </div>
+                                    {curProj.isStrategic && (
+                                      <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                    {curProj.code && (
+                                      <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                        {curProj.code}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] font-ui text-[#64748b]">
+                                      {activeTasks.length} việc
+                                    </span>
+                                  </div>
+                                  <div className="pl-6 pt-1">
+                                    <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                                      <span>Chi tiết</span>
+                                      <span>→</span>
+                                    </span>
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="text-xs font-ui text-[#64748b] p-2">Dự án</div>
+                              )}
+                            </div>
+
+                            {/* Cột phải: 800px Card công việc trình bày như cũ */}
+                            <div className="w-full max-w-[800px]">
+                              <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
+                                {activeTasks.map((task) => (
+                                  <TaskItemRow
+                                    key={task.id}
+                                    task={task}
+                                    members={members}
+                                    currentAuthUser={currentAuthUser}
+                                    isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
+                                    onToggleComplete={handleToggleComplete}
+                                    onSelectTask={(t) => {
+                                      setSelectedTask(t);
+                                      setIsDrawerOpen(true);
+                                    }}
+                                    onUpdateStatus={handleUpdateTaskStatus}
+                                    onDeleteTask={handleDeleteTask}
+                                    onOpenProjectDetail={handleOpenProjectDetail}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Completed Tasks Container */}
+                  {completedTasks.length > 0 && (
+                    <div className="border-t border-[#e5e7eb] pt-6 md:pt-8">
+                      <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
+                        {/* Left Column: Anchor (Pinned) */}
+                        <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                          <div className="p-2 -ml-2 space-y-1">
+                            <div className="flex items-center gap-2 text-[#24a148]">
+                              <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
+                              <span className="font-title text-[14px] font-normal text-[#24a148]">
+                                Đã hoàn thành
+                              </span>
+                            </div>
+                            <div className="pl-6 text-[11px] font-ui text-[#64748b]">
+                              {completedTasks.length} việc
                             </div>
                           </div>
                         </div>
-                      );
-                    }
-                  )}
-                </div>
-              ) : (
-                // Single project list
-                <div>
-                  {(() => {
-                    const curProj = projects.find((p) => p.id === filterState.projectId);
-                    return (
-                      <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                        {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                        <div className="w-full md:w-52 lg:w-56 shrink-0 md:sticky md:top-24 self-start pt-1">
-                          {curProj ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenProjectDetail(curProj.id)}
-                              className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
-                              title={`Bấm để xem chi tiết dự án: ${curProj.name}`}
-                            >
-                              <div className="flex items-start gap-2 min-w-0">
-                                <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
-                                <div className="min-w-0 flex-1">
-                                  <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
-                                    {curProj.name}
-                                  </span>
-                                </div>
-                                {curProj.isStrategic && (
-                                  <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
-                                {curProj.code && (
-                                  <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
-                                    {curProj.code}
-                                  </span>
-                                )}
-                                <span className="text-[11px] font-ui text-[#64748b]">
-                                  {activeTasks.length} việc
-                                </span>
-                              </div>
-                              <div className="pl-6 pt-1">
-                                <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-                                  <span>Chi tiết</span>
-                                  <span>→</span>
-                                </span>
-                              </div>
-                            </button>
-                          ) : (
-                            <div className="text-xs font-ui text-[#64748b] p-2">Dự án</div>
-                          )}
-                        </div>
 
-                        {/* Cột phải: Danh sách công việc trình bày như cũ */}
-                        <div className="flex-1 w-full min-w-0">
+                        {/* Right Column: 800px Completed Tasks Card (như cũ) */}
+                        <div className="w-full max-w-[800px]">
                           <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                            {activeTasks.map((task) => (
+                            {completedTasks.map((task) => (
                               <TaskItemRow
                                 key={task.id}
                                 task={task}
@@ -1579,55 +1640,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           </div>
                         </div>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Completed Tasks Container */}
-              {completedTasks.length > 0 && (
-                <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6 pt-4">
-                  {/* Left Column: Anchor (Pinned) */}
-                  <div className="w-full md:w-52 lg:w-56 shrink-0 md:sticky md:top-24 self-start pt-1">
-                    <div className="p-2 -ml-2 space-y-1">
-                      <div className="flex items-center gap-2 text-[#24a148]">
-                        <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
-                        <span className="font-title text-[14px] font-normal text-[#24a148]">
-                          Đã hoàn thành
-                        </span>
-                      </div>
-                      <div className="pl-6 text-[11px] font-ui text-[#64748b]">
-                        {completedTasks.length} việc
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Completed Tasks Card (như cũ) */}
-                  <div className="flex-1 w-full min-w-0">
-                    <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                      {completedTasks.map((task) => (
-                        <TaskItemRow
-                          key={task.id}
-                          task={task}
-                          members={members}
-                          currentAuthUser={currentAuthUser}
-                          isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                          onToggleComplete={handleToggleComplete}
-                          onSelectTask={(t) => {
-                            setSelectedTask(t);
-                            setIsDrawerOpen(true);
-                          }}
-                          onUpdateStatus={handleUpdateTaskStatus}
-                          onDeleteTask={handleDeleteTask}
-                          onOpenProjectDetail={handleOpenProjectDetail}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* VIEW 2: PROJECTS MANAGEMENT */}
           {activeTab === 'projects' && (
