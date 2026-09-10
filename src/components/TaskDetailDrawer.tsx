@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel } from '../types';
 import { formatLogTimestamp, addManualLog } from '../utils/taskLogUtils';
 import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
 import { canEditTask, canDeleteTask } from '../utils/rbac';
+import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
+import { getTodayDateString } from '../utils/dateUtils';
 import {
   X,
   Check,
@@ -84,6 +86,16 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     Boolean(task?.workLink && task?.resultLink && task.workLink.trim() === task.resultLink.trim())
   );
   const [validationError, setValidationError] = useState('');
+
+  const sortedProjects = useMemo(() => sortProjectsAlphabetically(projects), [projects]);
+
+  const minDueDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return getTodayDateString(d);
+  }, []);
+
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Author and update note state
   const [editorAuthor, setEditorAuthor] = useState('');
@@ -505,7 +517,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   onChange={(e) => handleProjectChange(e.target.value)}
                   className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
                 >
-                  {projects.map((p) => (
+                  {sortedProjects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -559,21 +571,48 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               {/* 8. Hạn hoàn thành */}
               <div className="space-y-1.5">
-                <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
+                <label
+                  onClick={() => {
+                    try {
+                      dateInputRef.current?.showPicker?.();
+                    } catch (_) {
+                      dateInputRef.current?.focus();
+                    }
+                  }}
+                  className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5 cursor-pointer select-none"
+                >
                   <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
-                  Hạn hoàn thành:
+                  <span>Hạn hoàn thành:</span>
                 </label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full text-xs font-ui p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
-                />
-                {dueDate && (
-                  <p className="text-[11px] text-[#71717a] font-ui pt-0.5">
-                    Hiển thị chuẩn: <strong className="text-[#202020]">{formatDateWithEnDay(dueDate)}</strong>
-                  </p>
-                )}
+                <div
+                  onClick={() => {
+                    try {
+                      dateInputRef.current?.showPicker?.();
+                    } catch (_) {
+                      dateInputRef.current?.focus();
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    min={minDueDate}
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    onClick={(e) => {
+                      try {
+                        (e.target as any).showPicker?.();
+                      } catch (_) {}
+                    }}
+                    className="w-full text-xs font-ui p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020] cursor-pointer"
+                  />
+                  {dueDate && (
+                    <p className="text-[11px] text-[#71717a] font-ui pt-0.5 select-none hover:text-[#202020]">
+                      Hiển thị chuẩn: <strong className="text-[#202020]">{formatDateWithEnDay(dueDate)}</strong>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -1244,10 +1244,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               {/* Quick Add Form Box */}
               <QuickAddBar
                 projects={projects}
+                tasks={tasks}
                 members={members}
                 onAddTask={handleAddTask}
                 defaultProjectId={
-                  filterState.projectId !== 'all' ? filterState.projectId : projects[0]?.id
+                  filterState.projectId !== 'all' ? filterState.projectId : undefined
                 }
                 defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
               />

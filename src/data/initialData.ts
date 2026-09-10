@@ -379,6 +379,29 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     isStrategic: true,
     targetDate: '2026-11-05',
   },
+  {
+    id: 'proj-others',
+    name: 'Chưa xác định (Others)',
+    code: 'VNE-OTHERS',
+    description: 'Dự án mặc định dành cho các công việc phát sinh tự do chưa được phân loại vào dự án cụ thể.',
+    objective: 'Thu thập và phân loại các công việc nhanh, sự vụ phát sinh trong Ban Sản phẩm.',
+    productOwner: 'Ban Sản phẩm - Công nghệ',
+    startDate: '2026-01-01',
+    targetDate: '2026-12-31',
+    status: 'Đang triển khai',
+    isStrategic: false,
+    leadName: 'Ban Sản phẩm',
+    roles: {
+      pm: [],
+      designer: [],
+      seo: [],
+      data: [],
+    },
+    phases: [],
+    customLinks: [],
+    notes: [],
+    history: [],
+  },
 ];
 
 export const INITIAL_MEMBERS: MemberItem[] = [

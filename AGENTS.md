@@ -100,9 +100,17 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
 1. **Tự động ánh xạ Nhóm (No Team Selector)**: Bỏ hoàn toàn ô chọn Nhóm (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`). Nhóm chuyên môn (`team`) được hệ thống tự động suy ra dựa trên Nhân sự được chọn (`assignee`).
-2. **Hiển thị Ngày hạn đầy đủ (Full Date Formatting)**: Khi chọn hoặc nhập ngày hạn hoàn thành (`dueDate`), bắt buộc hiển thị xem trước thông tin đầy đủ dạng `(Sun, 02 Aug 2026)` sử dụng `formatDateWithEnDay(dueDate)`.
-3. **Mức độ Ưu tiên dạng Checkbox Khẩn cấp**: Không dùng dropdown nhiều lựa chọn mức ưu tiên. Chỉ dùng checkbox duy nhất `🚨 Khẩn cấp` (Checked = `'Khẩn cấp'`, Unchecked = `'Bình thường'`).
-4. **Thiết kế Nền & Khung trung tính (Clean & Neutral Styling)**:
+2. **Phân nhóm Dự án (2 Nhóm Dự án + Dự án Đặc biệt)**:
+   - **Nhóm 1 (Dự án tham gia)**: Các dự án mà nhân sự được giao việc (`assignee`) trực tiếp tham gia (theo vai trò PM, Designer, SEO, Data, Lead hoặc có công việc được giao). Nhóm này được sắp xếp ưu tiên theo **dự án có công việc được tạo gần nhất**.
+   - **Nhóm 2 (Dự án khác)**: Các dự án còn lại trong hệ thống, được sắp xếp theo **thứ tự bảng chữ cái Alphabet (A-Z)**.
+   - **Dự án đặc biệt "Chưa xác định (Others)"**: Luôn hiển thị ở vị trí **cuối cùng** của danh sách lựa chọn để gán cho các công việc phát sinh chưa kịp phân loại.
+3. **Quy chuẩn Thời hạn Hoàn thành (Due Date & Date Picker)**:
+   - **Mặc định**: Khởi tạo là ngày hiện tại (`today`).
+   - **Giới hạn chọn ngày lùi (Minimum Date Bound)**: Không cho phép chọn các ngày cũ hơn ngày hiện tại quá 7 ngày (`min = today - 7 days`), vừa linh hoạt chống quên vừa ngăn ngừa sai lệch dữ liệu quá khứ.
+   - **Tương tác mở Date Picker**: Bấm vào bất kỳ đâu trên ô ngày, nhãn văn bản ngày tháng `(Sun, 02 Aug 2026)` hay icon lịch đều lập tức bung mở trình chọn ngày Date Picker (sử dụng API native `showPicker()`), không bắt buộc người dùng phải click chuẩn xác vào biểu tượng lịch nhỏ.
+4. **Hiển thị Ngày hạn đầy đủ (Full Date Formatting)**: Khi chọn hoặc nhập ngày hạn hoàn thành (`dueDate`), bắt buộc hiển thị xem trước thông tin đầy đủ dạng `(Sun, 02 Aug 2026)` sử dụng `formatDateWithEnDay(dueDate)`.
+5. **Mức độ Ưu tiên dạng Checkbox Khẩn cấp**: Không dùng dropdown nhiều lựa chọn mức ưu tiên. Chỉ dùng checkbox duy nhất `🚨 Khẩn cấp` (Checked = `'Khẩn cấp'`, Unchecked = `'Bình thường'`).
+6. **Thiết kế Nền & Khung trung tính (Clean & Neutral Styling)**:
    - Toàn hệ thống không sử dụng các ô background màu quá nổi bật hoặc tương phản mạnh gây rác thị giác.
    - Sử dụng các khung chứa trung tính, phớt xám nhẹ (`bg-[#ffffff]`, `bg-[#f9f9f9]`, `border-[#e0e0e0]`).
 
@@ -199,6 +207,7 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
 | 15 | Work Management System (WMS) | VNE-WMS | Trần Huy Anh, Trần Duy Tùng | Hệ thống Quản lý Công việc & Tiến độ Dự án nội bộ Ban Sản phẩm - Công nghệ VnExpress. |
 | 16 | KPI System | VNE-KPI | Đặng Tiến Ngọc, Trần Duy Tùng | Hệ thống Đánh giá & Theo dõi Chỉ số Hiệu suất Công việc (KPI) cho cán bộ nhân viên. |
 | 17 | Cá nhân hoá (Personalization) | VNE-PERSONALIZE | Đặng Tiến Ngọc | Trình gợi ý bài viết thông minh (Recommendation Engine) cá nhân hóa trang chủ theo hành vi đọc. |
+| 18 | Chưa xác định (Others) | VNE-OTHERS | Toàn ban | Dự án mặc định dành cho các công việc phát sinh tự do chưa được phân loại vào dự án cụ thể. |
 
 ---
 
@@ -580,6 +589,9 @@ Tại danh sách dự án thuộc Left Sidebar:
 2. **Khi bấm `Tất cả (xx)`**:
    - Tiêu đề nhóm chuyển thành: **`Toàn bộ dự án`**.
    - Nút chuyển chế độ bên phải đổi thành: **`Chỉ đang triển khai`** để người dùng có thể quay lại chế độ xem gọn.
+3. **Quy tắc Sắp xếp Danh sách Dự án (Alphabetical Sorting & Others Pinning)**:
+   - Danh sách dự án (cả ở chế độ *Đang triển khai* và *Toàn bộ dự án*) luôn được **sắp xếp theo thứ tự bảng chữ cái Alphabet (A-Z)** theo chuẩn tiếng Việt.
+   - Dự án đặc biệt **"Chưa xác định (Others)"** luôn luôn được neo cố định ở **vị trí cuối cùng** của danh sách để người dùng tiện tra cứu và lọc các công việc phát sinh tự do.
 
 ---
 

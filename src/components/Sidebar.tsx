@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ActiveTab, ProjectItem, MemberItem, TeamType, TaskStatus, DueFilterType } from '../types';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
+import { sortProjectsAlphabetically, isOthersProject } from '../utils/projectSortingUtils';
 import {
   CheckSquare,
   FolderKanban,
@@ -113,10 +114,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const memberRelatedProjects = useMemo(() => {
     if (!currentMember) return projects;
-    return projects.filter((p) => {
+    const othersProj = projects.find(isOthersProject);
+    const related = projects.filter((p) => {
+      if (isOthersProject(p)) return false;
       const rel = getMemberProjectRelation(p, currentMember);
       return rel.isRelated;
     });
+    return othersProj ? [...related, othersProj] : related;
   }, [projects, currentMember]);
 
   const baseProjects = currentMember ? memberRelatedProjects : projects;
@@ -126,15 +130,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [baseProjects]);
 
   const displayedProjects = useMemo(() => {
+    let list: ProjectItem[] = [];
     if (showAllProjectsInSidebar) {
-      return baseProjects;
+      list = baseProjects;
+    } else {
+      const active = baseProjects.filter((p) => p.status === 'Đang triển khai');
+      if (selectedProjectId !== 'all' && !active.some((p) => p.id === selectedProjectId)) {
+        const selProj = baseProjects.find((p) => p.id === selectedProjectId);
+        if (selProj) active.push(selProj);
+      }
+      list = active;
     }
-    const active = baseProjects.filter((p) => p.status === 'Đang triển khai');
-    if (selectedProjectId !== 'all' && !active.some((p) => p.id === selectedProjectId)) {
-      const selProj = baseProjects.find((p) => p.id === selectedProjectId);
-      if (selProj) return [...active, selProj];
-    }
-    return active;
+    return sortProjectsAlphabetically(list);
   }, [baseProjects, showAllProjectsInSidebar, selectedProjectId]);
 
   // User activity persistence for collapse/expand

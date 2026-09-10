@@ -8,6 +8,7 @@ import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRo
 import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
+import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
 import {
   FolderKanban,
   History,
@@ -246,7 +247,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
   const completedCount = projects.filter((p) => p.status === 'Hoàn thành' || (p.status as string) === 'Đã hoàn thành').length;
 
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    const result = projects.filter((p) => {
       // 0. Personalization filter for Product members
       if (targetMemberForProjects && projectScope === 'my_projects') {
         const rel = getMemberProjectRelation(p, targetMemberForProjects, tasks);
@@ -331,6 +332,8 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
 
       return true;
     });
+
+    return sortProjectsAlphabetically(result);
   }, [projects, filterState, tasks, members, statusFilter, quickSearch, targetMemberForProjects, projectScope]);
 
   const formatPoDisplay = (rawPoString?: string) => {

@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ProjectItem, MemberItem, TeamType, PriorityLevel } from '../types';
+import { ProjectItem, MemberItem, TeamType, PriorityLevel, TaskItem } from '../types';
 import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
+import { getTodayDateString } from '../utils/dateUtils';
+import { getTaskCreationProjectGroups, isOthersProject } from '../utils/projectSortingUtils';
 
 interface QuickAddBarProps {
   projects: ProjectItem[];
+  tasks?: TaskItem[];
   members: MemberItem[];
   onAddTask: (task: {
     title: string;
@@ -31,6 +34,7 @@ interface QuickAddBarProps {
 
 export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   projects,
+  tasks = [],
   members,
   onAddTask,
   defaultProjectId,
@@ -38,10 +42,40 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 }) => {
   const productMembers = getProductMembers(members);
   const [title, setTitle] = useState('');
-  const [projectId, setProjectId] = useState<string>(defaultProjectId || (projects[0]?.id || 'proj-1'));
-  const [phaseId, setPhaseId] = useState<string>('');
   const [assignee, setAssignee] = useState(defaultAssignee || productMembers[0]?.name || 'Hệ thống');
-  const [dueDate, setDueDate] = useState('2026-09-08');
+
+  // Calculate project groups: Group 1 (Participated projects by latest task), Group 2 (Other projects A-Z), Others (Special)
+  const projectGroups = useMemo(() => {
+    return getTaskCreationProjectGroups(projects, assignee, members, tasks);
+  }, [projects, assignee, members, tasks]);
+
+  // Default projectId selection
+  const initialProjectId = useMemo(() => {
+    if (defaultProjectId && projects.some((p) => p.id === defaultProjectId)) {
+      return defaultProjectId;
+    }
+    return (
+      projectGroups.myProjects[0]?.id ||
+      projectGroups.otherProjects[0]?.id ||
+      projectGroups.unspecifiedProject?.id ||
+      projects[0]?.id ||
+      'proj-others'
+    );
+  }, [defaultProjectId, projects, projectGroups]);
+
+  const [projectId, setProjectId] = useState<string>(initialProjectId);
+  const [phaseId, setPhaseId] = useState<string>('');
+
+  // Date calculation: default is today, minimum is 7 days ago
+  const minDueDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return getTodayDateString(d);
+  }, []);
+
+  const [dueDate, setDueDate] = useState<string>(() => getTodayDateString());
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   const [isUrgent, setIsUrgent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -52,10 +86,22 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   }, [defaultAssignee]);
 
   useEffect(() => {
-    if (defaultProjectId) {
+    if (defaultProjectId && projects.some((p) => p.id === defaultProjectId)) {
       setProjectId(defaultProjectId);
     }
-  }, [defaultProjectId]);
+  }, [defaultProjectId, projects]);
+
+  // Sync projectId if current one becomes invalid
+  useEffect(() => {
+    if (!projectId || !projects.some((p) => p.id === projectId)) {
+      const fallbackId =
+        projectGroups.myProjects[0]?.id ||
+        projectGroups.otherProjects[0]?.id ||
+        projectGroups.unspecifiedProject?.id ||
+        projects[0]?.id;
+      if (fallbackId) setProjectId(fallbackId);
+    }
+  }, [projects, projectGroups, projectId]);
 
   const selectedProj = projects.find((p) => p.id === projectId);
   const availablePhases = selectedProj?.phases || [];
@@ -70,11 +116,19 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     }
   };
 
+  const handleTriggerDatePicker = () => {
+    try {
+      dateInputRef.current?.showPicker?.();
+    } catch (_) {
+      dateInputRef.current?.focus();
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const projName = selectedProj ? selectedProj.name : 'Dự án VnExpress Premium';
+    const projName = selectedProj ? selectedProj.name : 'Chưa xác định (Others)';
     const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
@@ -87,11 +141,12 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       phaseName: foundPhase ? foundPhase.name : undefined,
       team,
       assignee,
-      dueDate,
+      dueDate: dueDate || getTodayDateString(),
       priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
     });
 
     setTitle('');
+    setDueDate(getTodayDateString());
     setIsUrgent(false);
     setIsExpanded(false);
   };
@@ -140,26 +195,44 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
             >
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#f0f0f0] text-xs font-ui">
                 <div className="flex flex-wrap items-center gap-2">
-              {/* Project selector */}
+              {/* Project selector with 2 groups + Others at bottom */}
               <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                <Briefcase className="w-3.5 h-3.5 text-[#b13460]" />
+                <Briefcase className="w-3.5 h-3.5 text-[#b13460] shrink-0" />
                 <select
                   value={projectId}
                   onChange={(e) => handleProjectSelect(e.target.value)}
-                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
+                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[210px] truncate"
                 >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name.replace('Dự án ', '')}
-                    </option>
-                  ))}
+                  {projectGroups.myProjects.length > 0 && (
+                    <optgroup label="── Dự án tham gia ──">
+                      {projectGroups.myProjects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name.replace(/^Dự án\s+/i, '')}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label={projectGroups.myProjects.length > 0 ? "── Dự án khác ──" : "── Danh sách dự án ──"}>
+                    {projectGroups.otherProjects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name.replace(/^Dự án\s+/i, '')}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {projectGroups.unspecifiedProject && (
+                    <optgroup label="── Khác ──">
+                      <option value={projectGroups.unspecifiedProject.id}>
+                        {projectGroups.unspecifiedProject.name.replace(/^Dự án\s+/i, '')}
+                      </option>
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
               {/* Phase selector if available */}
               {availablePhases.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                  <Layers className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                  <Layers className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
                   <select
                     value={phaseId}
                     onChange={(e) => setPhaseId(e.target.value)}
@@ -177,7 +250,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
               {/* Assignee selector */}
               <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                <User className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                <User className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
                 <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
@@ -191,17 +264,32 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 </select>
               </div>
 
-              {/* Due date with full date label preview */}
-              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
+              {/* Due date with full date label preview & click anywhere to open date picker */}
+              <div
+                onClick={handleTriggerDatePicker}
+                className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0] cursor-pointer hover:bg-[#f4f4f5] transition-colors"
+                title="Bấm để chọn hạn hoàn thành"
+              >
+                <Calendar className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0 pointer-events-none" />
                 <input
+                  ref={dateInputRef}
                   type="date"
+                  min={minDueDate}
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      (e.target as any).showPicker?.();
+                    } catch (_) {}
+                  }}
                   className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
                 />
                 {dueDate && (
-                  <span className="text-[#52525b] text-xs font-ui font-medium">
+                  <span
+                    onClick={handleTriggerDatePicker}
+                    className="text-[#52525b] text-xs font-ui font-medium cursor-pointer shrink-0 select-none hover:text-[#202020]"
+                  >
                     ({formatDateWithEnDay(dueDate)})
                   </span>
                 )}
