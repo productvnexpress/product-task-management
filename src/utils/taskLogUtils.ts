@@ -8,9 +8,9 @@ import { formatDateWithEnDay } from './formatters';
 
 /**
  * Format timestamp into readable date & time conforming to RULE.md section 2.3
- * Example: "Thu, 03 Sep 2026 • 15:45"
+ * Example: "Fri, 20 Nov 2026 • 14:30"
  */
-export function formatLogTimestamp(isoString?: string, includeTime: boolean = false): string {
+export function formatLogTimestamp(isoString?: string, includeTime: boolean = true): string {
   if (!isoString) return '';
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return isoString;

@@ -47,7 +47,7 @@ Mỗi công việc trong hệ thống được định nghĩa đầy đủ theo 
 Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, đổi người nhận, cập nhật link kết quả...), hệ thống tự động sinh 1 bản ghi lịch sử:
 - `id`: Định danh bản ghi log.
 - `author`: Họ tên người thực hiện điều chỉnh (lấy từ tài khoản đang đăng nhập).
-- `timestamp`: Thời gian ghi nhận (`YYYY-MM-DD HH:mm`).
+- `timestamp`: Thời gian ghi nhận (ISO timestamp, hiển thị chuẩn giao diện gồm cả ngày và giờ phút dạng `Fri, 20 Nov 2026 • 14:30`).
 - `action`: Hành động ngắn gọn (Tạo mới, Đổi trạng thái, Đổi hạn, Thêm ghi chú...).
 - `details`: Chi tiết thay đổi (Giá trị cũ ➔ Giá trị mới).
 

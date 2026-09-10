@@ -2127,7 +2127,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 <div className="space-y-2.5">
                   {notes.map((note) => {
                     const formattedDate = note.createdAt
-                      ? formatDateWithEnDay(note.createdAt)
+                      ? formatDateWithEnDay(note.createdAt, true)
                       : 'Hôm nay';
                     const authorInitial = note.author ? note.author.charAt(note.author.lastIndexOf(' ') + 1 || 0) : 'N';
 

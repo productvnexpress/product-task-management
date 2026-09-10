@@ -6,7 +6,7 @@
 import { ProjectItem, ProjectHistoryLog, ProjectHistoryChange, ProjectPhase } from '../types';
 import { formatDateWithEnDay } from './formatters';
 
-export function formatProjectLogTimestamp(isoString?: string, includeTime: boolean = false): string {
+export function formatProjectLogTimestamp(isoString?: string, includeTime: boolean = true): string {
   if (!isoString) return '';
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return isoString;

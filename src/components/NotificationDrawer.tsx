@@ -48,7 +48,7 @@ function formatNotificationTime(isoStr: string): string {
       const m = String(date.getMinutes()).padStart(2, '0');
       return `Hôm qua, ${h}:${m}`;
     }
-    return formatDateWithEnDay(date);
+    return formatDateWithEnDay(date, true);
   } catch (e) {
     return isoStr;
   }

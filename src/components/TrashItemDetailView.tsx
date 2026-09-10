@@ -232,7 +232,7 @@ export const TrashItemDetailView: React.FC<TrashItemDetailViewProps> = ({ item }
                       >
                         <div className="flex items-center justify-between text-[11px] text-[#71717a]">
                           <span className="font-bold text-[#202020]">{log?.author || 'Hệ thống'}</span>
-                          <span>{log?.timestamp || ''}</span>
+                          <span>{formatDateWithEnDay(log?.timestamp, true)}</span>
                         </div>
                         <p className="font-medium text-[#202020]">{log?.action || ''}</p>
                         {Array.isArray(log?.changes) && log.changes.length > 0 && (
