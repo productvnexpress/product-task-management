@@ -567,23 +567,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
                     }`}
                   >
-                    <span className="truncate pr-1" title={p.name}>
-                      {p.name.replace(/^Dự án\s+/i, '')}
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                    <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                      <span className="truncate" title={p.name}>
+                        {p.name.replace(/^Dự án\s+/i, '')}
+                      </span>
                       {p.isStrategic && (
-                        <span className="text-[#d97706] text-[11px] leading-none" title="Dự án chiến lược">
+                        <span className="text-[#d97706] text-[11px] leading-none shrink-0" title="Dự án chiến lược">
                           ⭐
                         </span>
                       )}
-                      <span
-                        className={`font-num text-[10px] px-1.5 py-0.2 rounded-full ${
-                          isSel ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
-                        }`}
-                      >
-                        {count}
-                      </span>
                     </div>
+                    <span
+                      className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                        isSel ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                      }`}
+                    >
+                      {count}
+                    </span>
                   </button>
                 );
               })}

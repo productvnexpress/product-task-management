@@ -406,6 +406,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setProductOwner(updated);
     }
     setPoSearchQuery('');
+    setIsPoDropdownOpen(false);
   };
 
   const handleRemovePo = (nameToRemove: string) => {
