@@ -50,7 +50,7 @@ import {
   Filter,
   Sparkles,
 } from 'lucide-react';
-import { formatDateShort, formatMemberWithPhone } from '../utils/formatters';
+import { formatDateShort, formatMemberWithPhone, formatProductMemberWithPhone } from '../utils/formatters';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
 
@@ -624,7 +624,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                             <span>Product Manager:</span>
                           </div>
                           <div className="text-[#202020] font-medium pl-4">
-                            {proj.roles.pm.map((r) => formatMemberWithPhone(r, members)).join(', ')}
+                            {proj.roles.pm.map((r) => formatProductMemberWithPhone(r, members)).join(', ')}
                           </div>
                         </div>
                       )}
@@ -637,7 +637,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                             <span>UX/UI Designer:</span>
                           </div>
                           <div className="text-[#202020] font-medium pl-4">
-                            {proj.roles.designer.map((r) => formatMemberWithPhone(r, members)).join(', ')}
+                            {proj.roles.designer.map((r) => formatProductMemberWithPhone(r, members)).join(', ')}
                           </div>
                         </div>
                       )}
@@ -650,7 +650,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                             <span>SEO Specialist:</span>
                           </div>
                           <div className="text-[#202020] font-medium pl-4">
-                            {proj.roles.seo.map((r) => formatMemberWithPhone(r, members)).join(', ')}
+                            {proj.roles.seo.map((r) => formatProductMemberWithPhone(r, members)).join(', ')}
                           </div>
                         </div>
                       )}
@@ -663,14 +663,20 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                             <span>Data Specialist:</span>
                           </div>
                           <div className="text-[#202020] font-medium pl-4">
-                            {proj.roles.data.map((r) => formatMemberWithPhone(r, members)).join(', ')}
+                            {proj.roles.data.map((r) => formatProductMemberWithPhone(r, members)).join(', ')}
                           </div>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div className="text-xs text-[#5f5f5f] bg-[#fafafa] p-2 rounded-[4px] border border-[#f0f0f0]">
-                      <strong>Phụ trách chung:</strong> {proj.leadName || 'Chưa phân công'}
+                      <strong>Phụ trách chung:</strong>{' '}
+                      {proj.leadName
+                        ? proj.leadName
+                            .split(',')
+                            .map((name) => formatProductMemberWithPhone(name.trim(), members))
+                            .join(', ')
+                        : 'Chưa phân công'}
                     </div>
                   )}
                 </div>

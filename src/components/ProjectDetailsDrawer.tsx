@@ -50,7 +50,7 @@ import {
   Send,
   History,
 } from 'lucide-react';
-import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
+import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
 import { ProjectTimelineView } from './ProjectTimelineView';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
@@ -1544,7 +1544,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                                 : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
                             }`}
                           >
-                            {isSelected ? '✓ ' : '+ '}{formatMemberWithPhone(m)}
+                            {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
                           </button>
                         );
                       })}
@@ -1554,7 +1554,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       {pmMembers.length > 0 ? (
                         pmMembers.map((name) => (
                           <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4]">
-                            {formatMemberWithPhone(name, members)}
+                            {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
@@ -1585,7 +1585,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                                 : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
                             }`}
                           >
-                            {isSelected ? '✓ ' : '+ '}{formatMemberWithPhone(m)}
+                            {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
                           </button>
                         );
                       })}
@@ -1595,7 +1595,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       {designerMembers.length > 0 ? (
                         designerMembers.map((name) => (
                           <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fcf5e8] text-[#b26b00] border border-[#f5dbb0]">
-                            {formatMemberWithPhone(name, members)}
+                            {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
@@ -1626,7 +1626,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                                 : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
                             }`}
                           >
-                            {isSelected ? '✓ ' : '+ '}{formatMemberWithPhone(m)}
+                            {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
                           </button>
                         );
                       })}
@@ -1636,7 +1636,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       {seoMembers.length > 0 ? (
                         seoMembers.map((name) => (
                           <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#e2f6e9] text-[#24a148] border border-[#b8e8c4]">
-                            {formatMemberWithPhone(name, members)}
+                            {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
@@ -1667,7 +1667,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                                 : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
                             }`}
                           >
-                            {isSelected ? '✓ ' : '+ '}{formatMemberWithPhone(m)}
+                            {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
                           </button>
                         );
                       })}
@@ -1677,7 +1677,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       {dataMembers.length > 0 ? (
                         dataMembers.map((name) => (
                           <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#eef4fb] text-[#1d508d] border border-[#c2d7f0]">
-                            {formatMemberWithPhone(name, members)}
+                            {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (

@@ -207,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-72 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col h-screen sticky top-0 shrink-0 select-none shadow-xs">
+    <aside className="w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col h-screen sticky top-0 shrink-0 select-none shadow-xs">
       {/* Brand & App Title Header */}
       <div className="p-6 border-b border-[#f0f0f0] space-y-3">
         <div className="flex items-center justify-between">
@@ -567,17 +567,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
                     }`}
                   >
-                    <span className="truncate pr-1 flex items-center gap-1">
-                      {p.isStrategic && <span className="text-[#d97706] shrink-0 text-[11px]" title="Dự án chiến lược">⭐</span>}
-                      <span>{p.name.replace('Dự án ', '')}</span>
+                    <span className="truncate pr-1" title={p.name}>
+                      {p.name.replace(/^Dự án\s+/i, '')}
                     </span>
-                    <span
-                      className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                        isSel ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
-                      }`}
-                    >
-                      {count}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                      {p.isStrategic && (
+                        <span className="text-[#d97706] text-[11px] leading-none" title="Dự án chiến lược">
+                          ⭐
+                        </span>
+                      )}
+                      <span
+                        className={`font-num text-[10px] px-1.5 py-0.2 rounded-full ${
+                          isSel ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </div>
                   </button>
                 );
               })}

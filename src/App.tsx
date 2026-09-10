@@ -998,7 +998,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     return activeProductMember || (filterState.assignee !== 'Tất cả' ? members.find((m) => m.name === filterState.assignee) : null);
   }, [activeProductMember, filterState.assignee, members]);
 
-  // Task counts by project for sidebar badges (dynamically filtered by selected member)
+  // Task counts by project for sidebar badges (dynamically filtered by selected member / scope)
   const taskCountsByProject = useMemo(() => {
     const counts: Record<string, number> = {};
     projects.forEach((p) => {
@@ -1006,33 +1006,71 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         const matchesProj = t.projectId === p.id || t.projectName === p.name;
         if (!matchesProj || t.status === 'Hoàn thành') return false;
 
-        if (targetMemberForCounts && filterState.assignee !== 'Tất cả') {
+        if (activeProductMember) {
+          if (taskPersonalScope === 'my_tasks') {
+            return isTaskForMember(t, activeProductMember);
+          }
+        } else if (targetMemberForCounts && filterState.assignee !== 'Tất cả') {
           return isTaskForMember(t, targetMemberForCounts);
         }
         return true;
       }).length;
     });
     return counts;
-  }, [tasks, projects, targetMemberForCounts, filterState.assignee]);
+  }, [tasks, projects, activeProductMember, taskPersonalScope, targetMemberForCounts, filterState.assignee]);
 
-  // Today and Overdue counts for filters (dynamically filtered by selected member)
-  const todayCount = useMemo(() => {
+  // Scoped tasks for due date calculations & reminder panel (respecting active scope and filters, excluding dueFilter itself)
+  const scopedTasksForDue = useMemo(() => {
     return tasks.filter((t) => {
-      if (targetMemberForCounts && filterState.assignee !== 'Tất cả') {
-        if (!isTaskForMember(t, targetMemberForCounts)) return false;
+      // 0. Account Personalization Scope
+      if (activeProductMember) {
+        if (taskPersonalScope === 'my_tasks') {
+          if (!isTaskForMember(t, activeProductMember)) {
+            return false;
+          }
+        } else if (taskPersonalScope === 'my_projects_tasks') {
+          if (!isTaskInMemberProjects(t, activeProductMember, projects)) {
+            return false;
+          }
+        }
       }
-      return isTaskDueToday(t);
-    }).length;
-  }, [tasks, targetMemberForCounts, filterState.assignee]);
+
+      // 1. Project Filter
+      if (
+        filterState.projectId !== 'all' &&
+        t.projectId !== filterState.projectId &&
+        t.projectName !== projects.find((p) => p.id === filterState.projectId)?.name
+      ) {
+        return false;
+      }
+
+      // 2. Team Filter
+      if (filterState.team !== 'Tất cả' && t.team !== filterState.team) {
+        return false;
+      }
+
+      // 3. Assignee / Member Filter
+      if (
+        filterState.assignee &&
+        filterState.assignee !== 'Tất cả' &&
+        taskPersonalScope !== 'my_projects_tasks' &&
+        t.assignee !== filterState.assignee
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [tasks, activeProductMember, taskPersonalScope, projects, filterState.projectId, filterState.team, filterState.assignee]);
+
+  // Today and Overdue counts for filters (dynamically scoped)
+  const todayCount = useMemo(() => {
+    return scopedTasksForDue.filter((t) => isTaskDueToday(t)).length;
+  }, [scopedTasksForDue]);
 
   const overdueCount = useMemo(() => {
-    return tasks.filter((t) => {
-      if (targetMemberForCounts && filterState.assignee !== 'Tất cả') {
-        if (!isTaskForMember(t, targetMemberForCounts)) return false;
-      }
-      return isTaskOverdue(t);
-    }).length;
-  }, [tasks, targetMemberForCounts, filterState.assignee]);
+    return scopedTasksForDue.filter((t) => isTaskOverdue(t)).length;
+  }, [scopedTasksForDue]);
 
   const activeTabTitles: Record<ActiveTab, string> = {
     tasks: 'Công việc',
@@ -1232,7 +1270,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
               {/* Reminder & Urge Control Panel */}
               <ReminderPanel
-                tasks={tasks}
+                tasks={scopedTasksForDue}
                 activeDueFilter={filterState.dueFilter}
                 onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
                 onSelectTask={(task) => {

@@ -161,25 +161,29 @@ export function formatMemberNameOnly(
  */
 export function formatMemberWithPhone(
   nameOrMember: { name: string; salutation?: string; ipPhone?: string } | string | undefined | null,
-  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string }>
+  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string }>,
+  includeSalutation: boolean = true
 ): string {
   if (!nameOrMember) return '';
 
   if (typeof nameOrMember === 'object') {
-    const prefix = nameOrMember.salutation ? `${nameOrMember.salutation} ` : '';
+    const cleanName = (nameOrMember.name || '').replace(/^(Anh|Chị)\s+/i, '').trim();
+    const prefix = includeSalutation && nameOrMember.salutation ? `${nameOrMember.salutation} ` : '';
     const phone = nameOrMember.ipPhone ? ` - ${nameOrMember.ipPhone}` : '';
-    return `${prefix}${nameOrMember.name}${phone}`;
+    return `${prefix}${cleanName}${phone}`;
   }
 
   const raw = nameOrMember.trim();
   if (!raw) return '';
 
-  // If phone is already included in raw (e.g. "Anh Bùi Văn Đông - 4509"), return it
+  // If phone is already included in raw (e.g. "Anh Bùi Văn Đông - 4509"), return it (cleaned if includeSalutation is false)
   if (/ - \d{3,5}$/.test(raw)) {
-    return raw;
+    return includeSalutation ? raw : raw.replace(/^(Anh|Chị)\s+/i, '');
   }
 
-  if (!membersList || membersList.length === 0) return raw;
+  if (!membersList || membersList.length === 0) {
+    return includeSalutation ? raw : raw.replace(/^(Anh|Chị)\s+/i, '');
+  }
 
   // Search for the member in the list
   const matched = membersList.find(
@@ -190,13 +194,27 @@ export function formatMemberWithPhone(
       raw.endsWith(m.name)
   );
 
+  const cleanName = (matched?.name || raw).replace(/^(Anh|Chị)\s+/i, '').trim();
+
   if (matched) {
-    const prefix = matched.salutation && !raw.startsWith(matched.salutation) ? `${matched.salutation} ` : (!matched.salutation ? '' : '');
+    const prefix = includeSalutation && matched.salutation ? `${matched.salutation} ` : '';
     const phone = matched.ipPhone ? ` - ${matched.ipPhone}` : '';
-    return `${prefix}${raw}${phone}`;
+    return `${prefix}${cleanName}${phone}`;
   }
 
-  return raw;
+  return includeSalutation ? raw : cleanName;
+}
+
+/**
+ * Format a Product member for project views (ProjectsManager, ProjectDetailsDrawer):
+ * Removes salutation prefix ("Anh", "Chị") for Product members,
+ * keeping "Tên - Phone" (or just "Tên" if phone not available).
+ */
+export function formatProductMemberWithPhone(
+  nameOrMember: { name: string; salutation?: string; ipPhone?: string } | string | undefined | null,
+  membersList?: Array<{ name: string; salutation?: string; ipPhone?: string }>
+): string {
+  return formatMemberWithPhone(nameOrMember, membersList, false);
 }
 
 /**

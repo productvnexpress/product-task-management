@@ -592,6 +592,14 @@ Tại danh sách dự án thuộc Left Sidebar:
 3. **Quy tắc Sắp xếp Danh sách Dự án (Alphabetical Sorting & Others Pinning)**:
    - Danh sách dự án (cả ở chế độ *Đang triển khai* và *Toàn bộ dự án*) luôn được **sắp xếp theo thứ tự bảng chữ cái Alphabet (A-Z)** theo chuẩn tiếng Việt.
    - Dự án đặc biệt **"Chưa xác định (Others)"** luôn luôn được neo cố định ở **vị trí cuối cùng** của danh sách để người dùng tiện tra cứu và lọc các công việc phát sinh tự do.
+4. **Quy chuẩn Kích thước & Vị trí Icon Sao ⭐ (Sidebar Width & Star Position)**:
+   - Chiều rộng của Left Sidebar được tối ưu thành `w-80` (320px) để đảm bảo không gian hiển thị rộng rãi, tránh cắt cụt các tên dự án dài.
+   - Biểu tượng sao ⭐ của **Dự án chiến lược** được chuyển sang **bên phải** (sau tên dự án, trước badge số lượng công việc) để giữ trục đọc dọc (reading axis) thẳng hàng tuyệt đối.
+5. **Bỏ tiền tố Xưng hô cho Nhân sự Product**:
+   - Trong trang Dự án (`ProjectsManager`) và Chi tiết dự án (`ProjectDetailsDrawer`), các chức danh Product (PM, UX/UI Designer, SEO, Data, Lead) không kèm tiền tố danh xưng ("Anh", "Chị"), hiển thị dạng `"Họ và Tên - IP Phone"`.
+   - Nhóm Stakeholder / Product Owner vẫn giữ nguyên tiền tố xưng hô.
+6. **Đồng bộ Lọc Thời gian theo Góc nhìn Phân vai**:
+   - Các bộ đếm Quá hạn, Đến hạn hôm nay và danh sách công việc trên thanh `ReminderPanel` luôn tự động đồng bộ theo phạm vi góc nhìn đang chọn (`Của tôi`, `Dự án của tôi`, hoặc các điều kiện lọc Dự án / Thành viên đang kích hoạt).
 
 ---
 
