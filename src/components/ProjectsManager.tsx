@@ -8,7 +8,7 @@ import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRo
 import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
-import { sortProjectsAlphabetically, normalizeProjectStatus, isProjectNew } from '../utils/projectSortingUtils';
+import { sortProjectsAlphabetically, normalizeProjectStatus } from '../utils/projectSortingUtils';
 import {
   FolderKanban,
   History,
@@ -544,14 +544,6 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                         </span>
                       )}
                       <span>{proj.name}</span>
-                      {isProjectNew(proj) && (
-                        <span
-                          className="px-1.5 py-0.5 rounded-[3px] text-[9px] font-ui font-extrabold bg-[#ef4444] text-white leading-none shrink-0 shadow-2xs tracking-wider uppercase"
-                          title="Dự án mới tạo trong 7 ngày"
-                        >
-                          NEW
-                        </span>
-                      )}
                       <PanelRight className="w-4 h-4 text-[#b13460] opacity-0 group-hover:opacity-100 transition-opacity" />
                     </h3>
 
