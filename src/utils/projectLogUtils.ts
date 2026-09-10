@@ -6,11 +6,11 @@
 import { ProjectItem, ProjectHistoryLog, ProjectHistoryChange, ProjectPhase } from '../types';
 import { formatDateWithEnDay } from './formatters';
 
-export function formatProjectLogTimestamp(isoString?: string): string {
+export function formatProjectLogTimestamp(isoString?: string, includeTime: boolean = false): string {
   if (!isoString) return '';
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return isoString;
-  return formatDateWithEnDay(date, true);
+  return formatDateWithEnDay(date, includeTime);
 }
 
 /**
@@ -27,8 +27,8 @@ export function createProjectInitialLog(project: ProjectItem, authorName?: strin
       { field: 'Tên dự án', newValue: project.name },
       { field: 'Mã dự án', newValue: project.code },
       { field: 'Trạng thái', newValue: project.status },
-      { field: 'Ngày bắt đầu', newValue: project.startDate || '2026-09-01' },
-      { field: 'Hạn hoàn thành', newValue: project.targetDate },
+      { field: 'Ngày bắt đầu', newValue: formatDateWithEnDay(project.startDate || '2026-09-01') },
+      { field: 'Hạn hoàn thành', newValue: formatDateWithEnDay(project.targetDate) },
       ...(project.productOwner ? [{ field: 'Product Owner', newValue: project.productOwner }] : []),
     ],
     note: 'Khởi tạo hồ sơ dự án theo kế hoạch Ban Sản phẩm công nghệ VnExpress 2026.',
@@ -73,16 +73,16 @@ export function recordProjectOverviewChanges(
   if (oldProject.startDate !== updatedProject.startDate) {
     changes.push({
       field: 'Ngày bắt đầu',
-      oldValue: oldProject.startDate || 'Chưa đặt',
-      newValue: updatedProject.startDate || 'Chưa đặt',
+      oldValue: oldProject.startDate ? formatDateWithEnDay(oldProject.startDate) : 'Chưa đặt',
+      newValue: updatedProject.startDate ? formatDateWithEnDay(updatedProject.startDate) : 'Chưa đặt',
     });
   }
 
   if (oldProject.targetDate !== updatedProject.targetDate) {
     changes.push({
       field: 'Hạn hoàn thành',
-      oldValue: oldProject.targetDate,
-      newValue: updatedProject.targetDate,
+      oldValue: oldProject.targetDate ? formatDateWithEnDay(oldProject.targetDate) : 'Chưa đặt',
+      newValue: updatedProject.targetDate ? formatDateWithEnDay(updatedProject.targetDate) : 'Chưa đặt',
     });
   }
 
@@ -177,8 +177,8 @@ export function recordPhaseUpdateLog(
   if (oldPhase.dueDate !== newPhase.dueDate) {
     changes.push({
       field: 'Hạn hoàn thành giai đoạn',
-      oldValue: oldPhase.dueDate,
-      newValue: newPhase.dueDate,
+      oldValue: oldPhase.dueDate ? formatDateWithEnDay(oldPhase.dueDate) : 'Chưa đặt',
+      newValue: newPhase.dueDate ? formatDateWithEnDay(newPhase.dueDate) : 'Chưa đặt',
     });
   }
 

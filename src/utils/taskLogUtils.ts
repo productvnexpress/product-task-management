@@ -10,11 +10,11 @@ import { formatDateWithEnDay } from './formatters';
  * Format timestamp into readable date & time conforming to RULE.md section 2.3
  * Example: "Thu, 03 Sep 2026 • 15:45"
  */
-export function formatLogTimestamp(isoString?: string): string {
+export function formatLogTimestamp(isoString?: string, includeTime: boolean = false): string {
   if (!isoString) return '';
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return isoString;
-  return formatDateWithEnDay(date, true);
+  return formatDateWithEnDay(date, includeTime);
 }
 
 /**

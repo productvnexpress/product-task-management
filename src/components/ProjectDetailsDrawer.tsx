@@ -460,7 +460,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       action: `Thêm giai đoạn mới: ${newlyAdded.name}`,
       changes: [
         { field: 'Tên giai đoạn', newValue: newlyAdded.name },
-        { field: 'Hạn hoàn thành', newValue: newlyAdded.dueDate },
+        { field: 'Hạn hoàn thành', newValue: formatDateWithEnDay(newlyAdded.dueDate) },
         { field: 'Trạng thái', newValue: newlyAdded.status },
         ...(newlyAdded.description ? [{ field: 'Mô tả', newValue: newlyAdded.description }] : []),
       ],
@@ -1214,7 +1214,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                 <div className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0]">
                   <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Bắt đầu</span>
-                  <span className="font-num text-xs font-semibold text-[#202020] flex items-center gap-1">
+                  <span className="font-ui text-xs font-semibold text-[#202020] flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-[#1d508d]" />
                     {formatDateShort(startDate)}
                   </span>
@@ -1222,7 +1222,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                 <div className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0]">
                   <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Hoàn thành</span>
-                  <span className="font-num text-xs font-bold text-[#b13460] flex items-center gap-1">
+                  <span className="font-ui text-xs font-bold text-[#b13460] flex items-center gap-1">
                     <Target className="w-3.5 h-3.5 text-[#b13460]" />
                     {formatDateShort(targetDate)}
                   </span>
@@ -2142,7 +2142,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             <span className="font-ui text-xs font-bold text-[#202020] truncate">
                               {note.author}
                             </span>
-                            <span className="text-[11px] text-[#808080] font-num shrink-0">
+                            <span className="text-[11px] text-[#808080] font-ui shrink-0">
                               • {formattedDate}
                             </span>
                           </div>

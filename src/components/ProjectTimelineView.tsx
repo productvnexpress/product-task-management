@@ -154,7 +154,7 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
           <div className="flex items-center gap-2 font-semibold text-[#0f172a]">
             <span>🚀 Khởi động Dự án</span>
           </div>
-          <span className="font-num text-[#1d508d] font-bold text-[11px] bg-white px-2 py-0.5 rounded border border-[#cbd5e1]">
+          <span className="font-ui text-[#1d508d] font-bold text-[11px] bg-white px-2 py-0.5 rounded border border-[#cbd5e1]">
             {formatDateShort(project.startDate || '2026-09-01')}
           </span>
         </div>

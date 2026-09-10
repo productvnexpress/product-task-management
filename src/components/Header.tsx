@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { formatFullDateTime, getInitials } from '../utils/formatters';
+import { formatDateWithEnDay, getInitials } from '../utils/formatters';
 import { getTeamColor } from '../utils/colors';
 import { Plus, User, KeyRound, LogOut, ChevronDown, Bell } from 'lucide-react';
 import { MemberItem, TaskItem, ProjectItem, ActiveTab, TeamType, TaskPersonalScope } from '../types';
@@ -103,8 +103,8 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             )}
           </div>
-          <p className="font-num text-xs text-[#7f7f7f]">
-            {formatFullDateTime(currentDate)}
+          <p className="font-ui text-xs text-[#7f7f7f]">
+            {formatDateWithEnDay(currentDate)}
           </p>
         </div>
 

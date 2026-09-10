@@ -254,7 +254,7 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
                         </span>
                       </div>
 
-                      <span className="text-[11px] font-num text-[#64748b] flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] font-ui text-[#64748b] flex items-center gap-1 shrink-0">
                         <Clock className="w-3 h-3 text-[#94a3b8]" />
                         {formatProjectLogTimestamp(log.timestamp)}
                       </span>

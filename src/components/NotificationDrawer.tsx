@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Trash2,
 } from 'lucide-react';
+import { formatDateWithEnDay } from '../utils/formatters';
 import { NotificationItem, NotificationType, MemberItem } from '../types';
 
 interface NotificationDrawerProps {
@@ -47,11 +48,7 @@ function formatNotificationTime(isoStr: string): string {
       const m = String(date.getMinutes()).padStart(2, '0');
       return `Hôm qua, ${h}:${m}`;
     }
-    const d = String(date.getDate()).padStart(2, '0');
-    const mo = String(date.getMonth() + 1).padStart(2, '0');
-    const h = String(date.getHours()).padStart(2, '0');
-    const m = String(date.getMinutes()).padStart(2, '0');
-    return `${d}/${mo} ${h}:${m}`;
+    return formatDateWithEnDay(date);
   } catch (e) {
     return isoStr;
   }
@@ -260,7 +257,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                             <span className="truncate">{n.projectName.replace('Dự án ', '')}</span>
                           </span>
 
-                          <span className="text-[10px] font-ui text-[#94a3b8] shrink-0 font-num">
+                          <span className="text-[10px] font-ui text-[#94a3b8] shrink-0">
                             {formatNotificationTime(n.createdAt)}
                           </span>
                         </div>

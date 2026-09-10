@@ -715,7 +715,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                           <div className="absolute -left-[17px] w-3 h-3 rounded-full bg-[#963861] border-2 border-white ring-1 ring-[#f4c2d7] shrink-0" />
                           <span className="font-bold text-[#5f5f5f]">Bắt đầu:</span>
                         </div>
-                        <div className="w-28 shrink-0 font-ui text-[11px] text-[#5f5f5f]">
+                        <div className="w-32 shrink-0 font-ui text-[11px] text-[#5f5f5f]">
                           {formatDateShort(proj.startDate || '2026-09-01')}
                         </div>
                         <div className="w-32 shrink-0 flex items-center">
@@ -748,7 +748,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                                 </span>
                               </div>
 
-                              <div className="w-28 shrink-0 font-ui text-[11px] text-[#5f5f5f]">
+                              <div className="w-32 shrink-0 font-ui text-[11px] text-[#5f5f5f]">
                                 {formatDateShort(ph.dueDate)}
                               </div>
 
@@ -780,7 +780,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                           <span className="font-bold text-[#b13460]">Mốc ra mắt:</span>
                         </div>
 
-                        <div className="w-28 shrink-0 font-ui font-bold text-[11px] text-[#202020]">
+                        <div className="w-32 shrink-0 font-ui font-bold text-[11px] text-[#202020]">
                           {formatDateShort(proj.targetDate)}
                         </div>
 

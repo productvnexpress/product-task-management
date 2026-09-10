@@ -194,8 +194,8 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
                   >
                     <div className="flex items-center justify-between text-[#7f7f7f] mb-1">
                       <span className="font-ui font-bold text-[#5f5f5f]">{log.author}</span>
-                      <span className="font-num text-[11px]">
-                        {formatDateWithEnDay(log.timestamp, true)}
+                      <span className="font-ui text-[11px] text-[#7f7f7f]">
+                        {formatDateWithEnDay(log.timestamp)}
                       </span>
                     </div>
                     <p className="text-[#202020]">{log.note}</p>
