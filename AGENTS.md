@@ -59,6 +59,9 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 5. **Đánh dấu Hoàn thành (Quick Toggle)**:
    - Khi bấm checkbox hoàn thành: Trạng thái chuyển thành `'Hoàn thành'`, `progress` chuyển thành `100%`.
    - Khi bỏ chọn hoàn thành: Trạng thái chuyển về `'Chưa làm'` hoặc `'Đang làm'`, `progress` giữ theo giá trị trước đó (hoặc mặc định `0%`/`50%`).
+6. **Bắt buộc nhập Link hoàn thành khi chuyển trạng thái Hoàn thành**:
+   - Khi bấm checkbox hoàn thành hoặc chuyển dropdown sang `'Hoàn thành'`: Nếu công việc chưa có link kết quả (`resultLink`), hệ thống bắt buộc mở modal `CompleteTaskModal` yêu cầu nhập Link hoàn thành (Figma, PRD, Báo cáo, Code, Staging...). Cho phép bấm nhanh "Dùng link làm việc" nếu công việc đã có sẵn `workLink`.
+   - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` khi trạng thái là `'Hoàn thành'`. Không cho phép lưu nếu trường này bị bỏ trống.
 
 ### 1.4. Giao diện Chi tiết Công việc (TaskDetailDrawer)
 - Giao diện dạng **Right Sidebar Drawer** trượt từ bên phải sang (chiều rộng tối ưu ~500-550px).
@@ -73,8 +76,8 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - **Phụ trách**: Dropdown chọn người phụ trách (chỉ hiển thị họ tên, không kèm IP Phone).
      - **Hạn hoàn thành**: Chọn ngày hạn kèm dòng xem trước định dạng chuẩn (ví dụ: `"Sun, 02 Aug 2026"`, `"Sun, 02 Aug 2026 • 14:30"`, `Hôm qua (Sun, 02 Aug 2026)`).
      - **Ưu tiên = Khẩn cấp**: Dạng Checkbox, tick chọn để đánh dấu công việc Khẩn cấp.
-     - **Ghi chú**: Khối lưu thông tin cập nhật gồm **Người cập nhật** (Dropdown thành viên) và **Nội dung** (Ô nhập lý do/ghi chú).
-  2. **Tab `Lịch sử`**: Dòng thời gian tự động hiển thị đầy đủ lịch sử thay đổi (Audit Log): Ai đã sửa gì, lúc nào, nội dung ghi chú.
+     - **Ghi chú**: Khối lưu thông tin cập nhật gồm **Người cập nhật** (Cố định là tài khoản đang đăng nhập, hiển thị dạng read-only, tuyệt đối không cho phép chọn người khác) và **Nội dung** (Ô nhập lý do/ghi chú).
+  2. **Tab `Lịch sử`**: Dòng thời gian tự động hiển thị đầy đủ lịch sử thay đổi (Audit Log): Ai đã sửa gì, lúc nào, nội dung ghi chú. Khu vực "Thêm nhật ký tiến độ / Ghi chú mới" cũng cố định người ghi là tài khoản đang đăng nhập, không có dropdown chọn người khác.
 - **Nút bấm tác vụ Footer**:
   - Nút **`Xoá`** (màu đỏ, icon `Trash2`) thay cho tên gọi cũ "Xóa việc".
   - Nút **`Đóng`** và **`Lưu thay đổi`**.
@@ -125,24 +128,59 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 
 ### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Task Đến hạn Trong Ngày (Daily Due Tasks Accountability Specification)
 1. **Quy tắc Nghiệp vụ**: Kiểm tra và cảnh báo đối với các nhân sự **chưa có công việc nào đến hạn ngày hôm nay (`dueDate === today`)**, nhằm bảo đảm mọi thành viên đều có kế hoạch hành động cụ thể trong ngày làm việc.
+   - **Quy tắc miễn trừ khi Nghỉ phép**: Nhân sự có lịch nghỉ phép đã được duyệt bao trùm ngày hôm nay (`startDate <= today && today <= endDate`) sẽ **tự động được miễn trừ** khỏi danh sách cảnh báo cần nhập task hôm nay (`missingMembers`).
 2. **Phân quyền Hiển thị Cảnh báo theo Cấp bậc (RBAC Scoped Alert)**:
    - **Admin (Quản trị viên)**: Hiển thị cảnh báo **tổng thể toàn bộ phận Sản phẩm** (PM, Designer, SEO, Data). Giúp Trưởng ban bao quát toàn diện tình trạng lên kế hoạch ngày của cả bộ phận.
    - **Manager (Quản lý sản phẩm PM)**: Hiển thị cảnh báo **toàn bộ nhân sự được khai báo chính thức trong các dự án phụ trách** (`roles.pm`, `roles.designer`, `roles.seo`, `roles.data`, `leadName`).
      - *Quy tắc phạm vi*: Chỉ tính nhân sự được khai báo trong dự án. Một số tình huống nhân sự ngoài dự án tham gia hỗ trợ một vài task sẽ **không** tính vào dự án.
-   - **Executive (Chuyên viên Designer, SEO, Data)**: Hiển thị cảnh báo **với từng cá nhân**. Nếu cá nhân chưa có task nào đến hạn hôm nay, hiển thị nhắc nhở cá nhân để chủ động cập nhật hạn chót hoặc tạo việc mới trong ngày.
+   - **Executive (Chuyên viên Designer, SEO, Data)**: Hiển thị cảnh báo **với từng cá nhân**. Nếu cá nhân chưa có task nào đến hạn hôm nay và không nghỉ phép, hiển thị nhắc nhở cá nhân để chủ động cập nhật hạn chót hoặc tạo việc mới trong ngày. Nếu đang nghỉ phép, hiển thị thông báo trạng thái nghỉ phép.
 3. **Cơ chế Giao diện Trực quan (`DailyCompletionAlert`)**:
-   - Đặt trong cột chuẩn 800px của trang Công việc.
+   - Đặt trong cột chuẩn của trang Công việc.
    - **Tiêu đề ngắn gọn, súc tích**:
      - Admin: `Cảnh báo: {count} nhân sự chưa có task đến hạn hôm nay`
      - Manager: `Cảnh báo: {count} nhân sự chưa có task đến hạn hôm nay`
      - Executive: `Cảnh báo: Bạn chưa có task đến hạn hôm nay`
      - Loại bỏ các thành phần rườm rà: Nút "Sao chép đôn đốc", tag pill số lượng, và dòng phụ đề "Phạm vi quản lý...".
    - **Danh sách nhân sự chưa có task**:
-     - Nhãn hiển thị: `Nhân sự chưa có task đến hạn:` (thống nhất cho cả Admin và Manager).
+     - Nhãn hiển thị: `Nhân sự cần nhập task đến hạn hôm nay:` (thống nhất cho cả Admin và Manager).
      - Định dạng tên: Kết hợp dạng `[Tên] [Họ]` (ví dụ: `Trung Tiêu`, `Trung Vũ`, `Vinh Ngô`, `Hiếu Nguyễn`, `Sơn Vũ`, `Tùng Trần`...) giúp phân biệt rõ ràng khi có nhiều nhân sự trùng tên gọi.
      - Sắp xếp tự động theo thứ tự bảng chữ cái ABC tiếng Việt (A-Z) ưu tiên theo Tên gọi (`firstName`), nếu trùng tên sẽ xét tiếp theo Họ (`lastName`).
      - Bấm vào tên để lọc nhanh danh sách công việc của nhân sự đó (bấm lại để hoàn tác).
    - Khi 100% nhân sự trong phạm vi đã có task đến hạn hôm nay: Hiển thị thanh thông báo xanh chúc mừng tinh gọn (`Tất cả nhân sự đã có task đến hạn hôm nay` / `Tất cả nhân sự trong dự án đã có task đến hạn hôm nay`).
+
+### 1.8. Quy chuẩn Thông báo Lịch nghỉ Phép Trong Ngày & 3 Ngày làm việc Tới (DailyLeaveNotice Specification)
+1. **Quy tắc Nghiệp vụ**:
+   - Tự động quét và tổng hợp danh sách nghỉ phép đã duyệt (`status === 'Đã duyệt'`) của các nhân sự thuộc bộ phận Product (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`).
+   - Kiểm tra 2 mốc thời gian:
+     - **Hôm nay**: Các nhân sự có đơn nghỉ bao trùm ngày hiện tại (`startDate <= today && today <= endDate`).
+     - **3 ngày làm việc tới**: Xác định 3 ngày làm việc tiếp theo bằng `workingTimeService.getNextWorkingDays(3)` (tự động loại trừ Thứ Bảy, Chủ Nhật không làm bù và các ngày lễ quốc gia), sau đó tổng hợp nhân sự nghỉ trong 3 ngày này.
+2. **Quy chuẩn Bố cục Tỷ lệ Ngang & Căn chỉnh Cân đối (Balanced Layout)**:
+   - **Bố cục khi có người nghỉ**:
+     - **Khối Cảnh báo (`DailyCompletionAlert`)**: Chiếm 7/12 (~58.3% chiều rộng), đủ không gian hiển thị tiêu đề và danh sách tên không bị chật.
+     - **Khối Lịch nghỉ phép (`DailyLeaveNotice`)**: Chiếm 5/12 (~41.7% chiều rộng), sử dụng tông màu **hồng nhẹ VnExpress (`#963861`, nền `#fdf4f8`, viền `#f3c2d4`)**, đảm bảo hiển thị trọn vẹn tiêu đề và ngày tháng dạng `Trung Tiêu (sáng Mon, 14 Sep 2026)` trên một hàng thoáng đãng.
+     - **Đồng bộ chiều cao (`items-stretch`)**: Cả 2 khối cùng có `h-full flex flex-col`, chiều cao Header đồng nhất (`min-h-[44px]`), đường kẻ phân cách ngang và đáy card khớp hàng hoàn hảo.
+   - **Bố cục khi không có ai nghỉ (cả hôm nay và 3 ngày tới)**:
+     - Khối Lịch nghỉ tự động ẩn. Toàn bộ 100% không gian này được nhường trọn cho khối Cảnh báo (`DailyCompletionAlert`).
+3. **Quy chuẩn Biên tập Ngôn ngữ & Kiểu chữ (`EDITOR.md`)**:
+   - Đưa facts quan trọng nhất lên đầu (Facts first), súc tích, trực diện, không dùng từ đệm rườm rà.
+   - Tên nhân sự: Sử dụng kiểu chữ thường `font-normal` ở cả mục "Hôm nay" và "3 ngày tới" để nhất quán với khối bên trái.
+   - Định dạng ngày nghỉ chuẩn hóa: `[Tên Họ] (sáng Mon, 14 Sep 2026)` hoặc `[Tên Họ] (Mon, 14 Sep 2026)` sử dụng `formatDateWithEnDay`.
+   - Buổi nghỉ: Chú thích ngắn gọn `(sáng)` hoặc `(chiều)`, nghỉ trọn ngày không cần ghi thêm chữ 'cả ngày'.
+   - Hiển thị:
+     - Hôm nay: `[Tên Họ] (sáng)` hoặc `[Tên Họ]`
+     - 3 ngày tới: `[Tên Họ] (sáng Mon, 14 Sep 2026)` hoặc `[Tên Họ] (Mon, 14 Sep 2026)`
+
+### 1.9. Dòng Thông báo Nghỉ Lễ Sắp Tới (UpcomingHolidayBanner Specification)
+1. **Quy chuẩn Tách Dòng Độc lập & Màu sắc Nổi bật**:
+   - Tách thành 1 dòng banner độc lập đặt phía trên khối Cảnh báo tiến độ ngày & Lịch nghỉ phép.
+   - Sử dụng dải màu gradient rực rỡ, mang sắc thái lễ hội bắt mắt (`bg-gradient-to-r from-[#ffe4e6] via-[#fce7f3] to-[#fef3c7] border border-[#f43f5e]/40`, icon `Sparkles` phát sáng).
+2. **Quy tắc Nghiệp vụ Thời gian & Biên tập Ngôn ngữ**:
+   - Phạm vi quét: Tự động quét và chỉ thông báo khi có ngày nghỉ lễ diễn ra trong vòng **5 ngày tới** (`workingTimeService.getUpcomingHolidays(5)`). Nếu không có ngày lễ nào trong 5 ngày tới, dòng này tự động ẩn hoàn toàn.
+   - Tuyệt đối không hiển thị hậu tố `(5 ngày)` hay `(15 ngày)`.
+   - Cấu trúc hiển thị chuẩn hóa bắt buộc:
+     `Nghỉ lễ sắp tới: {Thời gian} ({Tên ngày lễ}) - {Số ngày nghỉ} ngày`
+     - Ví dụ: `Nghỉ lễ sắp tới: Thu, 24 Sep 2026 (Văn hoá Việt Nam) - 1 ngày`
+     - Ví dụ nhiều ngày: `Nghỉ lễ sắp tới: Thu, 30 Apr 2026 - Sun, 03 May 2026 (Ngày Chiến Thắng 30/4 & 1/5) - 4 ngày`
 
 ---
 
@@ -189,13 +227,18 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
   - Cấp **Manager** (PM) và **Admin**: Toàn quyền thêm, sửa, đánh số và xoá các giai đoạn.
 - **Quy chuẩn Khối "Timeline" trong Thẻ Dự án**:
   - Tiêu đề mục: Đổi thành **`Timeline`** (bỏ tiền tố "Tiến trình Timeline").
-  - Thời hạn giai đoạn: **Tuyệt đối không dùng chữ "Hạn :"** để tránh làm lệch trục thị giác. Hiển thị ngày định dạng chuẩn ngắn gọn (`dd/mm/yyyy`).
-  - Đồng bộ và căn thẳng hàng tuyệt đối các cột:
-    - Cột thời gian: Cố định `w-28 font-ui text-[11px] text-[#5f5f5f]`.
+  - Tiền tố giai đoạn: **`Giai đoạn X: ` sử dụng kiểu chữ thường (`font-normal`)**, bỏ in đậm (`font-bold`) để giao diện thanh thoát, nhẹ nhàng, không gây nặng mắt.
+  - **Bỏ nút Edit (bút chì) sau mỗi dòng giai đoạn**: Toàn bộ thao tác chỉnh sửa thông tin dự án và giai đoạn được thực hiện tập trung trong Project Drawer ("Chi tiết").
+  - **Cột Khoảng thời gian (Duration)**: Thêm cột hiển thị số ngày giữa 2 giai đoạn (ví dụ: `24 ngày`), đặt chính giữa cột **Thời gian** và **Trạng thái** (không đặt Title cột).
+    - Mốc *Bắt đầu*: Hiển thị `—`.
+    - Các *Giai đoạn*: Tính khoảng cách số ngày từ mốc liền trước đến hạn của giai đoạn.
+    - Mốc *Ra mắt*: Tính khoảng cách số ngày từ giai đoạn cuối cùng đến ngày ra mắt.
+  - Căn chỉnh thẳng hàng đồng bộ các cột:
+    - Cột tên mốc/giai đoạn: `min-w-0 flex-1`
+    - Cột thời gian: Cố định `w-32 font-ui text-[11px] text-[#5f5f5f]`
+    - Cột khoảng thời gian (Duration): Cố định `w-24 text-center font-ui text-[11px] text-[#5f5f5f]`
     - Cột trạng thái: Khung `w-32` chứa thẻ trạng thái `w-28 text-center text-[11px] font-ui font-medium rounded-[4px] border` căn giữa đồng nhất.
-    - Cột thao tác đuôi: Cố định `w-6` cho toàn bộ các hàng.
   - Tag mốc ra mắt: Đổi từ `"Mục tiêu ra mắt"` thành **`Ra mắt`**.
-- **Thao tác**: Cho phép chỉnh sửa nhanh và xóa giai đoạn có xác nhận an toàn.
 
 #### Phần 3: Hệ thống Liên kết Dự án (Project Links)
 - **6 Liên kết mặc định**:
@@ -209,7 +252,7 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
 
 #### Phần 4: Ghi chú Dự án (Project Notes)
 - Dùng lưu vết các biên bản cuộc họp, thỏa thuận nhanh, quyết định kỹ thuật:
-  - `Người ghi chú`: Chọn từ danh sách nhân sự chính thức.
+  - `Người ghi chú`: Cố định là tài khoản đang đăng nhập (`currentActorName`), hiển thị dạng read-only, tuyệt đối không cho phép chọn người khác.
   - `Nội dung`: Nội dung chi tiết của ghi chú.
   - `Thời gian`: Hệ thống tự động ghi nhận ngày giờ tạo.
 
@@ -661,6 +704,85 @@ Tại danh sách dự án thuộc Left Sidebar:
    - Tích hợp thanh điều khiển Web Push trong `NotificationDrawer`: Nút yêu cầu cấp quyền ("Bật ngay"), chuyển đổi Trạng thái Bật/Tắt, nút "Thử thông báo" để kiểm tra tức thì trên màn hình, và hướng dẫn khi trình duyệt chặn quyền.
    - Tự động kích hoạt thông báo đẩy khi thành viên được giao việc mới (`task_assigned`), task hoàn thành (`task_completed`), task bị nghẽn (`task_blocked`), hoặc nhắc nhở các việc đến hạn/quá hạn trong ngày khi mở ứng dụng.
    - Khi bấm vào thông báo Web Push trên màn hình hệ thống: Tự động chuyển tiêu điểm (focus) về tab WMS và mở trực tiếp chi tiết công việc liên quan.
+6. **Cơ chế Kiểm tra & Hướng dẫn Cá nhân hóa theo Hệ điều hành và Trình duyệt (Personalized OS/Browser Guidance)**:
+   - Hệ thống tự động kiểm tra trạng thái quyền thông báo của người dùng (`default`, `denied`, hoặc `granted`).
+   - Tự động nhận diện chính xác Hệ điều hành (`macOS`, `Windows`, `iOS`, `Android`, `Linux`) và Trình duyệt (`Chrome`, `Safari`, `Edge`, `Firefox`, `Cốc Cốc`).
+   - **Khi chưa bật (`default`)**: Hiển thị hướng dẫn ngắn gọn phù hợp với trình duyệt đang dùng, kèm nút "Bật ngay".
+   - **Khi bị chặn (`denied`)**: Hiển thị quy trình 3 bước mở khóa trực quan riêng cho trình duyệt đó (vị trí icon ⚙️/🔒 trên thanh URL, đổi quyền sang "Cho phép", và tải lại trang).
+   - **Vị trí tinh tế, không gây phiền nhiễu**:
+     - *Trong NotificationDrawer*: Card `PersonalizedWebPushCard` nằm gọn trên đầu ngăn kéo thông báo.
+     - *Ngoài màn hình công việc*: Banner mỏng `WebPushPromptBanner` cao 34px, có nút đóng vĩnh viễn `✕` (lưu `localStorage` để không làm phiền lại).
+   - **Thông điệp súc tích**: Định dạng ngắn gọn, trực quan, có biểu tượng chỉ dẫn rõ ràng.
+
+---
+
+### 4.14. Quy chuẩn Thời gian làm việc & Mục Thiết lập trong Workspace (Working Time & Admin Settings Specification)
+1. **Quy chuẩn Thời gian làm việc (Standard Working Schedule)**:
+   - **Ngày làm việc trong tuần**: Thứ Hai đến hết thứ Sáu. Nghỉ cố định Thứ Bảy và Chủ Nhật.
+   - **Khung giờ làm việc**: Từ `08:00` đến `17:30` (Nghỉ trưa: `12:00` – `13:30`, tương đương 8 giờ làm việc/ngày).
+   - **Ngày lễ (National Holidays)**: Các ngày nghỉ lễ quốc gia trong năm (Tết Dương lịch, Tết Nguyên Đán, Giỗ tổ Hùng Vương, 30/4 & 1/5, Quốc khánh 2/9...).
+   - **Ngày làm bù (Compensatory Workdays)**: Những ngày Thứ Bảy hoặc Chủ Nhật được chỉ định làm việc bù (tính trọng số 1.0 ngày làm việc).
+   - **Nghỉ phép nhân sự (Member Leaves)**: Quản lý các ngày nghỉ phép năm, nghỉ ốm, việc gia đình cụ thể theo từng nhân sự. Hỗ trợ ghi nhận nghỉ cả ngày hoặc nửa buổi (sáng hoặc chiều = 0.5 ngày làm việc).
+2. **Mục đích Tính toán & Ứng dụng**:
+   - Dùng để tính toán chính xác **Số ngày triển khai công việc** thực tế của nhân sự trên từng dự án (chỉ tính ngày làm việc, loại trừ T7, CN, ngày lễ và ngày nhân sự xin nghỉ phép; cộng thêm các ngày làm bù).
+   - Chuẩn hóa thông tin ngày vào làm (`joinDate`): Hiển thị dạng chuẩn `Vào: Fri, 11 Sep 2026 (xxx ngày)` tương ứng với số ngày làm việc thực tế đã cống hiến tính đến thời điểm hiện tại.
+3. **Phân quyền Truy cập & Phạm vi Nhân sự (RBAC Scoped)**:
+   - Mục **`Thiết lập`** trong nhóm Work Space ở Left Sidebar **dành riêng cho tài khoản Admin** (`tienngoc`).
+   - Danh mục nhân sự trong đơn Nghỉ phép và Tra cứu ngày công **chỉ áp dụng đối với nhân sự thuộc bộ phận Product** (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`), không hiển thị nhân sự ngoài ban.
+   - Tab `Database` đã được lược bỏ khỏi giao diện người dùng sau khi hoàn tất khởi tạo các bảng trên Supabase.
+4. **Cơ chế Ngày làm bù & Xin nghỉ nửa buổi (Compensatory Workdays & Half-day Leaves)**:
+   - *Ngày làm bù (`compensatory_workdays`)*: Cho phép tạo ngày làm bù vào cuối tuần kèm lý do, tự động tính 1.0 ngày công.
+   - *Xin nghỉ nửa buổi (`session: 'morning' | 'afternoon'`)*: Cho phép chọn buổi sáng hoặc buổi chiều, hệ thống tự động tính trừ 0.5 ngày công thay vì 1.0 ngày.
+5. **Cơ chế Lưu trữ & Cấu trúc Database Supabase (Đã khởi tạo)**:
+   - Dữ liệu hiện được lưu trữ và đồng bộ an toàn trên thiết bị thông qua `workingTimeService.ts` (`localStorage`).
+   - Cấu trúc 4 bảng đã khởi tạo trên Supabase:
+   ```sql
+   -- Bảng 1: Lịch làm việc
+   CREATE TABLE IF NOT EXISTS public.working_schedule_config (
+     id TEXT PRIMARY KEY DEFAULT 'default',
+     work_days INTEGER[] DEFAULT ARRAY[1, 2, 3, 4, 5],
+     start_time TEXT DEFAULT '08:00',
+     end_time TEXT DEFAULT '17:30',
+     lunch_break_start TEXT DEFAULT '12:00',
+     lunch_break_end TEXT DEFAULT '13:30',
+     note TEXT,
+     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+   );
+
+   -- Bảng 2: Ngày lễ
+   CREATE TABLE IF NOT EXISTS public.system_holidays (
+     id TEXT PRIMARY KEY,
+     name TEXT NOT NULL,
+     start_date DATE NOT NULL,
+     end_date DATE NOT NULL,
+     days_count INTEGER NOT NULL DEFAULT 1,
+     is_recurring BOOLEAN DEFAULT FALSE,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+   );
+
+   -- Bảng 3: Ngày làm bù
+   CREATE TABLE IF NOT EXISTS public.compensatory_workdays (
+     id TEXT PRIMARY KEY,
+     name TEXT NOT NULL,
+     date DATE NOT NULL,
+     note TEXT,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+   );
+
+   -- Bảng 4: Nghỉ phép nhân sự (Hỗ trợ nghỉ nửa buổi sáng/chiều)
+   CREATE TABLE IF NOT EXISTS public.member_leaves (
+     id TEXT PRIMARY KEY,
+     member_id TEXT,
+     member_name TEXT NOT NULL,
+     start_date DATE NOT NULL,
+     end_date DATE NOT NULL,
+     session TEXT DEFAULT 'all_day', -- 'all_day', 'morning', 'afternoon'
+     days_count NUMERIC(4, 1) NOT NULL DEFAULT 1.0,
+     reason TEXT DEFAULT 'Nghỉ phép năm',
+     status TEXT DEFAULT 'Đã duyệt',
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+   );
+   ```
 
 ---
 
@@ -670,4 +792,8 @@ Tại danh sách dự án thuộc Left Sidebar:
 3. Mọi tính năng mới hoặc điều chỉnh luồng UI/UX phải được cập nhật mô tả chi tiết tại **Nhóm 4** để làm chuẩn tham chiếu kỹ thuật thống nhất.
 4. Mọi chuyển động hoặc hoạt họa mới phát triển trong hệ thống phải tuân thủ nghiêm ngặt theo quy chuẩn Framer Motion tại **Mục 4.8**.
 5. Mọi quy tắc phân quyền người dùng và kiểm soát hành vi trên thực thể phải tuân thủ nghiêm ngặt theo **Mục 4.9** và **Mục 4.10**.
+6. **Chuẩn hóa Biên tập Ngôn ngữ (EDITOR.md Compliance)**: Mọi trang, giao diện, bảng biểu hoặc tính năng mới thêm vào hệ thống **bắt buộc phải tuân thủ nghiêm ngặt phong cách biên tập từ `EDITOR.md`**: súc tích, trực diện, không dùng từ đệm rườm rà ("tiêu chuẩn", "danh mục các", "công cụ tra cứu"...), đặt danh từ/động từ trọng tâm lên đầu.
+7. **Ghi chú Cơ sở dữ liệu (Database Schemas)**: Khi phát triển tính năng mới có nhu cầu lưu trữ dữ liệu mới, bắt buộc phải ghi chú rõ ràng kèm cấu trúc bảng SQL (schema DDL, khóa chính, khóa ngoại, kiểu dữ liệu chuẩn) trong tài liệu kỹ thuật và giao diện quản trị.
+8. **Quy trình Triển khai Mã nguồn (Deployment & Git Rules)**: Tuyệt đối không tự ý chạy lệnh push Git (`git push`) hay tự động kích hoạt triển khai production (Vercel). Sau mỗi lần hoàn thiện task, luôn cung cấp đầy đủ danh sách câu lệnh Git chuẩn xác để người dùng tự chủ động kiểm tra và đẩy code lên repository khi có nhu cầu.
+
 

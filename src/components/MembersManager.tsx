@@ -30,6 +30,23 @@ import {
   Check
 } from 'lucide-react';
 import { canCreateMember, canEditMember, canDeleteMember, getUserRole } from '../utils/rbac';
+import { workingTimeService } from '../services/workingTimeService';
+
+/**
+ * Sắp xếp nhân sự theo thứ tự ABC tiếng Việt:
+ * Ưu tiên Tên gọi (firstName), nếu trùng tên thì xét tiếp theo Họ (lastName)
+ */
+export function sortMembersByName(members: MemberItem[]): MemberItem[] {
+  return [...members].sort((a, b) => {
+    const firstA = a.firstName || a.name.trim().split(/\s+/).slice(-1)[0];
+    const firstB = b.firstName || b.name.trim().split(/\s+/).slice(-1)[0];
+    const cmpFirst = firstA.localeCompare(firstB, 'vi');
+    if (cmpFirst !== 0) return cmpFirst;
+    const lastA = a.lastName || a.name.trim().split(/\s+/)[0];
+    const lastB = b.lastName || b.name.trim().split(/\s+/)[0];
+    return lastA.localeCompare(lastB, 'vi');
+  });
+}
 
 interface MembersManagerProps {
   members: MemberItem[];
@@ -364,7 +381,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
         <div className="space-y-8 animate-fade-in">
           {/* Sub-groups by Specialty */}
           {PRODUCT_TEAMS.map((teamName) => {
-            const teamMembers = productMembers.filter((m) => m.team === teamName);
+            const teamMembers = sortMembersByName(productMembers.filter((m) => m.team === teamName));
 
             const teamColors: Record<string, string> = {
               'Product Manager': 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]',
@@ -502,12 +519,26 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                   IP: {mem.ipPhone}
                                 </span>
                               )}
-                              {mem.joinDate && (
-                                <span className="bg-[#f4f4f5] text-[#52525b] px-2 py-0.5 rounded-[4px] border border-[#e4e4e7] flex items-center gap-1 font-num">
-                                  <Calendar className="w-3 h-3 text-[#a1a1aa]" />
-                                  Vào: {mem.joinDate}
-                                </span>
-                              )}
+                              {mem.joinDate && (() => {
+                                const workStats = workingTimeService.calculateDaysWorked(mem.joinDate, mem.name);
+                                if (!workStats.isValid) {
+                                  return (
+                                    <span className="bg-[#f4f4f5] text-[#52525b] px-2 py-0.5 rounded-[4px] border border-[#e4e4e7] flex items-center gap-1 font-num text-[11px]">
+                                      <Calendar className="w-3 h-3 text-[#a1a1aa]" />
+                                      Vào: {mem.joinDate}
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span
+                                    className="bg-[#f4f4f5] text-[#52525b] px-2 py-0.5 rounded-[4px] border border-[#e4e4e7] flex items-center gap-1 font-num text-[11px]"
+                                    title={`Vào làm: ${workStats.formattedDate} • ${workStats.workingDays.toLocaleString('vi-VN')} ngày làm việc (Thứ 2 - Thứ 6, trừ lễ & nghỉ) / ${workStats.calendarDays.toLocaleString('vi-VN')} ngày dương lịch`}
+                                  >
+                                    <Calendar className="w-3 h-3 text-[#a1a1aa] shrink-0" />
+                                    <span>Vào: <strong className="font-semibold text-[#3f3f46]">{workStats.formattedDate}</strong> ({workStats.workingDays.toLocaleString('vi-VN')} ngày)</span>
+                                  </span>
+                                );
+                              })()}
                             </div>
 
                             {/* Assigned Projects */}
@@ -755,7 +786,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                 </button>
               </div>
             ) : (
-              filteredStakeholders.map((mem) => {
+              sortMembersByName(filteredStakeholders).map((mem) => {
                 // Find projects where this stakeholder is PO
                 const poProjects = projects.filter(
                   (p) => p.productOwner && (p.productOwner.includes(mem.name) || mem.name.includes(p.productOwner))

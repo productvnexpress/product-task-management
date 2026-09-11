@@ -215,8 +215,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     if (status === 'Hoàn thành' && !finalResultLink) {
       setValidationError(
         isSameAsWorkLink
-          ? '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng nhập Link làm việc (đang được dùng chung làm Link kết quả).'
-          : '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng bổ sung Link kết quả (Link Staging, PR, Bài viết đã xuất bản...).'
+          ? '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng nhập Link làm việc (đang dùng chung làm Link hoàn thành).'
+          : '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng bổ sung Link hoàn thành (Link Figma, PRD, Staging, Bài xuất bản...).'
       );
       return;
     }
@@ -242,7 +242,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    const author = editorAuthor || currentAuthUser?.name || activeProductMember?.name || assignee;
+    const author = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
     onSaveTask(updatedTask, author, customUpdateNote.trim() || undefined);
     onClose();
   };
@@ -250,7 +250,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   // Handle manual log addition in history tab
   const handleAddManualNote = () => {
     if (!newLogNote.trim()) return;
-    const author = newLogAuthor || currentAuthUser?.name || activeProductMember?.name || assignee;
+    const author = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
     const updatedWithLog = addManualLog(task, author, newLogNote.trim());
     onSaveTask(updatedWithLog, author);
     setNewLogNote('');
@@ -413,12 +413,12 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#15803d]" />
-                  <span>Link kết quả (Figma, Beta, Production...):</span>
+                  <span>Link hoàn thành (Figma, Beta, Staging...):</span>
                   {status === 'Hoàn thành' && <span className="text-[#da1e28] font-bold text-sm">*</span>}
                 </label>
 
                 <div className="flex items-center gap-2.5">
-                  {/* Tuỳ chọn Link kết quả và Link làm việc là một */}
+                  {/* Tuỳ chọn Link hoàn thành và Link làm việc là một */}
                   <label className="inline-flex items-center gap-1.5 text-xs text-[#555] hover:text-[#202020] cursor-pointer select-none font-medium bg-[#f8fafc] hover:bg-[#f1f5f9] px-2 py-0.5 rounded border border-[#e2e8f0] transition-colors">
                     <input
                       type="checkbox"
@@ -426,7 +426,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       onChange={(e) => handleToggleSameLink(e.target.checked)}
                       className="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#15803d] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#15803d]"
                     />
-                    <span className="text-[11px] text-[#334155]">Link kết quả và Link làm việc là một</span>
+                    <span className="text-[11px] text-[#334155]">Link hoàn thành và Link làm việc là một</span>
                   </label>
 
                   {(isSameAsWorkLink ? workLink : resultLink) && (
@@ -639,17 +639,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-[#64748b]">Người cập nhật:</label>
-                  <select
-                    value={editorAuthor}
-                    onChange={(e) => setEditorAuthor(e.target.value)}
-                    className="w-full text-xs font-ui p-2 bg-white border border-[#cbd5e1] rounded-[6px] text-[#0f172a]"
-                  >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.name}>
-                        {formatMemberNameOnly(m, members)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-full text-xs font-ui p-2 bg-[#f1f5f9] border border-[#cbd5e1] rounded-[6px] text-[#0f172a] font-medium">
+                    {currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống')}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -680,17 +672,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1 md:col-span-1">
                   <label className="text-[11px] font-bold text-[#5f5f5f]">Người ghi nhật ký:</label>
-                  <select
-                    value={newLogAuthor}
-                    onChange={(e) => setNewLogAuthor(e.target.value)}
-                    className="w-full text-xs font-ui p-2 bg-[#f8f9fa] border border-[#d6d6d6] rounded-[6px] text-[#202020]"
-                  >
-                    {members.map((m) => (
-                      <option key={m.id} value={m.name}>
-                        {formatMemberWithPhone(m)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-full text-xs font-ui p-2 bg-[#f1f5f9] border border-[#d6d6d6] rounded-[6px] text-[#202020] font-medium">
+                    {currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống')}
+                  </div>
                 </div>
 
                 <div className="space-y-1 md:col-span-2">

@@ -45,8 +45,8 @@ self.addEventListener('push', (event) => {
   let payload = {
     title: 'WMS - Ban Sản phẩm VnExpress',
     body: 'Bạn có thông báo mới trong hệ thống.',
-    icon: '/favicon.svg',
-    badge: '/favicon.svg',
+    icon: '/icon.png',
+    badge: '/icon.png',
     data: {},
   };
 
@@ -61,8 +61,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: payload.icon || '/favicon.svg',
-    badge: payload.badge || '/favicon.svg',
+    icon: payload.icon || '/icon.png',
+    badge: payload.badge || '/icon.png',
     tag: payload.tag || 'wms-general-notification',
     renotify: true,
     data: payload.data || {},

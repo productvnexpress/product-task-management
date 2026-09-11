@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRoles, ProjectLinks, FilterState } from '../types';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
+import { diffInDays, parseDateSafe } from '../utils/projectForecastUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
 import { sortProjectsAlphabetically, normalizeProjectStatus } from '../utils/projectSortingUtils';
 import {
@@ -713,17 +714,19 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                       <div className="relative flex flex-col sm:flex-row sm:items-center gap-2 text-xs font-ui">
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <div className="absolute -left-[17px] w-3 h-3 rounded-full bg-[#963861] border-2 border-white ring-1 ring-[#f4c2d7] shrink-0" />
-                          <span className="font-bold text-[#5f5f5f]">Bắt đầu:</span>
+                          <span className="font-normal text-[#5f5f5f]">Bắt đầu:</span>
                         </div>
                         <div className="w-32 shrink-0 font-ui text-[11px] text-[#5f5f5f]">
                           {formatDateShort(proj.startDate || '2026-09-01')}
+                        </div>
+                        <div className="w-24 shrink-0 font-ui text-[11px] text-[#a0a0a0] text-center">
+                          —
                         </div>
                         <div className="w-32 shrink-0 flex items-center">
                           <span className="w-28 justify-center text-center text-[11px] font-ui font-medium text-[#7f7f7f] bg-white px-2 py-0.5 rounded-[4px] border border-[#d6d6d6] inline-flex items-center">
                             Khởi động
                           </span>
                         </div>
-                        <div className="w-6 shrink-0" />
                       </div>
 
                       {/* Phase Nodes */}
@@ -737,14 +740,18 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                           const dotBg = isDone ? 'bg-[#24a148]' : isBlocked ? 'bg-[#da1e28]' : isInProg ? 'bg-[#0590de]' : 'bg-[#9f9f9f]';
                           const ringColor = isDone ? 'ring-[#24a148]/30' : isBlocked ? 'ring-[#da1e28]/30' : isInProg ? 'ring-[#0590de]/30' : 'ring-[#d6d6d6]';
 
+                          const prevDateStr = idx === 0 ? (proj.startDate || '2026-09-01') : phaseList[idx - 1].dueDate;
+                          const diff = diffInDays(parseDateSafe(prevDateStr), parseDateSafe(ph.dueDate));
+
                           return (
                             <div key={ph.id} className="relative flex flex-col sm:flex-row sm:items-center gap-2 text-xs font-ui group/phase">
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <div className={`absolute -left-[18px] w-3.5 h-3.5 rounded-full ${dotBg} border-2 border-white ring-2 ${ringColor} flex items-center justify-center text-white text-[8px] font-bold shrink-0`}>
                                   {isDone ? '✓' : isBlocked ? '!' : (idx + 1)}
                                 </div>
-                                <span className="font-bold text-[#202020] truncate" title={ph.name}>
-                                  {formatPhaseName(ph.name, idx)}
+                                <span className="text-[#202020] truncate font-ui text-xs" title={ph.name}>
+                                  <span className="font-normal text-[#5f5f5f]">Giai đoạn {idx + 1}: </span>
+                                  <span className="font-normal text-[#202020]">{cleanPhaseTitle(ph.name)}</span>
                                 </span>
                               </div>
 
@@ -752,19 +759,12 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                                 {formatDateShort(ph.dueDate)}
                               </div>
 
-                              <div className="w-32 shrink-0 flex items-center">
-                                {renderPhaseStatusBadge(ph.status)}
+                              <div className="w-24 shrink-0 font-ui text-[11px] text-[#5f5f5f] text-center">
+                                {diff >= 0 ? `${diff} ngày` : `${diff} ngày`}
                               </div>
 
-                              <div className="w-6 shrink-0 flex justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenPhaseModalWithPhase(proj, ph)}
-                                  className="opacity-0 group-hover/phase:opacity-100 p-1 text-[#7f7f7f] hover:text-[#b13460] hover:bg-[#fce6eb] rounded transition-all cursor-pointer"
-                                  title="Chỉnh sửa phase này"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </button>
+                              <div className="w-32 shrink-0 flex items-center">
+                                {renderPhaseStatusBadge(ph.status)}
                               </div>
                             </div>
                           );
@@ -777,20 +777,28 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                           <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-[#b13460] text-white flex items-center justify-center text-[8px] font-bold border-2 border-white ring-2 ring-[#f3c2d4] shrink-0">
                             ★
                           </div>
-                          <span className="font-bold text-[#b13460]">Mốc ra mắt:</span>
+                          <span className="font-normal text-[#b13460]">Mốc ra mắt:</span>
                         </div>
 
                         <div className="w-32 shrink-0 font-ui font-bold text-[11px] text-[#202020]">
                           {formatDateShort(proj.targetDate)}
                         </div>
 
+                        {(() => {
+                          const lastPhaseDate = phaseList.length > 0 ? phaseList[phaseList.length - 1].dueDate : (proj.startDate || '2026-09-01');
+                          const diff = diffInDays(parseDateSafe(lastPhaseDate), parseDateSafe(proj.targetDate));
+                          return (
+                            <div className="w-24 shrink-0 font-ui text-[11px] text-[#5f5f5f] text-center">
+                              {diff >= 0 ? `${diff} ngày` : `${diff} ngày`}
+                            </div>
+                          );
+                        })()}
+
                         <div className="w-32 shrink-0 flex items-center">
                           <span className="w-28 justify-center text-center text-[11px] font-ui font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-flex items-center">
                             Ra mắt
                           </span>
                         </div>
-
-                        <div className="w-6 shrink-0" />
                       </div>
                     </div>
                   </div>

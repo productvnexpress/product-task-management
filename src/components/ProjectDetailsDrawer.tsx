@@ -627,7 +627,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   // Notes handlers
   const handleAddNote = () => {
     if (!newNoteContent.trim()) return;
-    const author = newNoteAuthor.trim() || members[0]?.name || 'Thành viên Ban';
+    const author = currentActorName;
     const newNote: ProjectNoteItem = {
       id: `note-${Date.now()}`,
       author,
@@ -2051,31 +2051,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               </h4>
 
               <div className="space-y-2">
-                {/* Người ghi chú */}
+                {/* Người ghi chú - Cố định người đang đăng nhập */}
                 <div className="space-y-1">
                   <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1">
                     <User className="w-3.5 h-3.5 text-[#b13460]" />
                     <span>Người ghi chú:</span>
                   </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={newNoteAuthor}
-                      onChange={(e) => setNewNoteAuthor(e.target.value)}
-                      className="flex-1 px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white font-ui focus:border-[#b13460]"
-                    >
-                      {members.map((m) => (
-                        <option key={m.id} value={m.name}>
-                          {m.name} ({m.team || m.title || 'Thành viên'})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Hoặc nhập tên khác..."
-                      value={newNoteAuthor}
-                      onChange={(e) => setNewNoteAuthor(e.target.value)}
-                      className="w-44 px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white"
-                    />
+                  <div className="px-3 py-1.5 bg-[#f8f9fa] border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020]">
+                    {currentActorName}
                   </div>
                 </div>
 

@@ -28,9 +28,12 @@ import { TaskItemRow } from './components/TaskItemRow';
 import { TaskDetailDrawer } from './components/TaskDetailDrawer';
 import { ProjectDetailsDrawer } from './components/ProjectDetailsDrawer';
 import { NotificationDrawer } from './components/NotificationDrawer';
+import { NotificationToastContainer } from './components/NotificationToastContainer';
+import { WebPushPromptBanner } from './components/WebPushPromptBanner';
 import { ProjectsManager } from './components/ProjectsManager';
 import { MembersManager } from './components/MembersManager';
 import { TrashManager } from './components/TrashManager';
+import { SettingsManager } from './components/SettingsManager';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StandupModal } from './components/StandupModal';
 import { LoginView } from './components/LoginView';
@@ -38,6 +41,9 @@ import { ProfileModal } from './components/ProfileModal';
 import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/authService';
 import { ReminderPanel } from './components/ReminderPanel';
 import { DailyCompletionAlert } from './components/DailyCompletionAlert';
+import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotice';
+import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
+import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
@@ -175,7 +181,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Profile & Change Password Modal state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [profileModalInitialTab, setProfileModalInitialTab] = useState<'profile' | 'password'>('profile');
+  const [profileModalInitialTab, setProfileModalInitialTab] = useState<'profile' | 'security'>('profile');
+
+  // Modal bắt buộc nhập Link hoàn thành
+  const [taskToCompleteModal, setTaskToCompleteModal] = useState<TaskItem | null>(null);
 
   const handleOpenProfile = (tab: 'profile' | 'password' = 'profile') => {
     setProfileModalInitialTab(tab);
@@ -229,6 +238,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       localStorage.setItem('vne_active_product_member_id', 'all');
     }
   }, [activeProductMember]);
+
+  // Product Leaves Data (Hôm nay & 3 ngày làm việc tới)
+  const productLeavesData = useProductLeaves(members);
 
   // Perspective Change Handler (Toàn bộ phận / Của tôi / Dự án của tôi / Đồng nghiệp)
   const handlePerspectiveChange = (scope: TaskPersonalScope, member?: MemberItem | null) => {
@@ -656,6 +668,15 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // Task Operations
   const handleToggleComplete = (taskId: string, authorName?: string) => {
     const actor = authorName || currentAuthUser?.name || activeProductMember?.name;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Nếu đang chưa hoàn thành và muốn chuyển sang hoàn thành, nhưng CHƯA CÓ resultLink -> buộc nhập link
+    if (task.status !== 'Hoàn thành' && !task.resultLink) {
+      setTaskToCompleteModal(task);
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
@@ -682,6 +703,15 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const handleUpdateTaskStatus = (taskId: string, newStatus: TaskStatus, authorName?: string, customNote?: string) => {
     const actor = authorName || currentAuthUser?.name || activeProductMember?.name;
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Nếu chọn 'Hoàn thành' mà CHƯA CÓ resultLink -> buộc nhập link
+    if (newStatus === 'Hoàn thành' && !task.resultLink) {
+      setTaskToCompleteModal(task);
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
@@ -699,6 +729,37 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
           createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, { oldStatus: t.status, note: customNote });
+          return logged;
+        }
+        return t;
+      })
+    );
+  };
+
+  const handleConfirmCompleteWithLink = (taskId: string, resultLink: string) => {
+    const actor = currentAuthUser?.name || activeProductMember?.name;
+    const finalLink = resultLink.trim();
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const updated: TaskItem = {
+            ...t,
+            status: 'Hoàn thành',
+            progress: 100,
+            resultLink: finalLink,
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+          };
+          const note = `Hoàn thành công việc kèm link: ${finalLink}`;
+          const logged = recordTaskChanges(t, updated, actor || t.assignee, note);
+          if (selectedTask?.id === taskId) {
+            setSelectedTask(logged);
+          }
+          wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
+          createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, {
+            oldStatus: t.status,
+            note,
+          });
           return logged;
         }
         return t;
@@ -1359,18 +1420,47 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         />
                       )}
 
-                      {/* Daily Accountability Alert (Admin: toàn bộ phận, Manager: Designers trong dự án, Executive: cá nhân) */}
-                      <DailyCompletionAlert
-                        members={members}
-                        tasks={tasks}
-                        projects={projects}
-                        currentAuthUser={currentAuthUser}
-                        activeProductMember={activeProductMember}
-                        selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
-                        onSelectAssignee={(assigneeName) => {
-                          setFilterState((f) => ({ ...f, assignee: assigneeName }));
-                        }}
+                      {/* Subtle Web Push Personalized Prompt Banner */}
+                      <WebPushPromptBanner
+                        onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
                       />
+
+                      {/* Thông báo Kỳ nghỉ lễ sắp tới (trong vòng 5 ngày) - Tách riêng 1 dòng nổi bật, nhiều màu sắc */}
+                      <UpcomingHolidayBanner customDays={5} />
+
+                      {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Căn chỉnh cân đối tỷ lệ ngang và đồng bộ chiều cao items-stretch */}
+                      {productLeavesData.hasAnyLeave ? (
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+                          <div className="md:col-span-7 flex flex-col">
+                            <DailyCompletionAlert
+                              members={members}
+                              tasks={tasks}
+                              projects={projects}
+                              currentAuthUser={currentAuthUser}
+                              activeProductMember={activeProductMember}
+                              selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
+                              onSelectAssignee={(assigneeName) => {
+                                setFilterState((f) => ({ ...f, assignee: assigneeName }));
+                              }}
+                            />
+                          </div>
+                          <div className="md:col-span-5 flex flex-col">
+                            <DailyLeaveNotice members={members} leaveData={productLeavesData} />
+                          </div>
+                        </div>
+                      ) : (
+                        <DailyCompletionAlert
+                          members={members}
+                          tasks={tasks}
+                          projects={projects}
+                          currentAuthUser={currentAuthUser}
+                          activeProductMember={activeProductMember}
+                          selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
+                          onSelectAssignee={(assigneeName) => {
+                            setFilterState((f) => ({ ...f, assignee: assigneeName }));
+                          }}
+                        />
+                      )}
 
                       {/* Reminder & Urge Control Panel */}
                       <ReminderPanel
@@ -1824,6 +1914,18 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                   />
                 </ErrorBoundary>
               )}
+
+              {/* VIEW 5: SETTINGS MANAGEMENT (ADMIN ONLY) */}
+              {activeTab === 'settings' && (
+                <ErrorBoundary fallbackTitle="Không thể tải giao diện Thiết lập">
+                  <SettingsManager
+                    members={members}
+                    tasks={tasks}
+                    projects={projects}
+                    currentAuthUser={currentAuthUser}
+                  />
+                </ErrorBoundary>
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -1890,6 +1992,24 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           onClose={() => setIsProfileModalOpen(false)}
           member={currentAuthUser}
           initialTab={profileModalInitialTab}
+        />
+      )}
+
+      {/* Floating Real-time In-App Notification Toast Container */}
+      <NotificationToastContainer
+        onOpenTask={(taskId) => {
+          const t = tasks.find((item) => item.id === taskId);
+          if (t) setSelectedTask(t);
+        }}
+      />
+
+      {/* Modal bắt buộc nhập Link hoàn thành khi đánh dấu hoàn thành */}
+      {taskToCompleteModal && (
+        <CompleteTaskModal
+          task={taskToCompleteModal}
+          isOpen={Boolean(taskToCompleteModal)}
+          onClose={() => setTaskToCompleteModal(null)}
+          onConfirm={handleConfirmCompleteWithLink}
         />
       )}
     </div>

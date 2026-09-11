@@ -11,7 +11,7 @@ export type TaskStatus = 'Chưa làm' | 'Đang làm' | 'Bị nghẽn' | 'Hoàn t
 
 export type PriorityLevel = 'Khẩn cấp' | 'Ưu tiên cao' | 'Bình thường';
 
-export type ActiveTab = 'tasks' | 'projects' | 'members' | 'trash';
+export type ActiveTab = 'tasks' | 'projects' | 'members' | 'trash' | 'settings';
 
 export type PhaseStatus = 'Chưa bắt đầu' | 'Đang triển khai' | 'Bị nghẽn' | 'Đã hoàn thành';
 
@@ -213,5 +213,46 @@ export interface NotificationItem {
   isRead: boolean;
   createdAt: string;          // ISO string
 }
+
+export interface WorkingScheduleConfig {
+  workDays: number[];         // 1: T2, 2: T3, 3: T4, 4: T5, 5: T6 (T7: 6, CN: 0)
+  startTime: string;          // '08:00'
+  endTime: string;            // '17:30'
+  lunchBreakStart: string;    // '12:00'
+  lunchBreakEnd: string;      // '13:30'
+  note?: string;
+}
+
+export interface HolidayItem {
+  id: string;
+  name: string;               // Tên ngày lễ (Tết Dương Lịch, Giỗ tổ Hùng Vương...)
+  startDate: string;          // YYYY-MM-DD
+  endDate: string;            // YYYY-MM-DD
+  daysCount: number;          // Số ngày nghỉ
+  isRecurringYearly?: boolean;
+}
+
+export interface CompensatoryWorkdayItem {
+  id: string;
+  name: string;               // Lý do làm bù (Làm bù cho ngày 29/04...)
+  date: string;               // YYYY-MM-DD
+  note?: string;
+}
+
+export type LeaveSession = 'all_day' | 'morning' | 'afternoon';
+
+export interface MemberLeaveItem {
+  id: string;
+  memberId?: string;
+  memberName: string;         // Tên nhân sự xin nghỉ
+  startDate: string;          // YYYY-MM-DD
+  endDate: string;            // YYYY-MM-DD
+  session?: LeaveSession;     // 'all_day' (mặc định) | 'morning' (nửa buổi sáng = 0.5) | 'afternoon' (nửa buổi chiều = 0.5)
+  daysCount: number;          // Số ngày nghỉ (ví dụ: 0.5, 1, 1.5, 2...)
+  reason: string;             // Lý do nghỉ (Phép năm, Việc riêng, Nghỉ ốm...)
+  status: 'Đã duyệt' | 'Chờ duyệt';
+  createdAt: string;
+}
+
 
 

@@ -28,9 +28,10 @@ import {
   Calendar,
   X,
   UserCheck,
-  Trash2
+  Trash2,
+  Settings
 } from 'lucide-react';
-import { canCreateProject, canCreateMember } from '../utils/rbac';
+import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -110,6 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onResetData,
 }) => {
   const currentMember = activeProductMember || (selectedAssignee !== 'Tất cả' ? members?.find((m) => m.name === selectedAssignee) : null);
+  const isAdmin = getUserRole(currentAuthUser || activeProductMember) === 'Admin';
   const [showAllProjectsInSidebar, setShowAllProjectsInSidebar] = useState(false);
 
   useEffect(() => {
@@ -372,10 +374,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                   )}
                 </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => onTabChange('settings')}
+                    className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      activeTab === 'settings'
+                        ? 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]'
+                        : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Settings className="w-4 h-4 text-[#7c3aed]" />
+                      <span>Thiết lập</span>
+                    </div>
+                    <span className="text-[10px] bg-[#ede9fe] text-[#6d28d9] px-1.5 py-0.5 rounded font-ui font-bold">
+                      Admin
+                    </span>
+                  </button>
+                )}
               </>
             ) : (
-              // If collapsed, but user is currently on members or trash, show active tab indicator
-              (activeTab === 'members' || activeTab === 'trash') && (
+              // If collapsed, but user is currently on members, trash or settings, show active tab indicator
+              (activeTab === 'members' || activeTab === 'trash' || activeTab === 'settings') && (
                 <div className="pt-0.5">
                   {activeTab === 'members' && (
                     <button
@@ -405,6 +426,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {trashCount}
                         </span>
                       )}
+                    </button>
+                  )}
+                  {activeTab === 'settings' && (
+                    <button
+                      onClick={() => onTabChange('settings')}
+                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Settings className="w-4 h-4 text-[#7c3aed]" />
+                        <span>Thiết lập</span>
+                      </div>
+                      <span className="text-[10px] bg-[#ede9fe] text-[#6d28d9] px-1.5 py-0.5 rounded font-ui font-bold">
+                        Admin
+                      </span>
                     </button>
                   )}
                 </div>

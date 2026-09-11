@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MemberItem, TeamType } from '../types';
 import { changePassword } from '../utils/authService';
+import { workingTimeService } from '../services/workingTimeService';
 import {
   X,
   User,
@@ -316,6 +317,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         {member.ipPhone || 'Chưa thiết lập'}
                       </p>
                     </div>
+
+                    {/* Ngày vào làm */}
+                    {member.joinDate && (() => {
+                      const workStats = workingTimeService.calculateDaysWorked(member.joinDate, member.name);
+                      if (!workStats.isValid) return null;
+                      return (
+                        <div className="p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-[8px] sm:col-span-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748b] uppercase tracking-wider mb-1">
+                            <Calendar className="w-3.5 h-3.5 text-[#b13460]" />
+                            <span>Ngày vào làm (Vào)</span>
+                          </div>
+                          <p className="font-ui text-xs text-[#202020] font-medium flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-[#963861]">{workStats.formattedDate}</span>
+                            <span className="text-[11px] text-[#52525b] bg-white px-2 py-0.5 rounded border border-[#e4e4e7] font-num">
+                              {workStats.workingDays.toLocaleString('vi-VN')} ngày làm việc ({workStats.calendarDays.toLocaleString('vi-VN')} ngày)
+                            </span>
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Button chuyển sang tab Đổi mật khẩu */}

@@ -64,6 +64,21 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
     const execMember = stats.targetMembers[0];
     if (!execMember) return null;
 
+    if (execMember.isOnLeaveToday) {
+      return (
+        <div className="bg-[#fdf4f8] border border-[#f3c2d4] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#963861]/15 text-[#963861] flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-title text-xs font-semibold text-[#963861]">
+              Kế hoạch hôm nay: Bạn đang trong lịch nghỉ phép
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     if (execMember.hasTaskDueToday) {
       return (
         <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
@@ -142,10 +157,10 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
   });
 
   return (
-    <div className="bg-[#fffdfa] border border-[#f59e0b]/40 rounded-[10px] shadow-2xs overflow-hidden transition-all">
+    <div className="h-full flex flex-col bg-[#fffdfa] border border-[#f59e0b]/40 rounded-[10px] shadow-2xs overflow-hidden transition-all">
       {/* Header Banner - Ngắn gọn, súc tích */}
       <div
-        className="px-3.5 py-2.5 bg-[#fffbeb] flex items-center justify-between gap-3 cursor-pointer select-none"
+        className="px-3.5 py-2.5 bg-[#fffbeb] flex items-center justify-between gap-2 cursor-pointer select-none min-h-[44px] border-b border-[#fef08a]"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -160,7 +175,7 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
         {/* Nút thu gọn / mở rộng */}
         <button
           type="button"
-          className="p-1 text-[#b45309] hover:bg-[#fef3c7] rounded-[4px] transition-colors shrink-0"
+          className="p-1 text-[#b45309] hover:bg-[#fef3c7] rounded-[4px] transition-colors shrink-0 cursor-pointer"
           title={isExpanded ? 'Thu gọn' : 'Mở rộng'}
         >
           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -169,13 +184,13 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
 
       {/* Body: Liệt kê tên ngắn gọn dạng Tên Họ sắp xếp ABC */}
       {isExpanded && (
-        <div className="px-3.5 py-2.5 border-t border-[#fef08a] bg-white">
+        <div className="flex-1 px-3.5 py-2.5 bg-white flex flex-col justify-start">
           {/* Danh sách tên Tên Họ sắp xếp ABC */}
-          <div className="text-xs font-ui flex items-baseline flex-wrap gap-1">
-            <span className="text-[#78350f] font-semibold shrink-0 mr-1">
-              Nhân sự chưa có task đến hạn:
-            </span>
-            <span className="inline-flex items-center flex-wrap gap-y-0.5">
+          <div className="text-xs font-ui leading-relaxed">
+            <div className="text-[#78350f] font-semibold mb-1">
+              Nhân sự cần nhập task đến hạn hôm nay:
+            </div>
+            <div className="flex flex-wrap items-center gap-y-1">
               {sortedMissingMembers.map((item, idx) => {
                 const displayName = getMemberDisplayName(item.member);
                 const isSelected = Boolean(selectedAssignee && isSamePersonName(selectedAssignee, item.member.name));
@@ -184,10 +199,10 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectAssignee(isSelected ? 'Tất cả' : item.member.name)}
-                      className={`font-medium transition-colors cursor-pointer rounded px-1 py-0.5 hover:underline ${
+                      className={`font-medium transition-colors cursor-pointer rounded hover:underline ${
                         isSelected
-                          ? 'bg-[#92400e] text-white font-semibold shadow-2xs'
-                          : 'text-[#92400e] hover:text-[#78350f] hover:bg-[#fef3c7]'
+                          ? 'bg-[#92400e] text-white font-semibold px-1.5 py-0.5 shadow-2xs'
+                          : 'text-[#92400e] hover:text-[#78350f]'
                       }`}
                       title={`${item.member.name} (${item.member.team || item.role}) - ${item.activeTasksCount} việc đang phụ trách`}
                     >
@@ -199,7 +214,7 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
                   </span>
                 );
               })}
-            </span>
+            </div>
           </div>
         </div>
       )}

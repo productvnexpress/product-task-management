@@ -8,6 +8,7 @@ import { getUserRole, UserRole } from './rbac';
 import { isTaskForMember, isSamePersonName } from './memberPersonalization';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
 import { formatDateWithEnDay } from './formatters';
+import { workingTimeService } from '../services/workingTimeService';
 
 export interface DueTaskMemberStatus {
   member: MemberItem;
@@ -17,6 +18,7 @@ export interface DueTaskMemberStatus {
   activeTasksCount: number;
   activeTasks: TaskItem[];
   hasTaskDueToday: boolean;
+  isOnLeaveToday?: boolean;
   projectsInvolvedNames?: string[];
 }
 
@@ -176,6 +178,11 @@ export function getDailyDueTaskStats(
 
   // Phân tích trạng thái task đến hạn hôm nay cho từng nhân sự trong danh sách mục tiêu
   const targetDateNorm = normalizeDateString(targetDateStr);
+  const approvedLeavesToday = workingTimeService.getLeavesForDate(targetDateStr);
+  const isMemberOnLeaveToday = (member: MemberItem) => {
+    return approvedLeavesToday.some((l) => isSamePersonName(l.memberName, member.name));
+  };
+
   const targetMembers: DueTaskMemberStatus[] = targetMembersList.map(({ member, projectNames }) => {
     const role = getUserRole(member);
     const memberTasks = tasks.filter((t) => isTaskForMember(t, member));
@@ -190,6 +197,7 @@ export function getDailyDueTaskStats(
     const activeTasks = memberTasks.filter((t) => t.status !== 'Hoàn thành');
 
     const hasTaskDueToday = tasksDueToday.length > 0;
+    const onLeaveToday = isMemberOnLeaveToday(member);
 
     return {
       member,
@@ -199,15 +207,16 @@ export function getDailyDueTaskStats(
       activeTasksCount: activeTasks.length,
       activeTasks,
       hasTaskDueToday,
+      isOnLeaveToday: onLeaveToday,
       projectsInvolvedNames: projectNames,
     };
   });
 
-  // Nhân sự chưa có task đến hạn hôm nay
-  const missingMembers = targetMembers.filter((s) => !s.hasTaskDueToday);
+  // Nhân sự chưa có task đến hạn hôm nay (loại trừ nhân sự đang nghỉ phép hôm nay)
+  const missingMembers = targetMembers.filter((s) => !s.hasTaskDueToday && !s.isOnLeaveToday);
 
-  // Nhân sự đã có task đến hạn hôm nay
-  const compliantMembers = targetMembers.filter((s) => s.hasTaskDueToday);
+  // Nhân sự đã có task đến hạn hôm nay hoặc đang trong lịch nghỉ phép
+  const compliantMembers = targetMembers.filter((s) => s.hasTaskDueToday || s.isOnLeaveToday);
 
   // Kiểm tra riêng tài khoản hiện tại
   const currentUserStatus = currentAuthUser
