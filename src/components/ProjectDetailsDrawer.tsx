@@ -49,7 +49,9 @@ import {
   Link2,
   Send,
   History,
+  Share2,
 } from 'lucide-react';
+import { getProjectFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
 import { ProjectTimelineView } from './ProjectTimelineView';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
@@ -156,6 +158,19 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
   // History Log Modal State
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Copy Friendly URL State
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    if (!project) return;
+    const url = getProjectFriendlyUrl(project);
+    const success = await copyUrlToClipboard(url);
+    if (success) {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
   const [historyLogs, setHistoryLogs] = useState<ProjectHistoryLog[]>([]);
 
   // Toast / Save notification state
@@ -882,7 +897,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       title: 'Order Tech',
       url: linkOrderTech,
       setUrl: setLinkOrderTech,
-      placeholder: 'https://jira.vne.internal/order-tech',
+      placeholder: 'https://place.fpt.com/groups/...',
       icon: FileText,
       badgeBg: 'bg-[#fcf0f5]',
       badgeText: 'text-[#b13460]',
@@ -894,7 +909,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       title: 'Chat Group',
       url: linkChat,
       setUrl: setLinkChat,
-      placeholder: 'https://zalo.me/g/...',
+      placeholder: 'https://chat.fpt.com/group/...',
       icon: MessageSquare,
       badgeBg: 'bg-[#e2f6e9]',
       badgeText: 'text-[#24a148]',
@@ -906,7 +921,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       title: 'Dashboard',
       url: linkDashboard,
       setUrl: setLinkDashboard,
-      placeholder: 'https://lookerstudio.google.com/...',
+      placeholder: 'https://app.powerbi.com/groups/...',
       icon: LayoutDashboard,
       badgeBg: 'bg-[#fcf5e8]',
       badgeText: 'text-[#b26b00]',
@@ -918,7 +933,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       title: 'Report',
       url: linkReport,
       setUrl: setLinkReport,
-      placeholder: 'https://docs.google.com/spreadsheets/...',
+      placeholder: 'https://docs.google.com/presentation/...',
       icon: TrendingUp,
       badgeBg: 'bg-[#eef4fb]',
       badgeText: 'text-[#1d508d]',
@@ -1041,6 +1056,27 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             >
               ● {normalizeProjectStatus(status)}
             </span>
+
+            {/* Button Sao chép liên kết Friendly URL */}
+            {!isCreateMode && project && (
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold rounded-[6px] border transition-colors cursor-pointer shadow-2xs shrink-0 ${
+                  isCopied
+                    ? 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
+                    : 'bg-white text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] border-[#d0d0d0]'
+                }`}
+                title="Sao chép liên kết dự án để gửi đồng nghiệp"
+              >
+                {isCopied ? (
+                  <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                )}
+                <span>{isCopied ? 'Đã chép link' : 'Sao chép link'}</span>
+              </button>
+            )}
 
             {/* Button Close kèm text "ESC để đóng" */}
             <button

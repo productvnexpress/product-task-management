@@ -32,7 +32,9 @@ import {
   Send,
   UserCheck,
   Edit3,
+  Share2,
 } from 'lucide-react';
+import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 
 interface TaskDetailDrawerProps {
   task: TaskItem | null;
@@ -256,6 +258,18 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     setNewLogNote('');
   };
 
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    if (!task) return;
+    const url = getTaskFriendlyUrl(task);
+    const success = await copyUrlToClipboard(url);
+    if (success) {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
   const logList = task?.logs || [];
 
   return (
@@ -289,12 +303,33 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 Chi tiết công việc
               </h2>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full text-[#7f7f7f] hover:text-[#202020] hover:bg-[#ececec] transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-ui font-semibold rounded-[6px] border transition-colors cursor-pointer shadow-2xs ${
+                  isCopied
+                    ? 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
+                    : 'bg-white text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] border-[#d0d0d0]'
+                }`}
+                title="Sao chép liên kết công việc để gửi đồng nghiệp"
+              >
+                {isCopied ? (
+                  <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                ) : (
+                  <Share2 className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                )}
+                <span>{isCopied ? 'Đã chép link' : 'Sao chép link'}</span>
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-full text-[#7f7f7f] hover:text-[#202020] hover:bg-[#ececec] transition-colors"
+                title="Đóng chi tiết (ESC)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Drawer Navigation Tabs */}

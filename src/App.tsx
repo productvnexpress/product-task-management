@@ -45,6 +45,7 @@ import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotic
 import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
+import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
@@ -138,8 +139,13 @@ export function App() {
 
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
-  // Active view tab state
-  const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
+  // Active view tab state (Friendly URL synchronized)
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    return parseCurrentRoute().tab;
+  });
+
+  // Pending deep link route waiting for data (tasks / projects) to load
+  const [pendingRoute, setPendingRoute] = useState<ParsedRoute | null>(() => parseCurrentRoute());
 
 // Helper to determine default perspective by RBAC role:
 // 1. Admin: Toàn bộ phận
@@ -303,9 +309,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const selectedProjectForDrawer = useMemo(() => {
     if (!selectedProjectIdForDrawer) return null;
+    const target = selectedProjectIdForDrawer.toLowerCase();
     return (
       projects.find(
-        (p) => p.id === selectedProjectIdForDrawer || p.name === selectedProjectIdForDrawer
+        (p) =>
+          p.id.toLowerCase() === target ||
+          p.code?.toLowerCase() === target ||
+          p.name.toLowerCase() === target
       ) || null
     );
   }, [projects, selectedProjectIdForDrawer]);
@@ -326,6 +336,105 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setActiveTab('members');
     setIsAddMemberOpen(true);
   };
+
+  // Tự động điều hướng và mở Drawer khi có deep link trong URL
+  useEffect(() => {
+    if (!pendingRoute) return;
+
+    if (pendingRoute.taskId && tasks.length > 0) {
+      const foundTask = tasks.find((t) => t.id === pendingRoute.taskId);
+      if (foundTask) {
+        setSelectedTask(foundTask);
+        setIsDrawerOpen(true);
+        setActiveTab('tasks');
+        setPendingRoute((prev) => (prev ? { ...prev, taskId: undefined } : null));
+      }
+    }
+
+    if (pendingRoute.projectIdOrCode && projects.length > 0) {
+      const target = pendingRoute.projectIdOrCode.toLowerCase();
+      const foundProject = projects.find(
+        (p) =>
+          p.code?.toLowerCase() === target ||
+          p.id.toLowerCase() === target ||
+          p.name.toLowerCase() === target
+      );
+      if (foundProject) {
+        setSelectedProjectIdForDrawer(foundProject.id);
+        setIsCreateProjectDrawer(false);
+        setIsProjectDrawerOpen(true);
+        setPendingRoute((prev) => (prev ? { ...prev, projectIdOrCode: undefined } : null));
+      }
+    }
+
+    if (pendingRoute.projectFilter && pendingRoute.projectFilter !== 'Tất cả') {
+      setFilterState((f) => ({ ...f, projectId: pendingRoute.projectFilter! }));
+      setPendingRoute((prev) => (prev ? { ...prev, projectFilter: undefined } : null));
+    }
+  }, [tasks, projects, pendingRoute]);
+
+  // Đồng bộ Friendly URL lên trình duyệt khi chuyển tab hoặc mở/đóng ngăn chi tiết
+  useEffect(() => {
+    if (isDrawerOpen && selectedTask) {
+      updateBrowserUrl({ tab: 'tasks', task: selectedTask });
+    } else if (isProjectDrawerOpen && selectedProjectForDrawer && !isCreateProjectDrawer) {
+      updateBrowserUrl({ tab: 'projects', project: selectedProjectForDrawer });
+    } else {
+      updateBrowserUrl({
+        tab: activeTab,
+        projectFilter: activeTab === 'tasks' && filterState.projectId !== 'Tất cả' ? filterState.projectId : null,
+      });
+    }
+  }, [
+    activeTab,
+    isDrawerOpen,
+    selectedTask,
+    isProjectDrawerOpen,
+    selectedProjectForDrawer,
+    isCreateProjectDrawer,
+    filterState.projectId,
+  ]);
+
+  // Hỗ trợ phím điều hướng Back / Forward của trình duyệt (Popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseCurrentRoute();
+      setActiveTab(route.tab);
+
+      if (route.taskId) {
+        const foundTask = tasks.find((t) => t.id === route.taskId);
+        if (foundTask) {
+          setSelectedTask(foundTask);
+          setIsDrawerOpen(true);
+        }
+      } else {
+        setIsDrawerOpen(false);
+      }
+
+      if (route.projectIdOrCode) {
+        const target = route.projectIdOrCode.toLowerCase();
+        const foundProj = projects.find(
+          (p) =>
+            p.code?.toLowerCase() === target ||
+            p.id.toLowerCase() === target ||
+            p.name.toLowerCase() === target
+        );
+        if (foundProj) {
+          setSelectedProjectIdForDrawer(foundProj.id);
+          setIsProjectDrawerOpen(true);
+        }
+      } else {
+        setIsProjectDrawerOpen(false);
+      }
+
+      if (route.projectFilter) {
+        setFilterState((f) => ({ ...f, projectId: route.projectFilter! }));
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [tasks, projects]);
 
   // Sync to LocalStorage
   useEffect(() => {

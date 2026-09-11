@@ -14,8 +14,9 @@
    - [4.9. Quy chuẩn Hệ thống Phân quyền Truy cập (Role-Based Access Control - RBAC)](#49-quy-chuẩn-hệ-thống-phân-quyền-truy-cập-role-based-access-control---rbac)
    - [4.10. Quy chuẩn Mặc định Góc nhìn khi Truy cập (Default Perspectives by RBAC)](#410-quy-chuẩn-mặc-định-góc-nhìn-khi-truy-cập-default-perspectives-by-rbac)
    - [4.11. Thanh Điều kiện Lọc Neo Cố định (Active Filters Bar)](#411-thanh-điều-kiện-lọc-neo-cố-định-active-filters-bar)
-   - [4.12. Bộ lọc Dự án bên Left Sidebar (Sidebar Project Filter)](#412-bộ-lọc-dự-án-bên-left-sidebar-sidebar-project-filter)
    - [4.13. Hệ thống Thông báo Cá nhân Right Sidebar (Targeted Notifications Drawer)](#413-hệ-thống-thông-báo-cá-nhân-right-sidebar-targeted-notifications-drawer)
+   - [4.14. Quy chuẩn Thời gian làm việc & Mục Thiết lập trong Workspace (Working Time & Admin Settings)](#414-quy-chuẩn-thời-gian-làm-việc--mục-thiết-lập-trong-workspace-working-time--admin-settings-specification)
+   - [4.15. Quy chuẩn Friendly URL & Deep Linking (Semantic Routing Specification)](#415-quy-chuẩn-friendly-url--deep-linking-semantic-routing-specification)
 
 ---
 
@@ -783,6 +784,30 @@ Tại danh sách dự án thuộc Left Sidebar:
      created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
    );
    ```
+
+---
+
+### 4.15. Quy chuẩn Friendly URL & Deep Linking (Semantic Routing Specification)
+1. **Mục đích & Trải nghiệm**:
+   - Cung cấp định dạng đường dẫn URL ngữ nghĩa, thân thiện, ngắn gọn để thành viên chia sẻ trực tiếp cho nhau qua Chat FPT, Zalo, Teams, Slack, Email.
+   - Khi người nhận mở đường dẫn, hệ thống tự động nhận diện và kích hoạt đúng trang chức năng hoặc tự động mở Right Sidebar Drawer của công việc/dự án tương ứng.
+2. **Cấu trúc Đường dẫn Chuẩn hóa (Path-based URLs)**:
+   - **Các lớp trang**:
+     - Công việc: `/tasks` (hoặc alias `/cong-viec`)
+     - Dự án: `/projects` (hoặc alias `/du-an`)
+     - Nhân sự: `/members` (hoặc alias `/nhan-su`)
+     - Thiết lập: `/settings` (hoặc alias `/thiet-lap`)
+     - Thùng rác: `/trash` (hoặc alias `/thung-rac`)
+   - **Chi tiết Công việc**: `/tasks/:taskId` (ví dụ: `/tasks/t-1`, `/tasks/task-1789...`) ➔ Mở trang Công việc kèm Right Drawer chi tiết công việc.
+   - **Chi tiết Dự án**: `/projects/:codeOrId` (ví dụ: `/projects/YKIEN`, `/projects/p-1`) ➔ Mở Right Drawer chi tiết dự án.
+   - **Lọc việc theo Dự án**: `/tasks?project=:codeOrId` (ví dụ: `/tasks?project=YKIEN`) ➔ Mở trang Công việc đã được kích hoạt bộ lọc dự án.
+3. **Cơ chế Đồng bộ & Trình duyệt (HTML5 History API & Popstate)**:
+   - Đồng bộ 2 chiều mượt mà giữa URL trên trình duyệt và trạng thái ứng dụng bằng `window.history.pushState` / `replaceState` mà không reload trang.
+   - Hỗ trợ đầy đủ phím điều hướng **Quay lại (Back)** và **Tiến tới (Forward)** của trình duyệt thông qua lắng nghe sự kiện `popstate`.
+   - Cấu hình rewrites SPA toàn diện trên Vercel (`vercel.json`) đảm bảo không bị lỗi 404 khi truy cập trực tiếp từ link chia sẻ.
+4. **Nút Sao chép Liên kết 1-Click (Quick Share)**:
+   - Tích hợp nút **"Sao chép link"** (icon `Share2`) trực tiếp trên Header của `TaskDetailDrawer` và `ProjectDetailsDrawer`.
+   - Tự động sao chép Full URL vào Clipboard và hiển thị trạng thái "Đã chép link" trong 2 giây.
 
 ---
 
