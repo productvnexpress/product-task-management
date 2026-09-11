@@ -11,6 +11,7 @@ import {
   LeaveSession,
 } from '../types';
 import { formatDateWithEnDay } from '../utils/formatters';
+import { supabase } from './supabaseClient';
 
 const STORAGE_KEYS = {
   SCHEDULE: 'wms_working_schedule_config',
@@ -133,6 +134,116 @@ export function formatWorkingDaysCount(count: number): string {
  * Service quản lý Lịch làm việc, Ngày lễ, Làm bù và Nghỉ phép
  */
 export const workingTimeService = {
+  // --- 0. KHỞI TẠO & ĐỒNG BỘ DỮ LIỆU TỪ SUPABASE ---
+  async initFromSupabase(): Promise<void> {
+    try {
+      const [schedRes, holRes, compRes, leaveRes] = await Promise.all([
+        supabase.from('working_schedule_config').select('*').limit(1),
+        supabase.from('system_holidays').select('*').order('start_date', { ascending: true }),
+        supabase.from('compensatory_workdays').select('*').order('date', { ascending: true }),
+        supabase.from('member_leaves').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      if (!schedRes.error && schedRes.data) {
+        if (schedRes.data.length > 0) {
+          const row = schedRes.data[0];
+          const cfg: WorkingScheduleConfig = {
+            workDays: row.work_days || [1, 2, 3, 4, 5],
+            startTime: row.start_time || '08:00',
+            endTime: row.end_time || '17:30',
+            lunchBreakStart: row.lunch_break_start || '12:00',
+            lunchBreakEnd: row.lunch_break_end || '13:30',
+            note: row.note || '',
+          };
+          this.saveSchedule(cfg, false);
+        } else {
+          // Bảng trống: Đồng bộ lịch hiện tại lên Supabase
+          this.saveSchedule(this.getSchedule(), true);
+        }
+      }
+
+      if (!holRes.error && holRes.data) {
+        if (holRes.data.length > 0) {
+          const hols: HolidayItem[] = holRes.data.map((h: any) => ({
+            id: h.id,
+            name: h.name,
+            startDate: h.start_date,
+            endDate: h.end_date,
+            daysCount: h.days_count,
+            isRecurringYearly: h.is_recurring,
+          }));
+          this.saveHolidays(hols, false);
+        } else {
+          // Chưa có ngày lễ nào trên database, tự động seed danh mục mẫu 2026
+          this.seedDefaultHolidaysToSupabase();
+        }
+      }
+
+      if (!compRes.error && compRes.data) {
+        if (compRes.data.length > 0) {
+          const comps: CompensatoryWorkdayItem[] = compRes.data.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            date: c.date,
+            note: c.note || undefined,
+          }));
+          this.saveCompensatoryWorkdays(comps, false);
+        } else {
+          const localComps = this.getCompensatoryWorkdays();
+          if (localComps.length > 0) {
+            for (const c of localComps) {
+              this.syncCompensatoryToSupabase(c);
+            }
+          }
+        }
+      }
+
+      if (!leaveRes.error && leaveRes.data) {
+        if (leaveRes.data.length > 0) {
+          const leaves: MemberLeaveItem[] = leaveRes.data.map((l: any) => ({
+            id: l.id,
+            memberId: l.member_id || undefined,
+            memberName: l.member_name,
+            startDate: l.start_date,
+            endDate: l.end_date,
+            session: (l.session as LeaveSession) || 'all_day',
+            daysCount: parseFloat(l.days_count) || 1.0,
+            reason: l.reason || 'Nghỉ phép năm',
+            status: l.status || 'Đã duyệt',
+            createdAt: l.created_at,
+          }));
+          this.saveMemberLeaves(leaves, false);
+        } else {
+          // Bảng trống trên DB: Đồng bộ các đơn nghỉ phép từ local lên Supabase
+          const localLeaves = this.getMemberLeaves();
+          if (localLeaves.length > 0) {
+            for (const l of localLeaves) {
+              this.syncLeaveToSupabase(l);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[workingTimeService] Supabase sync error:', e);
+    }
+  },
+
+  async seedDefaultHolidaysToSupabase(): Promise<void> {
+    try {
+      const rows = DEFAULT_HOLIDAYS_2026.map((h) => ({
+        id: h.id,
+        name: h.name,
+        start_date: h.startDate,
+        end_date: h.endDate,
+        days_count: h.daysCount,
+        is_recurring: h.isRecurringYearly ?? false,
+      }));
+      await supabase.from('system_holidays').upsert(rows);
+    } catch (e) {
+      console.warn('Cannot seed default holidays to Supabase:', e);
+    }
+  },
+
   // --- 1. LỊCH LÀM VIỆC ---
   getSchedule(): WorkingScheduleConfig {
     try {
@@ -142,11 +253,30 @@ export const workingTimeService = {
     return DEFAULT_WORKING_SCHEDULE;
   },
 
-  saveSchedule(config: WorkingScheduleConfig): void {
+  saveSchedule(config: WorkingScheduleConfig, syncToSupabase: boolean = true): void {
     try {
       localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(config));
     } catch (e) {
       console.warn('Cannot save working schedule:', e);
+    }
+    if (syncToSupabase) {
+      supabase
+        .from('working_schedule_config')
+        .upsert({
+          id: 'default',
+          work_days: config.workDays,
+          start_time: config.startTime,
+          end_time: config.endTime,
+          lunch_break_start: config.lunchBreakStart,
+          lunch_break_end: config.lunchBreakEnd,
+          note: config.note,
+          updated_at: new Date().toISOString(),
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('[workingTimeService] Lỗi ghi working_schedule_config vào Supabase (kiểm tra RLS):', error);
+          }
+        });
     }
   },
 
@@ -162,7 +292,7 @@ export const workingTimeService = {
     return DEFAULT_HOLIDAYS_2026;
   },
 
-  saveHolidays(holidays: HolidayItem[]): void {
+  saveHolidays(holidays: HolidayItem[], syncToSupabase: boolean = true): void {
     try {
       localStorage.setItem(STORAGE_KEYS.HOLIDAYS, JSON.stringify(holidays));
     } catch (e) {
@@ -177,7 +307,20 @@ export const workingTimeService = {
       id: 'hol-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     };
     const updated = [...holidays, newHol].sort((a, b) => a.startDate.localeCompare(b.startDate));
-    this.saveHolidays(updated);
+    this.saveHolidays(updated, false);
+    supabase
+      .from('system_holidays')
+      .upsert({
+        id: newHol.id,
+        name: newHol.name,
+        start_date: newHol.startDate,
+        end_date: newHol.endDate,
+        days_count: newHol.daysCount,
+        is_recurring: newHol.isRecurringYearly ?? false,
+      })
+      .then(({ error }) => {
+        if (error) console.error('[workingTimeService] Lỗi ghi system_holidays vào Supabase (kiểm tra RLS):', error);
+      });
     return newHol;
   },
 
@@ -186,17 +329,38 @@ export const workingTimeService = {
     const updated = holidays
       .map((h) => (h.id === item.id ? item : h))
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
-    this.saveHolidays(updated);
+    this.saveHolidays(updated, false);
+    supabase
+      .from('system_holidays')
+      .upsert({
+        id: item.id,
+        name: item.name,
+        start_date: item.startDate,
+        end_date: item.endDate,
+        days_count: item.daysCount,
+        is_recurring: item.isRecurringYearly ?? false,
+      })
+      .then(({ error }) => {
+        if (error) console.error('[workingTimeService] Lỗi cập nhật system_holidays vào Supabase (kiểm tra RLS):', error);
+      });
   },
 
   deleteHoliday(id: string): void {
     const holidays = this.getHolidays();
     const updated = holidays.filter((h) => h.id !== id);
-    this.saveHolidays(updated);
+    this.saveHolidays(updated, false);
+    supabase
+      .from('system_holidays')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('[workingTimeService] Lỗi xóa system_holidays trên Supabase (kiểm tra RLS):', error);
+      });
   },
 
   resetHolidaysToDefault(): HolidayItem[] {
-    this.saveHolidays(DEFAULT_HOLIDAYS_2026);
+    this.saveHolidays(DEFAULT_HOLIDAYS_2026, false);
+    this.seedDefaultHolidaysToSupabase();
     return DEFAULT_HOLIDAYS_2026;
   },
 
@@ -235,11 +399,25 @@ export const workingTimeService = {
     return [];
   },
 
-  saveCompensatoryWorkdays(items: CompensatoryWorkdayItem[]): void {
+  saveCompensatoryWorkdays(items: CompensatoryWorkdayItem[], syncToSupabase: boolean = true): void {
     try {
       localStorage.setItem(STORAGE_KEYS.COMPENSATORY, JSON.stringify(items));
     } catch (e) {
       console.warn('Cannot save compensatory workdays:', e);
+    }
+  },
+
+  async syncCompensatoryToSupabase(item: CompensatoryWorkdayItem): Promise<void> {
+    try {
+      const { error } = await supabase.from('compensatory_workdays').upsert({
+        id: item.id,
+        name: item.name,
+        date: item.date,
+        note: item.note ?? null,
+      });
+      if (error) console.error('[workingTimeService] Lỗi ghi compensatory_workdays:', error);
+    } catch (e) {
+      console.warn('Cannot sync compensatory workday to Supabase:', e);
     }
   },
 
@@ -250,7 +428,8 @@ export const workingTimeService = {
       id: 'comp-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     };
     const updated = [...current, newItem].sort((a, b) => a.date.localeCompare(b.date));
-    this.saveCompensatoryWorkdays(updated);
+    this.saveCompensatoryWorkdays(updated, false);
+    this.syncCompensatoryToSupabase(newItem);
     return newItem;
   },
 
@@ -259,13 +438,21 @@ export const workingTimeService = {
     const updated = current
       .map((c) => (c.id === item.id ? item : c))
       .sort((a, b) => a.date.localeCompare(b.date));
-    this.saveCompensatoryWorkdays(updated);
+    this.saveCompensatoryWorkdays(updated, false);
+    this.syncCompensatoryToSupabase(item);
   },
 
   deleteCompensatoryWorkday(id: string): void {
     const current = this.getCompensatoryWorkdays();
     const updated = current.filter((c) => c.id !== id);
-    this.saveCompensatoryWorkdays(updated);
+    this.saveCompensatoryWorkdays(updated, false);
+    supabase
+      .from('compensatory_workdays')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('[workingTimeService] Lỗi xóa compensatory_workdays trên Supabase (kiểm tra RLS):', error);
+      });
   },
 
   // --- 4. NGHỈ PHÉP NHÂN SỰ ---
@@ -280,11 +467,62 @@ export const workingTimeService = {
     return [];
   },
 
-  saveMemberLeaves(leaves: MemberLeaveItem[]): void {
+  saveMemberLeaves(leaves: MemberLeaveItem[], syncToSupabase: boolean = true): void {
     try {
       localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
     } catch (e) {
       console.warn('Cannot save member leaves:', e);
+    }
+  },
+
+  async syncLeaveToSupabase(item: MemberLeaveItem): Promise<void> {
+    const payloadWithSession: any = {
+      id: item.id,
+      member_id: item.memberId ?? null,
+      member_name: item.memberName,
+      start_date: item.startDate,
+      end_date: item.endDate,
+      session: item.session || 'all_day',
+      days_count: item.daysCount,
+      reason: item.reason ?? 'Nghỉ phép năm',
+      status: item.status ?? 'Đã duyệt',
+      created_at: item.createdAt || new Date().toISOString(),
+    };
+
+    try {
+      let { error } = await supabase.from('member_leaves').upsert(payloadWithSession);
+      if (error) {
+        // Fallback 1: Nếu database Supabase chưa có cột session (PGRST204)
+        if (error.code === 'PGRST204' || error.message?.includes('session')) {
+          const { session, ...payloadWithoutSession } = payloadWithSession;
+          let retry = await supabase.from('member_leaves').upsert(payloadWithoutSession);
+          if (retry.error && (retry.error.code === '22P02' || retry.error.message?.includes('integer'))) {
+            // Fallback 2: Nếu cột days_count bị tạo nhầm kiểu INTEGER thay vì NUMERIC
+            payloadWithoutSession.days_count = Math.max(1, Math.round(payloadWithoutSession.days_count));
+            retry = await supabase.from('member_leaves').upsert(payloadWithoutSession);
+          }
+          if (retry.error) {
+            console.error('[workingTimeService] Lỗi ghi member_leaves (fallback):', retry.error);
+          } else {
+            console.log('[workingTimeService] ✅ Đã lưu member_leaves vào Supabase (fallback tương thích).');
+          }
+        } else if (error.code === '22P02' || error.message?.includes('integer')) {
+          // Fallback khi cột days_count bị tạo kiểu INTEGER
+          payloadWithSession.days_count = Math.max(1, Math.round(payloadWithSession.days_count));
+          const retry = await supabase.from('member_leaves').upsert(payloadWithSession);
+          if (retry.error) {
+            console.error('[workingTimeService] Lỗi ghi member_leaves:', retry.error);
+          } else {
+            console.log('[workingTimeService] ✅ Đã lưu member_leaves vào Supabase (làm tròn số ngày công).');
+          }
+        } else {
+          console.error('[workingTimeService] Lỗi ghi member_leaves vào Supabase:', error);
+        }
+      } else {
+        console.log('[workingTimeService] ✅ Đã lưu member_leaves vào Supabase.');
+      }
+    } catch (e) {
+      console.warn('Cannot sync leave to Supabase:', e);
     }
   },
 
@@ -297,20 +535,29 @@ export const workingTimeService = {
       createdAt: new Date().toISOString(),
     };
     const updated = [newLeave, ...leaves];
-    this.saveMemberLeaves(updated);
+    this.saveMemberLeaves(updated, false);
+    this.syncLeaveToSupabase(newLeave);
     return newLeave;
   },
 
   updateMemberLeave(item: MemberLeaveItem): void {
     const leaves = this.getMemberLeaves();
     const updated = leaves.map((l) => (l.id === item.id ? item : l));
-    this.saveMemberLeaves(updated);
+    this.saveMemberLeaves(updated, false);
+    this.syncLeaveToSupabase(item);
   },
 
   deleteMemberLeave(id: string): void {
     const leaves = this.getMemberLeaves();
     const updated = leaves.filter((l) => l.id !== id);
-    this.saveMemberLeaves(updated);
+    this.saveMemberLeaves(updated, false);
+    supabase
+      .from('member_leaves')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('[workingTimeService] Lỗi xóa member_leaves trên Supabase (kiểm tra RLS):', error);
+      });
   },
 
   // --- 5. TÍNH TOÁN NGÀY CÔNG & TIẾN ĐỘ ---

@@ -44,6 +44,7 @@ import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotice';
 import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
+import { workingTimeService } from './services/workingTimeService';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
@@ -409,6 +410,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           wmsDataService.fetchTasks(),
           wmsDataService.fetchTrash(),
           wmsDataService.fetchNotifications(),
+          workingTimeService.initFromSupabase().catch((e) => {
+            console.warn('[workingTimeService] Supabase init warning:', e);
+            return null;
+          }),
         ]);
 
         if (!isMounted) return;

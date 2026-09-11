@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   WorkingScheduleConfig,
   HolidayItem,
@@ -103,6 +103,16 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   });
   const [calcStartDate, setCalcStartDate] = useState<string>('2026-09-01');
   const [calcEndDate, setCalcEndDate] = useState<string>('2026-09-30');
+
+  // Tự động đồng bộ từ Supabase khi mở màn hình Thiết lập
+  useEffect(() => {
+    workingTimeService.initFromSupabase().then(() => {
+      setSchedule(workingTimeService.getSchedule());
+      setHolidays(workingTimeService.getHolidays());
+      setCompensatoryList(workingTimeService.getCompensatoryWorkdays());
+      setLeaves(workingTimeService.getMemberLeaves());
+    });
+  }, []);
 
   // Handlers for Schedule
   const handleToggleDay = (dayNum: number) => {
