@@ -607,12 +607,12 @@ export const workingTimeService = {
 
     // 4. Kiểm tra nghỉ phép của nhân sự (nếu có memberName)
     if (memberName && baseWeight > 0) {
-      const cleanMemberName = memberName.trim().toLowerCase();
+      const cleanMemberName = (memberName || '').trim().toLowerCase();
       const leaves = this.getMemberLeaves();
       const memberLeave = leaves.find(
         (l) =>
           l.status === 'Đã duyệt' &&
-          l.memberName.trim().toLowerCase() === cleanMemberName &&
+          (l.memberName || '').trim().toLowerCase() === cleanMemberName &&
           isoDate >= l.startDate &&
           isoDate <= l.endDate
       );
@@ -762,11 +762,11 @@ export const workingTimeService = {
 
     const leaves = this.getMemberLeaves().filter((l) => l.status === 'Đã duyệt');
     const memberSet = filterMemberNames
-      ? new Set(filterMemberNames.map((n) => n.trim().toLowerCase()))
+      ? new Set(filterMemberNames.map((n) => (n || '').trim().toLowerCase()))
       : null;
 
     return leaves.filter((l) => {
-      if (memberSet && !memberSet.has(l.memberName.trim().toLowerCase())) return false;
+      if (memberSet && !memberSet.has((l.memberName || '').trim().toLowerCase())) return false;
       return isoDate >= l.startDate && isoDate <= l.endDate;
     });
   },

@@ -43,7 +43,8 @@ export function parseCurrentRoute(): ParsedRoute {
   let tab: ActiveTab = 'tasks';
   let taskId: string | undefined = undefined;
   let projectIdOrCode: string | undefined = undefined;
-  let projectFilter: string | undefined = searchParams.get('project') || undefined;
+  let rawProject = searchParams.get('project') || undefined;
+  let projectFilter = (rawProject === 'all' || rawProject === 'Tất cả') ? 'all' : rawProject;
 
   if (pathSegments.length > 0) {
     const rawTab = pathSegments[0].toLowerCase();
@@ -111,7 +112,12 @@ export function updateBrowserUrl(options: {
   } else if (options.project) {
     const identifier = options.project.code || options.project.id;
     newPath = `/projects/${encodeURIComponent(identifier)}`;
-  } else if (options.tab === 'tasks' && options.projectFilter && options.projectFilter !== 'Tất cả') {
+  } else if (
+    options.tab === 'tasks' &&
+    options.projectFilter &&
+    options.projectFilter !== 'Tất cả' &&
+    options.projectFilter !== 'all'
+  ) {
     newPath = `/tasks?project=${encodeURIComponent(options.projectFilter)}`;
   }
 

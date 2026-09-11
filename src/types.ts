@@ -80,7 +80,21 @@ export interface ProjectItem {
   customLinks?: ProjectCustomLink[]; // Liên kết tự thêm
   notes?: ProjectNoteItem[];         // Ghi chú dự án (Người ghi chú, Nội dung, Thời gian)
   history?: ProjectHistoryLog[];     // Lịch sử điều chỉnh chi tiết của dự án
+  checklist?: ProjectChecklistItem[]; // Checklist 34 tiêu chuẩn Product Management (5 giai đoạn)
   createdBy?: string;                // Người tạo dự án (phục vụ phân quyền RBAC)
+}
+
+export type ProjectChecklistStatus = 'pending' | 'completed' | 'skipped';
+
+export interface ProjectChecklistItem {
+  id: string;
+  phaseId: number;        // 1 đến 5
+  phaseTitle: string;     // Tiêu đề giai đoạn
+  text: string;           // Nội dung tiêu chuẩn
+  status: ProjectChecklistStatus; // 'pending' | 'completed' | 'skipped'
+  completedAt?: string;   // Thời điểm cập nhật
+  completedBy?: string;   // Tên người thao tác
+  note?: string;          // Ghi chú bổ sung
 }
 
 export interface ProjectHistoryChange {

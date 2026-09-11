@@ -94,7 +94,7 @@ export const isTaskCreator = (task: TaskItem, user: MemberItem | null | undefine
 
   // 1. Kiểm tra trường createdBy trực tiếp
   if (task.createdBy) {
-    const cb = task.createdBy.trim().toLowerCase();
+    const cb = (task.createdBy || '').trim().toLowerCase();
     if (cb === userName || (userUsername && cb === userUsername)) {
       return true;
     }
@@ -109,7 +109,7 @@ export const isTaskCreator = (task: TaskItem, user: MemberItem | null | undefine
         l.action?.toLowerCase().includes('create')
     );
     if (creationLog && creationLog.author) {
-      const auth = creationLog.author.trim().toLowerCase();
+      const auth = (creationLog.author || '').trim().toLowerCase();
       if (auth === userName || (userUsername && auth === userUsername)) {
         return true;
       }
@@ -118,7 +118,7 @@ export const isTaskCreator = (task: TaskItem, user: MemberItem | null | undefine
 
   // 3. Fallback: Nếu công việc được giao trực tiếp cho người dùng
   if (task.assignee) {
-    const asg = task.assignee.trim().toLowerCase();
+    const asg = (task.assignee || '').trim().toLowerCase();
     if (asg === userName || (userUsername && asg === userUsername)) {
       return true;
     }
@@ -137,7 +137,7 @@ export const isProjectCreator = (project: ProjectItem, user: MemberItem | null |
 
   // 1. Kiểm tra trường createdBy trực tiếp
   if (project.createdBy) {
-    const cb = project.createdBy.trim().toLowerCase();
+    const cb = (project.createdBy || '').trim().toLowerCase();
     if (cb === userName || (userUsername && cb === userUsername)) {
       return true;
     }
@@ -145,14 +145,14 @@ export const isProjectCreator = (project: ProjectItem, user: MemberItem | null |
 
   // 2. Lead phụ trách dự án
   if (project.leadName) {
-    const lead = project.leadName.toLowerCase();
+    const lead = (project.leadName || '').toLowerCase();
     if (lead.includes(userName) || (userUsername && lead.includes(userUsername))) {
       return true;
     }
   }
 
   // 3. Phân vai PM của dự án
-  if (project.roles?.pm && project.roles.pm.some((p) => p.toLowerCase().includes(userName))) {
+  if (project.roles?.pm && Array.isArray(project.roles.pm) && project.roles.pm.some((p) => (p || '').toLowerCase().includes(userName))) {
     return true;
   }
 

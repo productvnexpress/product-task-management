@@ -49,14 +49,14 @@ export const ProjectHistoryModal: React.FC<ProjectHistoryModalProps> = ({
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
-      l.author.toLowerCase().includes(term) ||
-      l.action.toLowerCase().includes(term) ||
-      (l.note && l.note.toLowerCase().includes(term)) ||
+      (l.author || '').toLowerCase().includes(term) ||
+      (l.action || '').toLowerCase().includes(term) ||
+      (l.note && (l.note || '').toLowerCase().includes(term)) ||
       l.changes.some(
         (c) =>
-          c.field.toLowerCase().includes(term) ||
-          (c.oldValue && c.oldValue.toLowerCase().includes(term)) ||
-          (c.newValue && c.newValue.toLowerCase().includes(term))
+          (c.field || '').toLowerCase().includes(term) ||
+          (c.oldValue && (c.oldValue || '').toLowerCase().includes(term)) ||
+          (c.newValue && (c.newValue || '').toLowerCase().includes(term))
       )
     );
   });

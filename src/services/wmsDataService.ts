@@ -167,6 +167,15 @@ export const wmsDataService = {
         linkBeta: p.link_beta || undefined,
         linkProduction: p.link_production || undefined,
         customLinks: p.custom_links || [],
+        checklist: (() => {
+          if (!p.checklist) return undefined;
+          try {
+            const parsed = typeof p.checklist === 'string' ? JSON.parse(p.checklist) : p.checklist;
+            return Array.isArray(parsed) && parsed.length > 0 ? parsed : undefined;
+          } catch {
+            return undefined;
+          }
+        })(),
         links: {
           orderTech: p.link_order_tech || undefined,
           chat: p.link_chat || undefined,
@@ -186,7 +195,7 @@ export const wmsDataService = {
 
   async saveProject(project: ProjectItem, newLog?: ProjectHistoryLog): Promise<void> {
     // 1. Lưu thông tin dự án
-    const { error: projErr } = await supabase.from('projects').upsert({
+    const projectPayload: any = {
       id: project.id,
       name: project.name,
       code: project.code,
@@ -206,10 +215,18 @@ export const wmsDataService = {
       link_beta: project.linkBeta || null,
       link_production: project.linkProduction || null,
       custom_links: project.customLinks || [],
+      checklist: project.checklist || [],
       created_by: project.createdBy || null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    };
 
+    let { error: projErr } = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
+    if (projErr && (projErr.message?.toLowerCase().includes('checklist') || (projErr as any).code === '42703')) {
+      console.warn('Cột checklist chưa có trong bảng projects. Đang lưu không kèm cột checklist.');
+      delete projectPayload.checklist;
+      const retry = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
+      projErr = retry.error;
+    }
     if (projErr) throw projErr;
 
     // 2. Lưu các phases nếu có

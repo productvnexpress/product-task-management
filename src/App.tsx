@@ -188,7 +188,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Profile & Change Password Modal state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [profileModalInitialTab, setProfileModalInitialTab] = useState<'profile' | 'security'>('profile');
+  const [profileModalInitialTab, setProfileModalInitialTab] = useState<'profile' | 'password'>('profile');
 
   // Modal bắt buộc nhập Link hoàn thành
   const [taskToCompleteModal, setTaskToCompleteModal] = useState<TaskItem | null>(null);
@@ -309,13 +309,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const selectedProjectForDrawer = useMemo(() => {
     if (!selectedProjectIdForDrawer) return null;
-    const target = selectedProjectIdForDrawer.toLowerCase();
+    const target = (selectedProjectIdForDrawer || '').toLowerCase();
     return (
       projects.find(
         (p) =>
-          p.id.toLowerCase() === target ||
-          p.code?.toLowerCase() === target ||
-          p.name.toLowerCase() === target
+          (p.id || '').toLowerCase() === target ||
+          (p.code || '').toLowerCase() === target ||
+          (p.name || '').toLowerCase() === target
       ) || null
     );
   }, [projects, selectedProjectIdForDrawer]);
@@ -352,12 +352,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     }
 
     if (pendingRoute.projectIdOrCode && projects.length > 0) {
-      const target = pendingRoute.projectIdOrCode.toLowerCase();
+      const target = (pendingRoute.projectIdOrCode || '').toLowerCase();
       const foundProject = projects.find(
         (p) =>
-          p.code?.toLowerCase() === target ||
-          p.id.toLowerCase() === target ||
-          p.name.toLowerCase() === target
+          (p.code || '').toLowerCase() === target ||
+          (p.id || '').toLowerCase() === target ||
+          (p.name || '').toLowerCase() === target
       );
       if (foundProject) {
         setSelectedProjectIdForDrawer(foundProject.id);
@@ -367,7 +367,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       }
     }
 
-    if (pendingRoute.projectFilter && pendingRoute.projectFilter !== 'Tất cả') {
+    if (pendingRoute.projectFilter) {
       setFilterState((f) => ({ ...f, projectId: pendingRoute.projectFilter! }));
       setPendingRoute((prev) => (prev ? { ...prev, projectFilter: undefined } : null));
     }
@@ -382,7 +382,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     } else {
       updateBrowserUrl({
         tab: activeTab,
-        projectFilter: activeTab === 'tasks' && filterState.projectId !== 'Tất cả' ? filterState.projectId : null,
+        projectFilter:
+          activeTab === 'tasks' &&
+          filterState.projectId !== 'Tất cả' &&
+          filterState.projectId !== 'all'
+            ? filterState.projectId
+            : null,
       });
     }
   }, [
@@ -412,12 +417,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       }
 
       if (route.projectIdOrCode) {
-        const target = route.projectIdOrCode.toLowerCase();
+        const target = (route.projectIdOrCode || '').toLowerCase();
         const foundProj = projects.find(
           (p) =>
-            p.code?.toLowerCase() === target ||
-            p.id.toLowerCase() === target ||
-            p.name.toLowerCase() === target
+            (p.code || '').toLowerCase() === target ||
+            (p.id || '').toLowerCase() === target ||
+            (p.name || '').toLowerCase() === target
         );
         if (foundProj) {
           setSelectedProjectIdForDrawer(foundProj.id);
@@ -1200,9 +1205,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       // 5. Search Query
       if (filterState.searchQuery.trim()) {
         const q = filterState.searchQuery.toLowerCase();
-        const matchTitle = t.title.toLowerCase().includes(q);
-        const matchAssignee = t.assignee.toLowerCase().includes(q);
-        const matchProject = t.projectName.toLowerCase().includes(q);
+        const matchTitle = (t.title || '').toLowerCase().includes(q);
+        const matchAssignee = (t.assignee || '').toLowerCase().includes(q);
+        const matchProject = (t.projectName || '').toLowerCase().includes(q);
         const matchDetails = (t.details || '').toLowerCase().includes(q);
         if (!matchTitle && !matchAssignee && !matchProject && !matchDetails) {
           return false;
@@ -1338,6 +1343,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     projects: 'Dự án',
     members: 'Nhân sự',
     trash: 'Thùng rác',
+    settings: 'Thiết lập',
   };
 
   // If not authenticated, display LoginView
@@ -1598,6 +1604,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           filterState.projectId !== 'all' ? filterState.projectId : undefined
                         }
                         defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
+                        currentUser={currentAuthUser || activeProductMember}
+                        onUpdateProjectChecklist={(projId, updatedChecklist) => {
+                          const targetProj = projects.find((p) => p.id === projId);
+                          if (targetProj) {
+                            handleUpdateProject({ ...targetProj, checklist: updatedChecklist });
+                          }
+                        }}
                       />
 
                       {/* Active Tasks Section Header */}

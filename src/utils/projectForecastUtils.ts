@@ -110,7 +110,7 @@ export function calculateProjectForecast(
   }
 
   if (isTargetOverdue) {
-    riskFactors.push(`Mốc ra mắt cuối cùng (${project.targetDate}) đã quá hạn ${Math.abs(daysToTarget)} ngày.`);
+    riskFactors.push(`Mốc hoàn thành cuối cùng (${project.targetDate}) đã quá hạn ${Math.abs(daysToTarget)} ngày.`);
   }
 
   // Calculate Health & Variance

@@ -26,21 +26,25 @@ export function normalizeProjectStatus(status?: string): ProjectStatus {
 /**
  * Checks if a project is the special "Chưa xác định (Others)" project
  */
-export function isOthersProject(project?: ProjectItem | null): boolean {
+export function isOthersProject(project: ProjectItem | string): boolean {
   if (!project) return false;
+  if (typeof project === 'string') {
+    return project === OTHERS_PROJECT_ID || (project || '').toLowerCase() === 'khác';
+  }
+  const name = (project.name || '').toLowerCase();
   return (
     project.id === OTHERS_PROJECT_ID ||
     project.code === 'VNE-OTHERS' ||
-    project.name.toLowerCase().includes('chưa xác định') ||
-    project.name.toLowerCase().includes('others')
+    name.includes('chưa xác định') ||
+    name.includes('others')
   );
 }
 
 /**
  * Clean project name by stripping prefix "Dự án "
  */
-export function cleanProjectName(name: string): string {
-  return name.replace(/^Dự án\s+/i, '').trim();
+export function cleanProjectName(name?: string): string {
+  return (name || '').replace(/^Dự án\s+/i, '').trim();
 }
 
 /**
@@ -102,16 +106,16 @@ export function getTaskCreationProjectGroups(
       const relation = getMemberProjectRelation(p, selectedMember, tasks);
       isParticipating = relation.isRelated;
     } else if (assigneeName) {
-      const nameLower = assigneeName.toLowerCase();
+      const nameLower = (assigneeName || '').toLowerCase();
       const inRoles = p.roles && (
-        p.roles.pm?.some((n) => n.toLowerCase().includes(nameLower)) ||
-        p.roles.designer?.some((n) => n.toLowerCase().includes(nameLower)) ||
-        p.roles.seo?.some((n) => n.toLowerCase().includes(nameLower)) ||
-        p.roles.data?.some((n) => n.toLowerCase().includes(nameLower))
+        p.roles.pm?.some((n) => (n || '').toLowerCase().includes(nameLower)) ||
+        p.roles.designer?.some((n) => (n || '').toLowerCase().includes(nameLower)) ||
+        p.roles.seo?.some((n) => (n || '').toLowerCase().includes(nameLower)) ||
+        p.roles.data?.some((n) => (n || '').toLowerCase().includes(nameLower))
       );
-      const inLead = p.leadName?.toLowerCase().includes(nameLower);
+      const inLead = (p.leadName || '').toLowerCase().includes(nameLower);
       const inTasks = tasks.some(
-        (t) => (t.projectId === p.id || t.projectName === p.name) && t.assignee?.toLowerCase().includes(nameLower)
+        (t) => (t.projectId === p.id || t.projectName === p.name) && (t.assignee || '').toLowerCase().includes(nameLower)
       );
       isParticipating = Boolean(inRoles || inLead || inTasks);
     }

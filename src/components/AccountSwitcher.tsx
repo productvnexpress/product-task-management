@@ -124,7 +124,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
-        m.name.toLowerCase().includes(q) ||
+        (m.name || '').toLowerCase().includes(q) ||
         (m.title || '').toLowerCase().includes(q) ||
         (m.team || '').toLowerCase().includes(q) ||
         (m.username || '').toLowerCase().includes(q) ||

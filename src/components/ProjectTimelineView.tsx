@@ -401,7 +401,7 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
               </span>
               <div>
                 <h5 className="font-title text-xs font-bold text-[#b13460]">
-                  Mốc Ra mắt Chính thức (Go-Live)
+                  Mốc Hoàn thành Dự án
                 </h5>
                 <span className="text-[11px] font-num font-semibold text-[#5f5f5f]">
                   {daysToTarget >= 0

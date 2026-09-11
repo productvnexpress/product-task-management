@@ -17,6 +17,13 @@ import {
 import { workingTimeService, formatWorkingDaysCount } from '../services/workingTimeService';
 import { formatDateWithEnDay } from '../utils/formatters';
 import {
+  ChecklistTemplateItem,
+  CHECKLIST_PHASES,
+  getMasterChecklistTemplate,
+  saveMasterChecklistTemplate,
+  resetMasterChecklistTemplate,
+} from '../data/defaultProjectChecklist';
+import {
   Clock,
   Calendar,
   Plus,
@@ -31,6 +38,9 @@ import {
   Check,
   Sunrise,
   Sunset,
+  CheckSquare,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -40,7 +50,7 @@ interface SettingsManagerProps {
   currentAuthUser?: MemberItem | null;
 }
 
-type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator';
+type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist';
 
 export const SettingsManager: React.FC<SettingsManagerProps> = ({
   members,
@@ -103,6 +113,19 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   });
   const [calcStartDate, setCalcStartDate] = useState<string>('2026-09-01');
   const [calcEndDate, setCalcEndDate] = useState<string>('2026-09-30');
+
+  // 6. Checklist Master Template state
+  const [checklistTemplate, setChecklistTemplate] = useState<ChecklistTemplateItem[]>(() =>
+    getMasterChecklistTemplate()
+  );
+  const [checklistFilterPhase, setChecklistFilterPhase] = useState<number | 'all'>('all');
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [editingChecklistItem, setEditingChecklistItem] = useState<ChecklistTemplateItem | null>(null);
+  const [itemText, setItemText] = useState('');
+  const [itemPhaseId, setItemPhaseId] = useState<number>(1);
+  const [itemInsertPosition, setItemInsertPosition] = useState<'end' | 'start'>('end');
+  const [deletingChecklistItem, setDeletingChecklistItem] = useState<ChecklistTemplateItem | null>(null);
+  const [checklistToast, setChecklistToast] = useState<string | null>(null);
 
   // Tự động đồng bộ từ Supabase khi mở màn hình Thiết lập
   useEffect(() => {
@@ -311,6 +334,137 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     }
   };
 
+  // Handlers for Checklist Template
+  const handleOpenAddChecklistItem = (defaultPhaseId?: number) => {
+    setEditingChecklistItem(null);
+    setItemPhaseId(defaultPhaseId || (typeof checklistFilterPhase === 'number' ? checklistFilterPhase : 1));
+    setItemText('');
+    setItemInsertPosition('end');
+    setIsChecklistModalOpen(true);
+  };
+
+  const handleOpenEditChecklistItem = (item: ChecklistTemplateItem) => {
+    setEditingChecklistItem(item);
+    setItemPhaseId(item.phaseId);
+    setItemText(item.text);
+    setIsChecklistModalOpen(true);
+  };
+
+  const handleSaveChecklistItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = itemText.trim();
+    if (!trimmed) return;
+
+    const phaseMeta = CHECKLIST_PHASES.find((p) => p.id === itemPhaseId);
+    const phaseTitle = phaseMeta ? phaseMeta.title : `Giai đoạn ${itemPhaseId}`;
+
+    let updated: ChecklistTemplateItem[];
+
+    if (editingChecklistItem) {
+      updated = checklistTemplate.map((it) => {
+        if (it.id === editingChecklistItem.id) {
+          return {
+            ...it,
+            phaseId: itemPhaseId,
+            phaseTitle,
+            text: trimmed,
+          };
+        }
+        return it;
+      });
+      setChecklistToast('Đã cập nhật tiêu chuẩn!');
+    } else {
+      const newItem: ChecklistTemplateItem = {
+        id: `chk-${itemPhaseId}-${Date.now()}`,
+        phaseId: itemPhaseId,
+        phaseTitle,
+        text: trimmed,
+      };
+
+      if (itemInsertPosition === 'start') {
+        const targetIndex = checklistTemplate.findIndex((it) => it.phaseId === itemPhaseId);
+        if (targetIndex !== -1) {
+          updated = [
+            ...checklistTemplate.slice(0, targetIndex),
+            newItem,
+            ...checklistTemplate.slice(targetIndex),
+          ];
+        } else {
+          updated = [...checklistTemplate, newItem];
+        }
+      } else {
+        let lastIndex = -1;
+        for (let i = checklistTemplate.length - 1; i >= 0; i--) {
+          if (checklistTemplate[i].phaseId === itemPhaseId) {
+            lastIndex = i;
+            break;
+          }
+        }
+        if (lastIndex !== -1) {
+          updated = [
+            ...checklistTemplate.slice(0, lastIndex + 1),
+            newItem,
+            ...checklistTemplate.slice(lastIndex + 1),
+          ];
+        } else {
+          updated = [...checklistTemplate, newItem];
+        }
+      }
+      setChecklistToast('Đã thêm tiêu chuẩn mới vào Checklist!');
+    }
+
+    setChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated);
+    setIsChecklistModalOpen(false);
+    setTimeout(() => setChecklistToast(null), 3000);
+  };
+
+  const handleConfirmDeleteChecklistItem = () => {
+    if (!deletingChecklistItem) return;
+    const updated = checklistTemplate.filter((it) => it.id !== deletingChecklistItem.id);
+    setChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated);
+    setDeletingChecklistItem(null);
+    setChecklistToast('Đã xoá tiêu chuẩn khỏi Checklist!');
+    setTimeout(() => setChecklistToast(null), 3000);
+  };
+
+  const handleMoveChecklistItem = (id: string, direction: 'up' | 'down') => {
+    const item = checklistTemplate.find((it) => it.id === id);
+    if (!item) return;
+
+    const phaseItems = checklistTemplate.filter((it) => it.phaseId === item.phaseId);
+    const indexInPhase = phaseItems.findIndex((it) => it.id === id);
+
+    if (direction === 'up' && indexInPhase <= 0) return;
+    if (direction === 'down' && indexInPhase >= phaseItems.length - 1) return;
+
+    const swapTargetIndex = direction === 'up' ? indexInPhase - 1 : indexInPhase + 1;
+    const targetItem = phaseItems[swapTargetIndex];
+
+    const idx1 = checklistTemplate.findIndex((it) => it.id === item.id);
+    const idx2 = checklistTemplate.findIndex((it) => it.id === targetItem.id);
+
+    const updated = [...checklistTemplate];
+    const temp = updated[idx1];
+    updated[idx1] = updated[idx2];
+    updated[idx2] = temp;
+
+    setChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated);
+    setChecklistToast('Đã thay đổi vị trí tiêu chuẩn!');
+    setTimeout(() => setChecklistToast(null), 2000);
+  };
+
+  const handleResetChecklistDefaults = () => {
+    if (confirm('Bạn có chắc chắn muốn khôi phục lại bộ 34 tiêu chuẩn chuẩn hóa ban đầu của Ban Sản phẩm không? Mọi chỉnh sửa tùy biến trước đó sẽ được đặt lại.')) {
+      const restored = resetMasterChecklistTemplate();
+      setChecklistTemplate(restored);
+      setChecklistToast('Đã khôi phục 34 tiêu chuẩn gốc!');
+      setTimeout(() => setChecklistToast(null), 3000);
+    }
+  };
+
   // Calculation Results
   const calcResult = useMemo(() => {
     if (!calcStartDate || !calcEndDate) return null;
@@ -352,17 +506,19 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-[6px] bg-[#963861] text-white flex items-center justify-center font-bold shadow-2xs">
-                <Clock className="w-4 h-4" />
+                {activeSubTab === 'checklist' ? <CheckSquare className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
               </div>
               <h1 className="font-title text-xl font-bold text-[#202020]">
-                Thời gian làm việc
+                {activeSubTab === 'checklist' ? 'Quản trị Checklist' : 'Thời gian làm việc'}
               </h1>
               <span className="bg-[#ede9fe] text-[#6d28d9] border border-[#ddd6fe] text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px]">
                 Admin
               </span>
             </div>
             <p className="text-xs font-ui text-[#5f5f5f]">
-              Lịch làm việc, ngày lễ, làm bù và nghỉ phép dùng tính ngày công nhân sự.
+              {activeSubTab === 'checklist'
+                ? 'Cấu hình danh mục tiêu chuẩn Product Management (thêm, sửa, xoá, sắp xếp vị trí các tiêu chuẩn theo từng giai đoạn).'
+                : 'Lịch làm việc, ngày lễ, làm bù và nghỉ phép dùng tính ngày công nhân sự.'}
             </p>
           </div>
 
@@ -433,6 +589,18 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
           >
             <Calculator className="w-3.5 h-3.5" />
             <span>Tra cứu ngày công</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('checklist')}
+            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeSubTab === 'checklist'
+                ? 'border-[#963861] text-[#963861]'
+                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+            }`}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            <span>Checklist ({checklistTemplate.length})</span>
           </button>
         </div>
       </div>
@@ -958,6 +1126,213 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* TAB 6: QUẢN TRỊ CHECKLIST DỰ ÁN */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'checklist' && (
+        <div className="bg-white rounded-[12px] border border-[#e0e0e0] p-6 shadow-2xs space-y-6">
+          {/* Header Top Controls */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#f0f0f0] pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-ui font-bold text-sm text-[#202020]">
+                  Danh mục Tiêu chuẩn Checklist ({checklistTemplate.length} tiêu chuẩn)
+                </h2>
+                <span className="text-[11px] font-ui font-semibold px-2 py-0.5 rounded-[4px] bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4]">
+                  5 Giai đoạn
+                </span>
+              </div>
+              <p className="text-xs text-[#71717a] font-ui mt-0.5">
+                Thêm, sửa, xoá và thay đổi vị trí các tiêu chuẩn để làm sườn mẫu chuẩn hóa triển khai dự án toàn bộ phận.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetChecklistDefaults}
+                className="px-3 py-1.5 rounded-[6px] border border-[#d4d4d8] text-xs font-ui text-[#52525b] hover:bg-[#f4f4f5] flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Khôi phục lại 34 tiêu chuẩn mẫu ban đầu của Ban Sản phẩm"
+              >
+                <RotateCcw className="w-3 h-3 text-[#71717a]" />
+                <span>Khôi phục 34 mục gốc</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenAddChecklistItem()}
+                className="px-3.5 py-1.5 rounded-[6px] bg-[#963861] hover:bg-[#832e52] text-white text-xs font-ui font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm tiêu chuẩn mới</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Filter by Phase Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+            <button
+              type="button"
+              onClick={() => setChecklistFilterPhase('all')}
+              className={`px-3 py-1.5 text-xs font-ui rounded-[6px] font-semibold transition-colors cursor-pointer shrink-0 ${
+                checklistFilterPhase === 'all'
+                  ? 'bg-[#963861] text-white'
+                  : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+              }`}
+            >
+              Tất cả ({checklistTemplate.length})
+            </button>
+            {CHECKLIST_PHASES.map((p) => {
+              const count = checklistTemplate.filter((it) => it.phaseId === p.id).length;
+              const isSelected = checklistFilterPhase === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setChecklistFilterPhase(p.id)}
+                  className={`px-3 py-1.5 text-xs font-ui rounded-[6px] font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#963861] text-white'
+                      : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                  }`}
+                >
+                  <span>GĐ {p.id}: {p.shortTitle}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-num font-bold ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-[#e4e4e7] text-[#52525b]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Grouped Phase Cards */}
+          <div className="space-y-6">
+            {CHECKLIST_PHASES.filter(
+              (p) => checklistFilterPhase === 'all' || checklistFilterPhase === p.id
+            ).map((phase) => {
+              const phaseItems = checklistTemplate.filter((it) => it.phaseId === phase.id);
+              return (
+                <div
+                  key={phase.id}
+                  className="border border-[#e4e4e7] rounded-[10px] overflow-hidden bg-white shadow-2xs"
+                >
+                  {/* Phase Group Header */}
+                  <div className="px-4 py-3 bg-[#fafafa] border-b border-[#e4e4e7] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[11px] font-ui font-bold px-2.5 py-0.5 rounded-[4px] border ${phase.badgeColor}`}>
+                        Giai đoạn {phase.id}
+                      </span>
+                      <h3 className="font-ui font-bold text-xs sm:text-sm text-[#202020]">
+                        {phase.title}
+                      </h3>
+                      <span className="text-xs font-ui text-[#71717a]">
+                        ({phaseItems.length} tiêu chuẩn)
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddChecklistItem(phase.id)}
+                      className="px-2.5 py-1 rounded-[6px] bg-white border border-[#d4d4d8] hover:border-[#963861] text-[#963861] text-xs font-ui font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs self-start sm:self-auto"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Thêm mục vào GĐ {phase.id}</span>
+                    </button>
+                  </div>
+
+                  {/* Items List */}
+                  {phaseItems.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-[#71717a] italic">
+                      Chưa có tiêu chuẩn nào trong giai đoạn này. Nhấn "Thêm mục vào GĐ {phase.id}" để bổ sung.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#f0f0f0]">
+                      {phaseItems.map((item, idx) => {
+                        const isFirst = idx === 0;
+                        const isLast = idx === phaseItems.length - 1;
+                        return (
+                          <div
+                            key={item.id}
+                            className="p-3 sm:px-4 sm:py-3 hover:bg-[#fafafa] flex items-start justify-between gap-3 transition-colors group"
+                          >
+                            {/* Order & Text */}
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                              <span className="font-num text-xs font-bold text-[#963861] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4] shrink-0 mt-0.5">
+                                {phase.id}.{idx + 1}
+                              </span>
+                              <p className="font-ui text-xs text-[#202020] leading-relaxed pt-0.5">
+                                {item.text}
+                              </p>
+                            </div>
+
+                            {/* Action Buttons: Move Up, Move Down, Edit, Delete */}
+                            <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                              {/* Move Up */}
+                              <button
+                                type="button"
+                                disabled={isFirst}
+                                onClick={() => handleMoveChecklistItem(item.id, 'up')}
+                                className={`p-1.5 rounded-[4px] border transition-colors ${
+                                  isFirst
+                                    ? 'text-[#d4d4d8] border-transparent cursor-not-allowed'
+                                    : 'text-[#52525b] hover:text-[#963861] hover:bg-[#fcf0f5] border-[#e4e4e7] hover:border-[#f3c2d4] cursor-pointer'
+                                }`}
+                                title={isFirst ? 'Đã ở vị trí đầu tiên' : 'Di chuyển lên'}
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Move Down */}
+                              <button
+                                type="button"
+                                disabled={isLast}
+                                onClick={() => handleMoveChecklistItem(item.id, 'down')}
+                                className={`p-1.5 rounded-[4px] border transition-colors ${
+                                  isLast
+                                    ? 'text-[#d4d4d8] border-transparent cursor-not-allowed'
+                                    : 'text-[#52525b] hover:text-[#963861] hover:bg-[#fcf0f5] border-[#e4e4e7] hover:border-[#f3c2d4] cursor-pointer'
+                                }`}
+                                title={isLast ? 'Đã ở vị trí cuối cùng' : 'Di chuyển xuống'}
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Edit */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditChecklistItem(item)}
+                                className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#3b82f6] text-[#52525b] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
+                                title="Chỉnh sửa tiêu chuẩn"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                type="button"
+                                onClick={() => setDeletingChecklistItem(item)}
+                                className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#fda4af] text-[#52525b] hover:text-[#e11d48] hover:bg-[#fff1f2] transition-colors cursor-pointer"
+                                title="Xoá tiêu chuẩn"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* MODAL: THÊM / SỬA NGÀY LỄ */}
       {isHolidayModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
@@ -1273,6 +1648,167 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* MODAL: THÊM / SỬA TIÊU CHUẨN CHECKLIST */}
+      {isChecklistModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#963861] flex items-center justify-center font-bold">
+                  <CheckSquare className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="font-ui font-bold text-sm text-[#202020]">
+                  {editingChecklistItem ? 'Chỉnh sửa tiêu chuẩn Checklist' : 'Thêm tiêu chuẩn mới vào Checklist'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChecklistModalOpen(false)}
+                className="p-1 rounded text-[#71717a] hover:text-[#202020] hover:bg-[#f0f0f0]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveChecklistItem} className="space-y-4">
+              {/* Chọn Giai đoạn */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                  Thuộc giai đoạn: <span className="text-[#e11d48]">*</span>
+                </label>
+                <select
+                  value={itemPhaseId}
+                  onChange={(e) => setItemPhaseId(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-[#d4d4d8] rounded-[6px] text-xs font-ui text-[#202020] bg-white focus:border-[#963861]"
+                >
+                  {CHECKLIST_PHASES.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      Giai đoạn {p.id}: {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Vị trí chèn khi thêm mới */}
+              {!editingChecklistItem && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Vị trí trong giai đoạn:
+                  </label>
+                  <div className="flex items-center gap-4 pt-0.5">
+                    <label className="inline-flex items-center gap-1.5 text-xs font-ui text-[#52525b] cursor-pointer">
+                      <input
+                        type="radio"
+                        name="insertPosition"
+                        value="end"
+                        checked={itemInsertPosition === 'end'}
+                        onChange={() => setItemInsertPosition('end')}
+                        className="accent-[#963861]"
+                      />
+                      <span>Thêm vào cuối giai đoạn</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 text-xs font-ui text-[#52525b] cursor-pointer">
+                      <input
+                        type="radio"
+                        name="insertPosition"
+                        value="start"
+                        checked={itemInsertPosition === 'start'}
+                        onChange={() => setItemInsertPosition('start')}
+                        className="accent-[#963861]"
+                      />
+                      <span>Thêm vào đầu giai đoạn</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Nội dung tiêu chuẩn */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                  Nội dung tiêu chuẩn / câu hỏi kiểm tra: <span className="text-[#e11d48]">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={itemText}
+                  onChange={(e) => setItemText(e.target.value)}
+                  placeholder="Nhập nội dung tiêu chuẩn rõ ràng, súc tích (VD: Đã có spec tracking chi tiết theo chuẩn ITM/ADP chưa?)..."
+                  className="w-full px-3 py-2 border border-[#d4d4d8] rounded-[6px] text-xs font-ui text-[#202020] focus:border-[#963861]"
+                  autoFocus
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#f0f0f0]">
+                <button
+                  type="button"
+                  onClick={() => setIsChecklistModalOpen(false)}
+                  className="px-4 py-2 rounded-[6px] border border-[#d4d4d8] text-xs font-ui font-semibold text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+                >
+                  Huỷ
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-[6px] bg-[#963861] hover:bg-[#832e52] text-white text-xs font-ui font-bold shadow-xs cursor-pointer"
+                >
+                  {editingChecklistItem ? 'Lưu cập nhật' : 'Thêm tiêu chuẩn'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: XÁC NHẬN XOÁ TIÊU CHUẨN */}
+      {deletingChecklistItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-3 text-[#e11d48]">
+              <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fda4af] flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-[#e11d48]" />
+              </div>
+              <div>
+                <h3 className="font-ui font-bold text-sm text-[#202020]">
+                  Xác nhận xoá tiêu chuẩn
+                </h3>
+                <p className="text-xs text-[#71717a] font-ui">
+                  Tiêu chuẩn này sẽ bị gỡ bỏ khỏi Master Checklist mẫu.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#fafafa] rounded-[8px] border border-[#e4e4e7] text-xs font-ui text-[#3f3f46]">
+              {deletingChecklistItem.text}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <button
+                type="button"
+                onClick={() => setDeletingChecklistItem(null)}
+                className="px-4 py-2 rounded-[6px] border border-[#d4d4d8] text-xs font-ui font-semibold text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteChecklistItem}
+                className="px-4 py-2 rounded-[6px] bg-[#e11d48] hover:bg-[#be123c] text-white text-xs font-ui font-bold shadow-xs cursor-pointer"
+              >
+                Xoá tiêu chuẩn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING TOAST NOTIFICATION */}
+      {checklistToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#202020] text-white px-4 py-2.5 rounded-[8px] shadow-lg text-xs font-ui flex items-center gap-2 animate-fade-in border border-[#404040]">
+          <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
+          <span>{checklistToast}</span>
         </div>
       )}
     </div>

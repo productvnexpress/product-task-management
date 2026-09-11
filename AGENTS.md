@@ -239,7 +239,7 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
     - Cột thời gian: Cố định `w-32 font-ui text-[11px] text-[#5f5f5f]`
     - Cột khoảng thời gian (Duration): Cố định `w-24 text-center font-ui text-[11px] text-[#5f5f5f]`
     - Cột trạng thái: Khung `w-32` chứa thẻ trạng thái `w-28 text-center text-[11px] font-ui font-medium rounded-[4px] border` căn giữa đồng nhất.
-  - Tag mốc ra mắt: Đổi từ `"Mục tiêu ra mắt"` thành **`Ra mắt`**.
+  - Tag mốc hoàn thành: Đổi từ `"Mốc ra mắt:"` / `"Ra mắt"` thành **`Hoàn thành:`** và badge **`Hoàn thành`** để nhất quán trong ngoài với 4 trạng thái chuẩn của hệ thống.
 
 #### Phần 3: Hệ thống Liên kết Dự án (Project Links)
 - **6 Liên kết mặc định**:
@@ -256,6 +256,57 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
   - `Người ghi chú`: Cố định là tài khoản đang đăng nhập (`currentActorName`), hiển thị dạng read-only, tuyệt đối không cho phép chọn người khác.
   - `Nội dung`: Nội dung chi tiết của ghi chú.
   - `Thời gian`: Hệ thống tự động ghi nhận ngày giờ tạo.
+
+#### Phần 5: Sườn Checklist 34 Tiêu chuẩn Dự án (Project Checklist — Product Management)
+Cung cấp bộ khung sườn tiêu chuẩn hóa 5 giai đoạn cho toàn bộ team triển khai bám theo từ lúc khởi sự đến sau khi ra mắt:
+1. **Giai đoạn 1 — Trước khi bắt đầu (7 tiêu chuẩn)**:
+   - Vấn đề thật của độc giả & lý do cần làm bây giờ.
+   - Nhóm độc giả phục vụ (OV, DO hay cả hai).
+   - Chỉ số đo thành công, baseline hiện tại & mục tiêu năm.
+   - Số lượng giai đoạn và mốc dự kiến từng giai đoạn.
+   - Xác định Product Owner duy nhất chịu trách nhiệm từ đầu đến cuối.
+   - Kênh và quyết định phê duyệt chính thức (họp BBT, email...).
+   - Kế hoạch triển khai chi tiết: ai làm gì, phụ thuộc ai, rủi ro lớn nhất về thời gian.
+2. **Giai đoạn 2 — Thiết kế & Chuyển giao (7 tiêu chuẩn)**:
+   - Đủ màn hình, đủ trạng thái (empty, loading, error) trên Desktop, Mobile Web/App.
+   - Tài liệu logic luồng người dùng (INPUT - PROCESS - OUTPUT).
+   - Chốt zone vị trí quảng cáo (trải nghiệm đọc vs tối ưu doanh thu).
+   - Spec tracking chi tiết (event gì, trigger khi nào, chuẩn đặt tên ITM/ADP).
+   - Yêu cầu SEO đầy đủ (cấu trúc URL, meta, schema, canonical, sitemap).
+   - Pháp lý, bản quyền, phối hợp Ban Trị sự / Kế toán / Nhân sự.
+   - Nguồn dữ liệu đầu vào & nhu cầu CMS/tool nhập liệu riêng cho Tòa soạn.
+3. **Giai đoạn 3 — Sản phẩm BETA (8 tiêu chuẩn)**:
+   - Giải pháp nhập liệu/vận hành trên CMS Editor & App Editor.
+   - Ý kiến thống nhất với Tổng thư ký tòa soạn về vị trí trên Trang chủ.
+   - Cấu hình menu, folder, widget trên desktop & mobile web.
+   - Mobile app push, category ID & deep link tương ứng.
+   - Kiểm thử đa trình duyệt (Chrome, Safari) & thiết bị thực tế (iOS, Android).
+   - Chuẩn tốc độ Core Web Vitals (LCP < 2.5s, CLS < 0.1, INP < 200ms).
+   - Kiểm tra tracking dữ liệu thực tế trên staging.
+   - Kế hoạch rollback khi có sự cố nghiêm trọng sau release.
+4. **Giai đoạn 4 — Chuẩn bị Release (8 tiêu chuẩn)**:
+   - Ấn định ngày giờ release & xác nhận sẵn sàng từ Tech, Tòa soạn, QC.
+   - Dự trù thời gian test sau release & nhân sự trực tiếp nghiệm thu.
+   - **Quy tắc bất biến: Tuyệt đối không release vào cuối tuần hoặc sau 15:00 các ngày trong tuần**.
+   - Form tiếp nhận phản hồi / báo lỗi từ Tòa soạn và độc giả.
+   - Product Owner duyệt lần cuối (sign-off) trên beta/staging.
+   - Thông báo kế hoạch release tới BBT, BLĐ, Ban Trị sự, TKTS, Vận hành SD.
+   - Chuẩn bị tài liệu truyền thông, ảnh chụp, What's New trên App Store/Google Play.
+   - Dashboard đo lường (VnExpress Analytics / PowerBI / SIS) sẵn sàng.
+5. **Giai đoạn 5 — Ra mắt (4 tiêu chuẩn)**:
+   - Thông báo / bài viết / banner giới thiệu tính năng tới độc giả.
+   - Theo dõi dữ liệu real-time trong 48h đầu sau go-live (lượng truy cập, lỗi error rate).
+   - Lịch báo cáo hiệu quả định kỳ (sau 3 ngày, 1 tuần, 1 tháng).
+   - Họp / gửi email đánh giá rút kinh nghiệm (Post-mortem / Retrospective).
+
+- **Trạng thái & Tương tác**:
+  - `status`: `'pending'` (chưa làm) \| `'completed'` (đã xong, dấu tích xanh) \| `'skipped'` (bỏ qua / không áp dụng, chữ gạch ngang mờ).
+  - Tự động hiển thị thanh tiến độ tuân thủ tiêu chuẩn: `% hoàn thành` dựa trên số lượng hoàn thành / (tổng - bỏ qua).
+- **Tích hợp Tác nghiệp**:
+  - Xem và cập nhật tổng thể trong Section **`5: Checklist`** của `ProjectDetailsDrawer`, hỗ trợ thanh 5 menu điều hướng nhanh (Tổng quan, Giai đoạn, Liên kết, Ghi chú, Checklist) được pin cố định dưới tên dự án.
+  - Nút **`Checklist (xx/yy)`** trên thanh `QuickAddBar`: Mở nhanh modal `ProjectChecklistModal` để tra cứu và 1-click gán nội dung tiêu chuẩn làm tiêu đề công việc.
+- **Tổ chức Database Supabase**:
+  - Cột `checklist JSONB DEFAULT '[]'::jsonb` trong bảng `projects`.
 
 ### 2.3. Nhật ký Thay đổi Dự án (Audit History Log)
 - Ghi lại vết mọi lần thay đổi thông tin dự án gồm: Trường dữ liệu thay đổi, Giá trị cũ, Giá trị mới, Người thực hiện, và Thời gian thực hiện.
@@ -784,6 +835,16 @@ Tại danh sách dự án thuộc Left Sidebar:
      created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
    );
    ```
+
+6. **Quản trị Master Checklist Dự án trong Thiết lập (Master Checklist Management)**:
+   - Tích hợp tab **`Checklist ({count})`** trong mục Thiết lập hệ thống (`SettingsManager`).
+   - Cung cấp đầy đủ các tác vụ quản trị:
+     - **Thêm mới**: Bổ sung tiêu chuẩn vào bất kỳ giai đoạn nào (1 đến 5) với lựa chọn chèn vào đầu hoặc cuối giai đoạn.
+     - **Sửa**: Điều chỉnh nội dung câu hỏi/tiêu chuẩn và chuyển giai đoạn nếu cần.
+     - **Xoá**: Gỡ bỏ tiêu chuẩn khỏi bộ tiêu chuẩn mẫu với modal xác nhận an toàn.
+     - **Thay đổi vị trí (Reorder)**: Di chuyển lên / Di chuyển xuống trực tiếp trong cùng giai đoạn bằng các nút `ArrowUp` / `ArrowDown`.
+     - **Khôi phục gốc (Reset to Defaults)**: Khôi phục lại bộ 34 tiêu chuẩn chuẩn hóa ban đầu của Ban Sản phẩm bất kỳ lúc nào.
+   - Khi Master Checklist thay đổi, hệ thống phát tín hiệu `wms_checklist_template_updated` để tự động cập nhật ngay trên các màn hình mở việc và chi tiết dự án.
 
 ---
 

@@ -226,13 +226,13 @@ export function formatProductMemberWithPhone(
   }
 
   if (membersList && membersList.length > 0) {
-    const cleanRaw = raw.replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+    const cleanRaw = (raw || '').replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
 
     // 1. Prioritize Product members (Ban Sản phẩm - Công nghệ) to avoid collision with stakeholders having the exact same name
     const productMember = membersList.find((m) => {
       const isProd =
         m.group === 'Product' ||
-        (m.department && m.department.toLowerCase().includes('sản phẩm')) ||
+        (m.department && (m.department || '').toLowerCase().includes('sản phẩm')) ||
         (m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team));
       if (!isProd) return false;
 
@@ -277,14 +277,14 @@ export function formatStakeholderMemberWithPhone(
   }
 
   if (membersList && membersList.length > 0) {
-    const cleanRaw = raw.replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
+    const cleanRaw = (raw || '').replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();
 
     // Prioritize Stakeholders/Ban Biên tập over Product members
     const stakeholder = membersList.find((m) => {
       const isStakeholder =
         m.group === 'Stakeholder' ||
         m.team === 'Stakeholder' ||
-        (m.department && !m.department.toLowerCase().includes('sản phẩm'));
+        (m.department && !(m.department || '').toLowerCase().includes('sản phẩm'));
       if (!isStakeholder) return false;
 
       const cleanMName = (m.name || '').replace(/^(Anh|Chị)\s+/i, '').trim().toLowerCase();

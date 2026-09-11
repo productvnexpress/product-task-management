@@ -5,12 +5,14 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ProjectItem, MemberItem, TeamType, PriorityLevel, TaskItem } from '../types';
-import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers } from 'lucide-react';
+import { ProjectItem, MemberItem, TeamType, PriorityLevel, TaskItem, ProjectChecklistItem } from '../types';
+import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups, isOthersProject } from '../utils/projectSortingUtils';
+import { ProjectChecklistModal } from './ProjectChecklistModal';
+import { calculateChecklistStats } from '../data/defaultProjectChecklist';
 
 interface QuickAddBarProps {
   projects: ProjectItem[];
@@ -30,6 +32,8 @@ interface QuickAddBarProps {
   }) => void;
   defaultProjectId?: string;
   defaultAssignee?: string;
+  onUpdateProjectChecklist?: (projectId: string, updatedChecklist: ProjectChecklistItem[]) => void;
+  currentUser?: MemberItem | null;
 }
 
 export const QuickAddBar: React.FC<QuickAddBarProps> = ({
@@ -39,10 +43,13 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   onAddTask,
   defaultProjectId,
   defaultAssignee,
+  onUpdateProjectChecklist,
+  currentUser,
 }) => {
   const productMembers = getProductMembers(members);
   const [title, setTitle] = useState('');
   const [assignee, setAssignee] = useState(defaultAssignee || productMembers[0]?.name || 'Hệ thống');
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
 
   // Calculate project groups: Group 1 (Participated projects by latest task), Group 2 (Other projects A-Z), Others (Special)
   const projectGroups = useMemo(() => {
@@ -105,6 +112,11 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
   const selectedProj = projects.find((p) => p.id === projectId);
   const availablePhases = selectedProj?.phases || [];
+
+  const checklistStats = useMemo(() => {
+    if (!selectedProj || isOthersProject(selectedProj.id)) return null;
+    return calculateChecklistStats(selectedProj.checklist);
+  }, [selectedProj]);
 
   const handleProjectSelect = (pId: string) => {
     setProjectId(pId);
@@ -229,6 +241,24 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 </select>
               </div>
 
+              {/* Checklist quick button */}
+              {selectedProj && !isOthersProject(selectedProj.id) && (
+                <button
+                  type="button"
+                  onClick={() => setIsChecklistModalOpen(true)}
+                  className="flex items-center gap-1.5 bg-[#fcf0f5] hover:bg-[#fae6ef] text-[#b13460] px-2.5 py-1.5 rounded-[6px] border border-[#f3c2d4] text-xs font-ui font-semibold transition-colors cursor-pointer shadow-2xs"
+                  title="Xem nhanh Checklist dự án & chọn tiêu chuẩn để tạo task"
+                >
+                  <ListChecks className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Checklist</span>
+                  {checklistStats && (
+                    <span className="text-[10px] font-bold bg-[#b13460] text-white px-1.5 py-0.2 rounded-full">
+                      {checklistStats.completed}/{checklistStats.total - checklistStats.skipped}
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* Phase selector if available */}
               {availablePhases.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
@@ -321,6 +351,29 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           )}
         </AnimatePresence>
       </form>
+
+      {/* Project Checklist Modal */}
+      {selectedProj && !isOthersProject(selectedProj.id) && isChecklistModalOpen && (
+        <ProjectChecklistModal
+          isOpen={isChecklistModalOpen}
+          onClose={() => setIsChecklistModalOpen(false)}
+          project={selectedProj}
+          currentUser={currentUser}
+          onSelectAsTaskTitle={(chosenTitle, chosenPhaseId) => {
+            setTitle(chosenTitle);
+            if (chosenPhaseId && selectedProj.phases && selectedProj.phases.length > 0) {
+              const matchedPhase = selectedProj.phases.find(
+                (p, idx) => idx + 1 === chosenPhaseId || p.id === String(chosenPhaseId) || p.name.toLowerCase().includes(`giai đoạn ${chosenPhaseId}`) || p.name.toLowerCase().includes(`gđ ${chosenPhaseId}`)
+              );
+              if (matchedPhase) {
+                setPhaseId(matchedPhase.id);
+              }
+            }
+            setIsExpanded(true);
+          }}
+          onUpdateProjectChecklist={onUpdateProjectChecklist}
+        />
+      )}
     </div>
   );
 };

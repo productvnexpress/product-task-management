@@ -63,7 +63,7 @@ export const login = (
     if (!isProductMember(m)) return false;
     const u = (m.username || '').toLowerCase();
     const emailPrefix = (m.email || '').split('@')[0].toLowerCase();
-    return u === normalizedUser || emailPrefix === normalizedUser || m.id.toLowerCase() === normalizedUser;
+    return u === normalizedUser || emailPrefix === normalizedUser || (m.id || '').toLowerCase() === normalizedUser;
   });
 
   if (!user) {
@@ -106,7 +106,7 @@ export const getCurrentAuthUser = (members: MemberItem[]): MemberItem | null => 
       if (!isProductMember(m)) return false;
       const u = (m.username || '').toLowerCase();
       const emailPrefix = (m.email || '').split('@')[0].toLowerCase();
-      return u === normalized || emailPrefix === normalized || m.id.toLowerCase() === normalized;
+      return u === normalized || emailPrefix === normalized || (m.id || '').toLowerCase() === normalized;
     });
 
     return user || null;

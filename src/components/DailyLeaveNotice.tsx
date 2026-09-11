@@ -24,13 +24,13 @@ export function useProductLeaves(members: MemberItem[]) {
   const productMemberMap = useMemo(() => {
     const map = new Map<string, MemberItem>();
     productMembers.forEach((m) => {
-      map.set(m.name.trim().toLowerCase(), m);
+      map.set((m.name || '').trim().toLowerCase(), m);
     });
     return map;
   }, [productMembers]);
 
   const productMemberNames = useMemo(() => {
-    return productMembers.map((m) => m.name);
+    return productMembers.map((m) => m.name || '');
   }, [productMembers]);
 
   // 1. Ngày hôm nay & 3 ngày làm việc tiếp theo
@@ -50,7 +50,7 @@ export function useProductLeaves(members: MemberItem[]) {
       .getMemberLeaves()
       .filter((l) => l.status === 'Đã duyệt');
 
-    const memberNameSet = new Set(productMembers.map((m) => m.name.trim().toLowerCase()));
+    const memberNameSet = new Set(productMembers.map((m) => (m.name || '').trim().toLowerCase()));
 
     // Thu thập theo từng ngày trong 3 ngày làm việc tới
     const list: {
@@ -61,7 +61,7 @@ export function useProductLeaves(members: MemberItem[]) {
 
     next3WorkingDays.forEach((dayStr) => {
       const dayLeaves = allApproved.filter((l) => {
-        if (!memberNameSet.has(l.memberName.trim().toLowerCase())) return false;
+        if (!memberNameSet.has((l.memberName || '').trim().toLowerCase())) return false;
         return dayStr >= l.startDate && dayStr <= l.endDate;
       });
 
@@ -69,7 +69,7 @@ export function useProductLeaves(members: MemberItem[]) {
         list.push({
           date: dayStr,
           leave: l,
-          memberObj: productMemberMap.get(l.memberName.trim().toLowerCase()),
+          memberObj: productMemberMap.get((l.memberName || '').trim().toLowerCase()),
         });
       });
     });
@@ -194,7 +194,7 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({ members, lea
             {hasTodayLeaves ? (
               <div className="flex flex-wrap items-center gap-1 text-[#202020]">
                 {todayLeaves.map((l, idx) => {
-                  const mObj = productMemberMap.get(l.memberName.trim().toLowerCase());
+                  const mObj = productMemberMap.get((l.memberName || '').trim().toLowerCase());
                   const displayName = mObj ? getMemberDisplayName(mObj) : l.memberName;
                   return (
                     <span key={l.id} className="inline-flex items-center">

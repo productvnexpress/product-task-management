@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ProjectItem,
@@ -17,7 +17,10 @@ import {
   ProjectCustomLink,
   ProjectNoteItem,
   ProjectHistoryLog,
+  ProjectChecklistItem,
 } from '../types';
+import { ProjectChecklistSection } from './ProjectChecklistSection';
+import { normalizeProjectChecklist } from '../data/defaultProjectChecklist';
 import {
   X,
   Calendar,
@@ -50,6 +53,7 @@ import {
   Send,
   History,
   Share2,
+  CheckSquare,
 } from 'lucide-react';
 import { getProjectFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
@@ -156,6 +160,31 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const [newNoteAuthor, setNewNoteAuthor] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
 
+  // Checklist State (34 tiêu chuẩn Product Management)
+  const [checklist, setChecklist] = useState<ProjectChecklistItem[]>(() =>
+    normalizeProjectChecklist(project?.checklist)
+  );
+
+  const handleUpdateChecklist = (updatedChecklist: ProjectChecklistItem[]) => {
+    setChecklist(updatedChecklist);
+    if (project && !isCreateMode) {
+      const updatedProject: ProjectItem = {
+        ...project,
+        checklist: updatedChecklist,
+      };
+      onSaveProject(updatedProject);
+    }
+  };
+
+  // Tự động đồng bộ khi Master Checklist Template thay đổi từ màn hình Thiết lập
+  useEffect(() => {
+    const handleTemplateUpdated = () => {
+      setChecklist(normalizeProjectChecklist(project?.checklist));
+    };
+    window.addEventListener('wms_checklist_template_updated', handleTemplateUpdated);
+    return () => window.removeEventListener('wms_checklist_template_updated', handleTemplateUpdated);
+  }, [project]);
+
   // History Log Modal State
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -177,6 +206,62 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const [isSavedToast, setIsSavedToast] = useState(false);
 
   const currentActorName = currentAuthUser?.name || activeProductMember?.name || members[0]?.name || 'Hệ thống';
+
+  // Quick Navigation Section Menu State
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const [activeNav, setActiveNav] = useState<string>('project-drawer-section-overview');
+
+  const scrollToSection = (sectionId: string) => {
+    setActiveNav(sectionId);
+    const container = scrollBodyRef.current;
+    const target = document.getElementById(sectionId);
+    if (container && target) {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const offsetTop = targetRect.top - containerRect.top + container.scrollTop - 12;
+      container.scrollTo({
+        top: Math.max(0, offsetTop),
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  useEffect(() => {
+    const container = scrollBodyRef.current;
+    if (!container || !isOpen) return;
+
+    const handleScroll = () => {
+      const sectionIds = [
+        'project-drawer-section-overview',
+        'project-drawer-section-phases',
+        'project-drawer-section-links',
+        'project-drawer-section-notes',
+        'project-drawer-section-checklist',
+      ];
+      const containerTop = container.getBoundingClientRect().top;
+
+      let current = sectionIds[0];
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top - containerTop <= 110) {
+            current = id;
+          }
+        }
+      }
+      setActiveNav(current);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveNav('project-drawer-section-overview');
+    }
+  }, [isOpen, project?.id]);
 
   // Sync state when project prop updates or drawer opens
   useEffect(() => {
@@ -239,6 +324,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setPhases([]);
       setNotes([]);
       setHistoryLogs([]);
+      setChecklist(normalizeProjectChecklist([]));
 
       setNewNoteAuthor(currentActorName);
       setNewNoteContent('');
@@ -280,6 +366,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       // Normalize phases chronologically from near to far and auto-number
       setPhases(normalizeAndNumberPhases(project.phases || []));
       setNotes(project.notes || []);
+      setChecklist(normalizeProjectChecklist(project.checklist));
 
       // Initialize history logs
       const currentLogs = project.history && project.history.length > 0
@@ -403,8 +490,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
     const query = poSearchQuery.toLowerCase();
     return (
-      m.name.toLowerCase().includes(query) ||
-      fullNameWithSalutation.toLowerCase().includes(query) ||
+      (m.name || '').toLowerCase().includes(query) ||
+      (fullNameWithSalutation || '').toLowerCase().includes(query) ||
       (m.salutation || '').toLowerCase().includes(query) ||
       (m.department || '').toLowerCase().includes(query) ||
       (m.title || '').toLowerCase().includes(query) ||
@@ -753,6 +840,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       links,
       customLinks: validCustomLinks,
       notes,
+      checklist,
       history: [initialLog],
       createdAt: new Date().toISOString(),
     };
@@ -818,6 +906,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       links,
       customLinks: validCustomLinks,
       notes,
+      checklist,
     };
 
     // Calculate overview changes and record history log
@@ -883,6 +972,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     },
     customLinks,
     notes,
+    checklist,
     history: historyLogs,
   };
 
@@ -1091,11 +1181,97 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
         </div>
 
+        {/* Sub-header: Pinned Section Quick Navigation Menu */}
+        <div className="px-5 py-2 bg-[#fcfcfc] border-b border-[#e0e0e0] flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none z-10">
+          <button
+            type="button"
+            onClick={() => scrollToSection('project-drawer-section-overview')}
+            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeNav === 'project-drawer-section-overview'
+                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
+                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+            }`}
+          >
+            <FolderKanban className="w-3.5 h-3.5" />
+            <span>Tổng quan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection('project-drawer-section-phases')}
+            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeNav === 'project-drawer-section-phases'
+                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
+                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Giai đoạn</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-num font-bold ${
+                activeNav === 'project-drawer-section-phases'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[#f0f0f0] text-[#606060]'
+              }`}
+            >
+              {phases.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection('project-drawer-section-links')}
+            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeNav === 'project-drawer-section-links'
+                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
+                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+            }`}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Liên kết</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection('project-drawer-section-notes')}
+            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeNav === 'project-drawer-section-notes'
+                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
+                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Ghi chú</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-num font-bold ${
+                activeNav === 'project-drawer-section-notes'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[#f0f0f0] text-[#606060]'
+              }`}
+            >
+              {notes.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection('project-drawer-section-checklist')}
+            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeNav === 'project-drawer-section-checklist'
+                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
+                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+            }`}
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            <span>Checklist</span>
+          </button>
+        </div>
+
         {/* Drawer Body - Single Screen Scrollable Content */}
-        <div className="p-5 overflow-y-auto font-body text-xs text-[#202020] flex-1 space-y-6">
+        <div ref={scrollBodyRef} className="p-5 overflow-y-auto font-body text-xs text-[#202020] flex-1 space-y-6 scroll-smooth">
 
           {/* ==================== SECTION 1: TỔNG QUAN ==================== */}
-          <div className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs">
+          <div id="project-drawer-section-overview" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
             <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold">
@@ -1730,7 +1906,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 2: GIAI ĐOẠN ==================== */}
-          <div className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs">
+          <div id="project-drawer-section-phases" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
             <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#eef4fb] border border-[#c2d7f0] text-[#1d508d] flex items-center justify-center font-bold">
@@ -1843,7 +2019,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 3: LIÊN KẾT ==================== */}
-          <div className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs">
+          <div id="project-drawer-section-links" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
             <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#e2f6e9] border border-[#b8e8c4] text-[#24a148] flex items-center justify-center font-bold">
@@ -2064,7 +2240,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 4: GHI CHÚ ==================== */}
-          <div className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs">
+          <div id="project-drawer-section-notes" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
             <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold">
@@ -2188,6 +2364,21 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ==================== SECTION 5: CHECKLIST DỰ ÁN ==================== */}
+          <div id="project-drawer-section-checklist" className="scroll-mt-2">
+            <ProjectChecklistSection
+              checklist={checklist}
+              onUpdateChecklist={handleUpdateChecklist}
+              canEdit={canEdit}
+              currentUser={effectiveUser}
+              onCreateTaskFromItem={(itemText) => {
+                if (project) {
+                  onSelectProjectTasks(project.id);
+                }
+              }}
+            />
           </div>
 
         </div>

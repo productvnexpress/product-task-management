@@ -105,7 +105,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = item.title.toLowerCase().includes(q);
+        const matchTitle = (item.title || '').toLowerCase().includes(q);
         const matchSubtitle = (item.subtitle || '').toLowerCase().includes(q);
         const matchAuthor = (item.deletedBy || '').toLowerCase().includes(q);
         if (!matchTitle && !matchSubtitle && !matchAuthor) {

@@ -178,8 +178,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
     const q = poSearchQuery.toLowerCase();
     return (
-      m.name.toLowerCase().includes(q) ||
-      formalName.toLowerCase().includes(q) ||
+      (m.name || '').toLowerCase().includes(q) ||
+      (formalName || '').toLowerCase().includes(q) ||
       (m.salutation || '').toLowerCase().includes(q) ||
       (m.department || '').toLowerCase().includes(q) ||
       (m.title || '').toLowerCase().includes(q) ||

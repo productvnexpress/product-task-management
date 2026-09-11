@@ -320,12 +320,12 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
       // 6. Search query (either from sidebar or local quick search)
       const q = (filterState?.searchQuery || quickSearch).trim().toLowerCase();
       if (q) {
-        const matchName = p.name.toLowerCase().includes(q);
-        const matchCode = p.code.toLowerCase().includes(q);
+        const matchName = (p.name || '').toLowerCase().includes(q);
+        const matchCode = (p.code || '').toLowerCase().includes(q);
         const matchPO = (p.productOwner || '').toLowerCase().includes(q);
         const matchDesc = (p.description || '').toLowerCase().includes(q);
         const matchObj = (p.objective || '').toLowerCase().includes(q);
-        const matchPM = p.roles?.pm && p.roles.pm.some((m) => m.toLowerCase().includes(q));
+        const matchPM = p.roles?.pm && Array.isArray(p.roles.pm) && p.roles.pm.some((m) => (m || '').toLowerCase().includes(q));
         if (!matchName && !matchCode && !matchPO && !matchDesc && !matchObj && !matchPM) {
           return false;
         }
@@ -777,7 +777,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                           <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-[#b13460] text-white flex items-center justify-center text-[8px] font-bold border-2 border-white ring-2 ring-[#f3c2d4] shrink-0">
                             ★
                           </div>
-                          <span className="font-normal text-[#b13460]">Mốc ra mắt:</span>
+                          <span className="font-normal text-[#b13460]">Hoàn thành:</span>
                         </div>
 
                         <div className="w-32 shrink-0 font-ui font-bold text-[11px] text-[#202020]">
@@ -796,7 +796,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
 
                         <div className="w-32 shrink-0 flex items-center">
                           <span className="w-28 justify-center text-center text-[11px] font-ui font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-flex items-center">
-                            Ra mắt
+                            Hoàn thành
                           </span>
                         </div>
                       </div>
