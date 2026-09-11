@@ -39,12 +39,18 @@ import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/a
 import { ReminderPanel } from './components/ReminderPanel';
 import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
-import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation } from './utils/memberPersonalization';
-import { isTaskOverdue, isTaskDueToday, isTaskDueSoon } from './utils/dateUtils';
+import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
+import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
 import { normalizeProjectStatus } from './utils/projectSortingUtils';
+import {
+  initWebPushListener,
+  dispatchNotificationWebPush,
+  showWebPushNotification,
+  isWebPushEnabledByUser,
+} from './utils/webPushNotifications';
 import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder, CheckCircle2 } from 'lucide-react';
 
 export function App() {
@@ -329,6 +335,53 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     localStorage.setItem('vne_notifications_v1', JSON.stringify(notifications));
   }, [notifications]);
 
+  // Lắng nghe sự kiện click thông báo từ Service Worker để mở Task chi tiết
+  useEffect(() => {
+    const cleanup = initWebPushListener((taskId) => {
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) {
+        setSelectedTask(target);
+      }
+    });
+    return () => cleanup();
+  }, [tasks]);
+
+  // Tự động nhắc nhở đầu việc đến hạn/quá hạn qua Web Push Notification khi truy cập
+  useEffect(() => {
+    if (!currentAuthUser || !isWebPushEnabledByUser()) return;
+
+    const todayStr = getTodayDateString();
+    const storageKey = `vne_web_push_daily_${currentAuthUser.id}_${todayStr}`;
+    if (localStorage.getItem(storageKey)) return;
+
+    const userTasks = tasks.filter((t) => isTaskForMember(t, currentAuthUser));
+    const dueTodayTasks = userTasks.filter((t) => {
+      const d = normalizeDateString(t.dueDate);
+      return d === todayStr && t.status !== 'Hoàn thành';
+    });
+    const overdueTasks = userTasks.filter((t) => {
+      const d = normalizeDateString(t.dueDate);
+      return d !== '' && d < todayStr && t.status !== 'Hoàn thành';
+    });
+
+    if (dueTodayTasks.length > 0 || overdueTasks.length > 0) {
+      localStorage.setItem(storageKey, 'true');
+      const title =
+        overdueTasks.length > 0
+          ? `⚠️ WMS: Bạn có ${overdueTasks.length} việc quá hạn!`
+          : `📅 WMS: Hôm nay bạn có ${dueTodayTasks.length} việc đến hạn`;
+      const body =
+        overdueTasks.length > 0
+          ? `Cùng ${dueTodayTasks.length} việc đến hạn hôm nay. Hãy rà soát tiến độ nhé!`
+          : `Ưu tiên hoàn thành các đầu việc đúng hạn trong ngày làm việc hôm nay.`;
+
+      showWebPushNotification(title, {
+        body,
+        tag: `daily-reminder-${todayStr}`,
+      });
+    }
+  }, [currentAuthUser, tasks]);
+
   // Load and sync data with Supabase on mount + Realtime collaboration
   useEffect(() => {
     let isMounted = true;
@@ -552,6 +605,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       setNotifications((prev) => [...newNotifs, ...prev]);
       newNotifs.forEach((n) => {
         wmsDataService.saveNotification(n).catch(console.warn);
+
+        // Bắn thông báo đẩy Web Push nếu người nhận là tài khoản hiện tại hoặc active member
+        const isTargetUser =
+          (currentUserName && isSamePersonName(n.recipientName, currentUserName)) ||
+          (activeProductMember && isSamePersonName(n.recipientName, activeProductMember.name));
+
+        if (isTargetUser) {
+          dispatchNotificationWebPush(n, () => {
+            if (n.taskId) {
+              const target = tasks.find((t) => t.id === n.taskId);
+              if (target) setSelectedTask(target);
+            }
+          });
+        }
       });
     }
   };
@@ -939,7 +1006,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         filterState.assignee &&
         filterState.assignee !== 'Tất cả' &&
         taskPersonalScope !== 'my_projects_tasks' &&
-        t.assignee !== filterState.assignee
+        !isSamePersonName(t.assignee, filterState.assignee)
       ) {
         return false;
       }
@@ -1014,7 +1081,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Active target member for sidebar badge calculations
   const targetMemberForCounts = useMemo(() => {
-    return activeProductMember || (filterState.assignee !== 'Tất cả' ? members.find((m) => m.name === filterState.assignee) : null);
+    return activeProductMember || (filterState.assignee !== 'Tất cả' ? members.find((m) => isSamePersonName(m.name, filterState.assignee)) : null);
   }, [activeProductMember, filterState.assignee, members]);
 
   // Task counts by project for sidebar badges (dynamically filtered by selected member / scope)
@@ -1073,7 +1140,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         filterState.assignee &&
         filterState.assignee !== 'Tất cả' &&
         taskPersonalScope !== 'my_projects_tasks' &&
-        t.assignee !== filterState.assignee
+        !isSamePersonName(t.assignee, filterState.assignee)
       ) {
         return false;
       }
@@ -1292,11 +1359,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         />
                       )}
 
-                      {/* Daily Completion Accountability Alert for Manager & Executive */}
+                      {/* Daily Accountability Alert (Admin: toàn bộ phận, Manager: Designers trong dự án, Executive: cá nhân) */}
                       <DailyCompletionAlert
                         members={members}
                         tasks={tasks}
+                        projects={projects}
                         currentAuthUser={currentAuthUser}
+                        activeProductMember={activeProductMember}
                         selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
                         onSelectAssignee={(assigneeName) => {
                           setFilterState((f) => ({ ...f, assignee: assigneeName }));

@@ -15,6 +15,25 @@ export interface DueDateInfo {
 }
 
 /**
+ * Normalizes any date string or Date object to YYYY-MM-DD format
+ */
+export function normalizeDateString(dateVal?: string | Date | null): string {
+  if (!dateVal) return '';
+  if (dateVal instanceof Date) {
+    return getTodayDateString(dateVal);
+  }
+  const str = String(dateVal).trim();
+  // Extract YYYY-MM-DD from ISO strings (e.g. 2026-09-11T00:00:00.000Z or 2026-09-11 00:00:00)
+  const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return getTodayDateString(d);
+  }
+  return str;
+}
+
+/**
  * Returns YYYY-MM-DD string for today or input date
  */
 export function getTodayDateString(refDate: Date = new Date()): string {
@@ -28,11 +47,11 @@ export function getTodayDateString(refDate: Date = new Date()): string {
  * Calculates day difference (dateStr1 - dateStr2)
  */
 export function getDaysDifference(dateStr1: string, dateStr2: string): number {
-  if (!dateStr1 || !dateStr2) return 0;
-  const d1 = new Date(dateStr1);
-  const d2 = new Date(dateStr2);
-  d1.setHours(0, 0, 0, 0);
-  d2.setHours(0, 0, 0, 0);
+  const d1Str = normalizeDateString(dateStr1);
+  const d2Str = normalizeDateString(dateStr2);
+  if (!d1Str || !d2Str) return 0;
+  const d1 = new Date(d1Str + 'T00:00:00');
+  const d2 = new Date(d2Str + 'T00:00:00');
   const diffTime = d1.getTime() - d2.getTime();
   return Math.round(diffTime / (1000 * 60 * 60 * 24));
 }
@@ -82,13 +101,15 @@ export function getTaskDueDateInfo(dueDateStr: string, status: TaskStatus, refDa
 export function isTaskDueToday(task: TaskItem, refDate: Date = new Date()): boolean {
   if (task.status === 'Hoàn thành') return false;
   const todayStr = getTodayDateString(refDate);
-  return task.dueDate === todayStr;
+  const taskDate = normalizeDateString(task.dueDate);
+  return taskDate !== '' && taskDate === todayStr;
 }
 
 export function isTaskOverdue(task: TaskItem, refDate: Date = new Date()): boolean {
   if (task.status === 'Hoàn thành') return false;
   const todayStr = getTodayDateString(refDate);
-  return task.dueDate < todayStr;
+  const taskDate = normalizeDateString(task.dueDate);
+  return taskDate !== '' && taskDate < todayStr;
 }
 
 export function isTaskDueSoon(task: TaskItem, refDate: Date = new Date()): boolean {

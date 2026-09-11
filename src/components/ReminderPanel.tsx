@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { MemberItem, TaskItem, DueFilterType } from '../types';
-import { getDailyAccountabilityStats } from '../utils/dailyAccountability';
+import { getDailyDueTaskStats } from '../utils/dailyAccountability';
 import {
   isTaskOverdue,
   isTaskDueToday,
@@ -59,13 +59,13 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
     let report = `📢 BÁO CÁO ĐÔN ĐỐC TIẾN ĐỘ CÔNG VIỆC (${formatDateWithEnDay(new Date())})\n`;
     report += `===============================================\n\n`;
 
-    // 1. Cảnh báo tiến độ ngày: Nhân sự chưa có task hoàn thành hôm nay
+    // 1. Cảnh báo tiến độ ngày: Nhân sự chưa có task đến hạn hôm nay
     if (members && members.length > 0) {
-      const dailyStats = getDailyAccountabilityStats(members, tasks);
+      const dailyStats = getDailyDueTaskStats(members, tasks, []);
       if (dailyStats.missingMembers.length > 0) {
-        report += `🚨 NHÂN SỰ CHƯA CÓ TASK HOÀN THÀNH HÔM NAY (${dailyStats.missingMembers.length}/${dailyStats.totalApplicable}):\n`;
+        report += `🚨 NHÂN SỰ CHƯA CÓ TASK ĐẾN HẠN HÔM NAY (${dailyStats.missingMembers.length}/${dailyStats.targetMembers.length}):\n`;
         dailyStats.missingMembers.forEach((item, i) => {
-          report += `${i + 1}. [${item.role}] ${item.member.name} (${item.member.team}) - Đang có ${item.activeTasksCount} việc chưa xong\n`;
+          report += `${i + 1}. [${item.member.team || item.role}] ${item.member.name} - Đang có ${item.activeTasksCount} việc phụ trách\n`;
         });
         report += `\n`;
       }

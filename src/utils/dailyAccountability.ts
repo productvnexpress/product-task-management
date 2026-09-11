@@ -3,174 +3,259 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MemberItem, TaskItem } from '../types';
-import { getUserRole } from './rbac';
-import { isTaskForMember } from './memberPersonalization';
-import { getTodayDateString } from './dateUtils';
+import { MemberItem, TaskItem, ProjectItem } from '../types';
+import { getUserRole, UserRole } from './rbac';
+import { isTaskForMember, isSamePersonName } from './memberPersonalization';
+import { getTodayDateString, normalizeDateString } from './dateUtils';
 import { formatDateWithEnDay } from './formatters';
 
-export interface MemberAccountabilityStatus {
+export interface DueTaskMemberStatus {
   member: MemberItem;
-  role: 'Manager' | 'Executive';
-  completedTasksCount: number;
-  completedTasks: TaskItem[];
+  role: UserRole;
+  tasksDueTodayCount: number;
+  tasksDueToday: TaskItem[];
   activeTasksCount: number;
   activeTasks: TaskItem[];
-  hasCompletedToday: boolean;
+  hasTaskDueToday: boolean;
+  projectsInvolvedNames?: string[];
 }
 
-export interface DailyAccountabilityResult {
+export interface DailyDueTaskStatsResult {
+  roleScope: 'Admin' | 'Manager' | 'Executive';
+  scopeTitle: string;
+  scopeSubtitle: string;
   dateStr: string;
-  totalApplicable: number;
-  missingMembers: MemberAccountabilityStatus[];
-  compliantMembers: MemberAccountabilityStatus[];
-  allStatuses: MemberAccountabilityStatus[];
+  targetMembers: DueTaskMemberStatus[];
+  missingMembers: DueTaskMemberStatus[];
+  compliantMembers: DueTaskMemberStatus[];
   isCurrentUserMissing: boolean;
-  currentUserStatus?: MemberAccountabilityStatus;
+  currentUserStatus?: DueTaskMemberStatus;
 }
 
 /**
- * Kiểm tra xem một công việc có được hoàn thành trong ngày mục tiêu (mặc định hôm nay) không
+ * Lấy danh sách toàn bộ nhân sự được khai báo trong các dự án mà một Manager phụ trách.
+ * QUY CHUẨN: Chỉ tính nhân sự được khai báo chính thức trong roles (pm, designer, seo, data)
+ * hoặc leadName của dự án. Nhân sự ngoài dự án chỉ hỗ trợ một vài task sẽ KHÔNG tính vào dự án.
  */
-export function isTaskCompletedOnDate(task: TaskItem, targetDateStr: string = getTodayDateString()): boolean {
-  if (task.status !== 'Hoàn thành') return false;
-
-  // 1. Kiểm tra trường completedAt chuẩn
-  if (task.completedAt) {
-    return task.completedAt.startsWith(targetDateStr);
-  }
-
-  // 2. Kiểm tra nhật ký thay đổi trạng thái sang 'Hoàn thành' trong ngày
-  if (task.logs && task.logs.length > 0) {
-    const hasLogToday = task.logs.some((log) => {
-      const isCompleteAction =
-        log.action?.toLowerCase().includes('hoàn thành') ||
-        log.changes?.some(
-          (c) => c.field?.toLowerCase().includes('trạng thái') && c.newValue === 'Hoàn thành'
-        );
-      return (
-        isCompleteAction &&
-        (log.timestamp.startsWith(targetDateStr) || log.timestamp.includes(targetDateStr))
-      );
-    });
-    if (hasLogToday) return true;
-  }
-
-  // 3. Fallback: updatedAt trong ngày
-  if (task.updatedAt && task.updatedAt.startsWith(targetDateStr)) {
-    return true;
-  }
-
-  // 4. Fallback: dueDate trong ngày
-  if (task.dueDate === targetDateStr) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Tính toán thống kê hoàn thành công việc trong ngày của toàn bộ nhân sự cấp Manager & Executive
- */
-export function getDailyAccountabilityStats(
+export function getMembersInManagerProjects(
+  manager: MemberItem,
   members: MemberItem[],
-  tasks: TaskItem[],
-  targetDateStr: string = getTodayDateString(),
-  currentAuthUser?: MemberItem | null
-): DailyAccountabilityResult {
-  // Lọc danh sách nhân sự áp dụng: Cấp Manager và Executive thuộc Ban Sản phẩm
-  const applicableMembers = members.filter((m) => {
-    const role = getUserRole(m);
-    const isProductTeam =
-      m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team);
-    return isProductTeam && (role === 'Manager' || role === 'Executive');
+  projects: ProjectItem[]
+): { members: MemberItem[]; projectMap: Map<string, string[]> } {
+  // 1. Tìm các dự án do Manager này phụ trách (PM hoặc Lead)
+  const managerProjects = projects.filter((p) => {
+    const isPm = (p.roles?.pm || []).some((n) => isSamePersonName(n, manager.name));
+    const isLead = (p.leadName || '')
+      .split(/[,&]/)
+      .some((namePart) => isSamePersonName(namePart, manager.name));
+    return isPm || isLead;
   });
 
-  const allStatuses: MemberAccountabilityStatus[] = applicableMembers.map((member) => {
-    const role = getUserRole(member) as 'Manager' | 'Executive';
+  // 2. Thu thập nhân sự được khai báo trong dự án theo member.id
+  const memberProjectSets = new Map<string, Set<string>>();
 
-    // Toàn bộ công việc thuộc nhân sự này
+  const addProjectForMember = (memberId: string, projName: string) => {
+    if (!memberProjectSets.has(memberId)) {
+      memberProjectSets.set(memberId, new Set());
+    }
+    memberProjectSets.get(memberId)!.add(projName);
+  };
+
+  managerProjects.forEach((p) => {
+    const declaredNames = [
+      ...(p.roles?.pm || []),
+      ...(p.roles?.designer || []),
+      ...(p.roles?.seo || []),
+      ...(p.roles?.data || []),
+      ...(p.leadName ? p.leadName.split(/[,&]/) : []),
+    ];
+
+    declaredNames.forEach((name) => {
+      const matchMember = members.find((m) => isSamePersonName(m.name, name));
+      if (matchMember) {
+        addProjectForMember(matchMember.id, p.name);
+      }
+    });
+  });
+
+  // 3. Lọc danh sách MemberItem có tham gia chính thức trong các dự án này
+  const projectMembers = members.filter((m) => memberProjectSets.has(m.id));
+
+  // Fallback: nếu chưa cấu hình dự án cụ thể nào, lấy toàn bộ nhân sự Product
+  const finalMembers =
+    projectMembers.length > 0
+      ? projectMembers
+      : members.filter(
+          (m) => m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team)
+        );
+
+  const projectMapFormatted = new Map<string, string[]>();
+  finalMembers.forEach((m) => {
+    const projs = memberProjectSets.get(m.id);
+    projectMapFormatted.set(m.id, projs ? Array.from(projs) : []);
+  });
+
+  return { members: finalMembers, projectMap: projectMapFormatted };
+}
+
+/**
+ * Alias cho getMembersInManagerProjects để tương thích ngược
+ */
+export function getDesignersInManagerProjects(
+  manager: MemberItem,
+  members: MemberItem[],
+  projects: ProjectItem[],
+  _tasks?: TaskItem[]
+): { designers: MemberItem[]; projectMap: Map<string, string[]> } {
+  const { members: projMembers, projectMap } = getMembersInManagerProjects(manager, members, projects);
+  return { designers: projMembers, projectMap };
+}
+
+/**
+ * Tính toán thống kê nhân sự chưa có task đến hạn hôm nay theo phân quyền RBAC:
+ * - Admin: Hiển thị tổng thể toàn bộ phận
+ * - Manager: Hiển thị toàn bộ nhân sự được khai báo trong các dự án phụ trách
+ * - Executive: Hiển thị với từng cá nhân
+ */
+export function getDailyDueTaskStats(
+  members: MemberItem[],
+  tasks: TaskItem[],
+  projects: ProjectItem[],
+  currentAuthUser?: MemberItem | null,
+  activeProductMember?: MemberItem | null,
+  targetDateStr: string = getTodayDateString()
+): DailyDueTaskStatsResult {
+  // Xác định góc nhìn vai trò: ưu tiên activeProductMember nếu có, ngược lại lấy currentAuthUser
+  const viewingUser = activeProductMember || currentAuthUser;
+  const roleScope = getUserRole(viewingUser);
+
+  let targetMembersList: { member: MemberItem; projectNames?: string[] }[] = [];
+  let scopeTitle = '';
+  let scopeSubtitle = '';
+
+  if (roleScope === 'Admin') {
+    // 1. ADMIN: Tổng thể toàn bộ phận (Product Manager, Designer, SEO, Data)
+    const allProductMembers = members.filter((m) =>
+      m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team)
+    );
+    targetMembersList = allProductMembers.map((m) => ({ member: m }));
+    scopeTitle = 'Toàn bộ phận Sản phẩm';
+    scopeSubtitle = 'Phạm vi Quản trị (Admin): Theo dõi tất cả nhân sự trong Ban';
+  } else if (roleScope === 'Manager') {
+    // 2. MANAGER: Toàn bộ nhân sự được khai báo trong các dự án phụ trách
+    const managerUser = viewingUser || currentAuthUser;
+    if (managerUser) {
+      const { members: projMembers, projectMap } = getMembersInManagerProjects(managerUser, members, projects);
+      targetMembersList = projMembers.map((m) => ({
+        member: m,
+        projectNames: projectMap.get(m.id) || [],
+      }));
+      scopeTitle = `Nhân sự trong dự án của ${managerUser.name}`;
+      scopeSubtitle = 'Phạm vi Quản lý (Manager): Theo dõi nhân sự trong các dự án phụ trách';
+    } else {
+      const allProductMembers = members.filter((m) =>
+        m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team)
+      );
+      targetMembersList = allProductMembers.map((m) => ({ member: m }));
+      scopeTitle = 'Nhân sự dự án';
+      scopeSubtitle = 'Phạm vi Quản lý (Manager)';
+    }
+  } else {
+    // 3. EXECUTIVE: Hiển thị với từng cá nhân
+    const execUser = viewingUser || currentAuthUser;
+    if (execUser) {
+      targetMembersList = [{ member: execUser }];
+      scopeTitle = `Cá nhân: ${execUser.name}`;
+      scopeSubtitle = 'Phạm vi Chuyên viên (Executive): Kế hoạch công việc cá nhân trong ngày';
+    } else {
+      targetMembersList = [];
+      scopeTitle = 'Cá nhân';
+      scopeSubtitle = 'Phạm vi Chuyên viên (Executive)';
+    }
+  }
+
+  // Phân tích trạng thái task đến hạn hôm nay cho từng nhân sự trong danh sách mục tiêu
+  const targetDateNorm = normalizeDateString(targetDateStr);
+  const targetMembers: DueTaskMemberStatus[] = targetMembersList.map(({ member, projectNames }) => {
+    const role = getUserRole(member);
     const memberTasks = tasks.filter((t) => isTaskForMember(t, member));
 
-    // Công việc hoàn thành trong ngày hôm nay
-    const completedTasks = memberTasks.filter((t) => isTaskCompletedOnDate(t, targetDateStr));
+    // Task đến hạn ngày hôm nay (chuẩn hóa định dạng ngày để tránh lệch do timestamp hoặc múi giờ)
+    const tasksDueToday = memberTasks.filter((t) => {
+      const taskDateNorm = normalizeDateString(t.dueDate);
+      return taskDateNorm !== '' && taskDateNorm === targetDateNorm;
+    });
 
-    // Công việc đang làm / chưa xong
+    // Task đang thực hiện
     const activeTasks = memberTasks.filter((t) => t.status !== 'Hoàn thành');
 
-    const hasCompletedToday = completedTasks.length > 0;
+    const hasTaskDueToday = tasksDueToday.length > 0;
 
     return {
       member,
       role,
-      completedTasksCount: completedTasks.length,
-      completedTasks,
+      tasksDueTodayCount: tasksDueToday.length,
+      tasksDueToday,
       activeTasksCount: activeTasks.length,
       activeTasks,
-      hasCompletedToday,
+      hasTaskDueToday,
+      projectsInvolvedNames: projectNames,
     };
   });
 
-  // Phân loại: Chưa hoàn thành task ngày vs Đã hoàn thành
-  const missingMembers = allStatuses
-    .filter((s) => !s.hasCompletedToday)
-    .sort((a, b) => {
-      // Ưu tiên Manager lên trước, sau đó theo số việc đang làm giảm dần
-      if (a.role !== b.role) {
-        return a.role === 'Manager' ? -1 : 1;
-      }
-      return b.activeTasksCount - a.activeTasksCount;
-    });
+  // Nhân sự chưa có task đến hạn hôm nay
+  const missingMembers = targetMembers.filter((s) => !s.hasTaskDueToday);
 
-  const compliantMembers = allStatuses.filter((s) => s.hasCompletedToday);
+  // Nhân sự đã có task đến hạn hôm nay
+  const compliantMembers = targetMembers.filter((s) => s.hasTaskDueToday);
 
-  // Kiểm tra tài khoản đang đăng nhập
+  // Kiểm tra riêng tài khoản hiện tại
   const currentUserStatus = currentAuthUser
-    ? allStatuses.find((s) => s.member.id === currentAuthUser.id || s.member.name === currentAuthUser.name)
+    ? targetMembers.find(
+        (s) => s.member.id === currentAuthUser.id || isSamePersonName(s.member.name, currentAuthUser.name)
+      )
     : undefined;
 
-  const isCurrentUserMissing = currentUserStatus ? !currentUserStatus.hasCompletedToday : false;
+  const isCurrentUserMissing = currentUserStatus ? !currentUserStatus.hasTaskDueToday : false;
 
   return {
+    roleScope,
+    scopeTitle,
+    scopeSubtitle,
     dateStr: targetDateStr,
-    totalApplicable: applicableMembers.length,
+    targetMembers,
     missingMembers,
     compliantMembers,
-    allStatuses,
     isCurrentUserMissing,
     currentUserStatus,
   };
 }
 
 /**
- * Tạo nội dung văn bản đôn đốc hoàn thành task trong ngày để gửi qua nhóm chat / email
+ * Tạo nội dung văn bản đôn đốc nhân sự chưa có task đến hạn hôm nay
  */
-export function formatDailyUrgeReport(
-  stats: DailyAccountabilityResult,
+export function formatDailyDueUrgeReport(
+  stats: DailyDueTaskStatsResult,
   targetDate: Date = new Date()
 ): string {
   const dateFormatted = formatDateWithEnDay(targetDate);
-  let report = `📢 CẢNH BÁO TIẾN ĐỘ HOÀN THÀNH CÔNG VIỆC TRONG NGÀY (${dateFormatted})\n`;
+  let report = `📢 BÁO CÁO ĐÔN ĐỐC CÔNG VIỆC ĐẾN HẠN HÔM NAY (${dateFormatted})\n`;
   report += `==========================================================\n`;
-  report += `📌 Quy chuẩn: 100% nhân sự cấp Manager & Executive cần có ít nhất 1 task hoàn thành mỗi ngày.\n`;
-  report += `📊 Tỷ lệ tuân thủ: ${stats.compliantMembers.length}/${stats.totalApplicable} nhân sự (${Math.round(
-    (stats.compliantMembers.length / (stats.totalApplicable || 1)) * 100
-  )}%)\n\n`;
+  report += `🎯 Phạm vi: ${stats.scopeTitle} (${stats.scopeSubtitle})\n`;
+  report += `📊 Tình trạng: ${stats.compliantMembers.length}/${stats.targetMembers.length} nhân sự đã có task đến hạn hôm nay\n\n`;
 
   if (stats.missingMembers.length > 0) {
-    report += `🚨 DANH SÁCH NHÂN SỰ CHƯA CÓ TASK HOÀN THÀNH HÔM NAY (${stats.missingMembers.length} người):\n`;
+    report += `⚠️ DANH SÁCH NHÂN SỰ CHƯA CÓ TASK ĐẾN HẠN HÔM NAY (${stats.missingMembers.length} người):\n`;
     stats.missingMembers.forEach((item, index) => {
-      report += `${index + 1}. [${item.role}] ${item.member.name} (${item.member.team || 'Sản phẩm'})\n`;
-      report += `   👉 Đang phụ trách: ${item.activeTasksCount} việc chưa xong`;
-      if (item.activeTasks.length > 0) {
-        const topTask = item.activeTasks[0];
-        report += ` (Ví dụ: [${topTask.projectName}] ${topTask.title})`;
+      report += `${index + 1}. [${item.member.team || item.role}] ${item.member.name}\n`;
+      if (item.projectsInvolvedNames && item.projectsInvolvedNames.length > 0) {
+        report += `   📁 Dự án tham gia: ${item.projectsInvolvedNames.join(', ')}\n`;
       }
-      report += `\n`;
+      report += `   👉 Đang có: ${item.activeTasksCount} việc đang phụ trách trong hệ thống\n`;
     });
-    report += `\nĐề nghị các nhân sự trên khẩn trương rà soát và cập nhật kết quả các đầu việc đang thực hiện!\n`;
+    report += `\nĐề nghị các nhân sự rà soát và cập nhật kế hoạch / hạn chót các đầu việc cho ngày hôm nay!\n`;
   } else {
-    report += `🎉 XUẤT SẮC: 100% nhân sự Manager & Executive đã có công việc hoàn thành trong ngày hôm nay!\n`;
+    report += `🎉 100% nhân sự trong phạm vi đã có task đến hạn ngày hôm nay!\n`;
   }
 
   report += `==========================================================\n`;

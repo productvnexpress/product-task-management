@@ -28,19 +28,56 @@ export function getProductMembers(members: MemberItem[]): MemberItem[] {
 }
 
 /**
- * Check if a task is assigned to the given member
+ * Normalizes a person's full name:
+ * - NFC unicode normalization (critical for Vietnamese text composed vs decomposed accents)
+ * - Strip trailing phone numbers/IP phone: e.g. " - 4887", "(4597)", " [Designer]"
+ * - Strip leading honorifics/salutations: e.g. "Anh ", "Chị ", "Ông ", "Bà ", "Em "
+ * - Collapse extra whitespace and lowercase
+ */
+export function normalizePersonName(name?: string | null): string {
+  if (!name) return '';
+  return name
+    .normalize('NFC')
+    .replace(/\s*[-–(].*$/, '')
+    .replace(/^(anh|chị|ông|bà|em)\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Checks if two person name strings refer to the same individual
+ */
+export function isSamePersonName(nameA?: string | null, nameB?: string | null): boolean {
+  if (!nameA || !nameB) return false;
+  const cleanA = normalizePersonName(nameA);
+  const cleanB = normalizePersonName(nameB);
+  if (!cleanA || !cleanB) return false;
+  return cleanA === cleanB;
+}
+
+/**
+ * Check if a task is assigned to the given member.
+ * Strictly checks full name equality, member ID, username, or email to prevent false collisions
+ * between individuals sharing identical first names (e.g. Tiêu Đình Trung vs Vũ Hữu Trung).
  */
 export function isTaskForMember(task: TaskItem, member?: MemberItem | null): boolean {
   if (!member || !task) return false;
-  const rawAssignee = (task.assignee || '').trim().toLowerCase();
-  const memName = (member.name || '').trim().toLowerCase();
-  if (!rawAssignee || !memName) return false;
+  const rawAssignee = (task.assignee || '').trim();
+  if (!rawAssignee) return false;
 
-  return (
-    rawAssignee === memName ||
-    rawAssignee.includes(memName) ||
-    memName.includes(rawAssignee)
-  );
+  // 1. Direct ID / username / email match
+  const rawLower = rawAssignee.toLowerCase();
+  if (member.id && rawLower === member.id.toLowerCase()) return true;
+  if (member.username && rawLower === member.username.toLowerCase()) return true;
+  if (member.email && rawLower === member.email.toLowerCase()) return true;
+
+  // 2. Strict normalized name match (handles NFC/NFD, prefixes like "Anh", suffixes like "- 4597")
+  if (isSamePersonName(rawAssignee, member.name)) {
+    return true;
+  }
+
+  return false;
 }
 
 export interface MemberProjectRelation {
@@ -63,12 +100,9 @@ export function getMemberProjectRelation(
   }
 
   const memName = member.name.trim();
-  const memNameLower = memName.toLowerCase();
 
   // 1. Check roles PM
-  const isPM = project.roles?.pm?.some(
-    (n) => n.trim().toLowerCase() === memNameLower || n.toLowerCase().includes(memNameLower)
-  );
+  const isPM = project.roles?.pm?.some((n) => isSamePersonName(n, memName));
   if (isPM) {
     const tasksCount = (tasks || []).filter(
       (t) => (t.projectId === project.id || t.projectName === project.name) && isTaskForMember(t, member)
@@ -82,9 +116,7 @@ export function getMemberProjectRelation(
   }
 
   // 2. Check roles Designer
-  const isDesigner = project.roles?.designer?.some(
-    (n) => n.trim().toLowerCase() === memNameLower || n.toLowerCase().includes(memNameLower)
-  );
+  const isDesigner = project.roles?.designer?.some((n) => isSamePersonName(n, memName));
   if (isDesigner) {
     const tasksCount = (tasks || []).filter(
       (t) => (t.projectId === project.id || t.projectName === project.name) && isTaskForMember(t, member)
@@ -98,9 +130,7 @@ export function getMemberProjectRelation(
   }
 
   // 3. Check roles SEO
-  const isSEO = project.roles?.seo?.some(
-    (n) => n.trim().toLowerCase() === memNameLower || n.toLowerCase().includes(memNameLower)
-  );
+  const isSEO = project.roles?.seo?.some((n) => isSamePersonName(n, memName));
   if (isSEO) {
     const tasksCount = (tasks || []).filter(
       (t) => (t.projectId === project.id || t.projectName === project.name) && isTaskForMember(t, member)
@@ -114,9 +144,7 @@ export function getMemberProjectRelation(
   }
 
   // 4. Check roles Data
-  const isData = project.roles?.data?.some(
-    (n) => n.trim().toLowerCase() === memNameLower || n.toLowerCase().includes(memNameLower)
-  );
+  const isData = project.roles?.data?.some((n) => isSamePersonName(n, memName));
   if (isData) {
     const tasksCount = (tasks || []).filter(
       (t) => (t.projectId === project.id || t.projectName === project.name) && isTaskForMember(t, member)
@@ -130,7 +158,10 @@ export function getMemberProjectRelation(
   }
 
   // 5. Check leadName
-  if (project.leadName && project.leadName.toLowerCase().includes(memNameLower)) {
+  const isLead = (project.leadName || '')
+    .split(/[,&]/)
+    .some((leadPart) => isSamePersonName(leadPart, memName));
+  if (isLead) {
     const tasksCount = (tasks || []).filter(
       (t) => (t.projectId === project.id || t.projectName === project.name) && isTaskForMember(t, member)
     ).length;
@@ -156,7 +187,7 @@ export function getMemberProjectRelation(
   }
 
   // 7. Check notes author
-  const hasNotes = project.notes?.some((nt) => nt.author?.toLowerCase().includes(memNameLower));
+  const hasNotes = project.notes?.some((nt) => isSamePersonName(nt.author, memName));
   if (hasNotes) {
     return {
       isRelated: true,

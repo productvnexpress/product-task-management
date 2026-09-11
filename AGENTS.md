@@ -123,18 +123,26 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Toàn hệ thống không sử dụng các ô background màu quá nổi bật hoặc tương phản mạnh gây rác thị giác.
    - Sử dụng các khung chứa trung tính, phớt xám nhẹ (`bg-[#ffffff]`, `bg-[#f9f9f9]`, `border-[#e0e0e0]`).
 
-### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Hoàn thành Công việc Từng ngày (Daily Accountability Specification)
-1. **Đối tượng Áp dụng Bắt buộc**: Toàn bộ nhân sự thuộc Ban Sản phẩm có vai trò từ cấp **Manager** (Quản lý sản phẩm PM) và **Executive** (Chuyên viên UX/UI Designer, SEO, Data).
-2. **Quy tắc Nghiệp vụ (Daily Completion Requirement)**: Mỗi nhân sự thuộc diện áp dụng bắt buộc phải có **ít nhất 1 công việc trạng thái `'Hoàn thành'` trong ngày hôm nay** (dựa trên trường `completedAt`, lịch sử thay đổi `logs`, hoặc cập nhật `updatedAt` trong ngày).
-3. **Cơ chế Cảnh báo Trực quan (`DailyCompletionAlert`)**:
-   - Khi có bất kỳ nhân sự nào chưa có task hoàn thành trong ngày:
-     - Hệ thống hiển thị khối Cảnh báo Tiến độ Ngày (`bg-[#fffdfa] border-[#f59e0b]/40 rounded-[12px] p-4 shadow-2xs`) nổi bật tại cột 800px của trang Công việc.
-     - Hiển thị rõ số lượng: `X/Y nhân sự chưa có task hoàn thành hôm nay (Thứ, DD/MM/YYYY)`.
-     - Liệt kê danh sách chip các nhân sự chưa hoàn thành (kèm vai trò và số việc đang làm).
-     - **Tương tác Lọc nhanh**: Bấm vào chip nhân sự để lọc ngay các công việc của người đó, giúp Quản lý/Lead kiểm tra và đôn đốc tức thì.
-     - **Cảnh báo Cá nhân**: Nếu chính người dùng đang đăng nhập (`currentAuthUser`) chưa có task hoàn thành hôm nay, hiển thị thông báo nhắc nhở cá nhân nổi bật màu đỏ nhạt (`bg-[#fff1f2] border-[#fecdd3]`).
-     - **Nút Sao chép Đôn đốc**: Tự động sinh nội dung văn bản chuẩn để copy gửi nhanh vào nhóm chat/email.
-   - Khi 100% nhân sự đã đạt chỉ tiêu: Hiển thị thanh thông báo xanh chúc mừng `🎉 100% nhân sự Manager & Executive đã có công việc hoàn thành hôm nay!`.
+### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Task Đến hạn Trong Ngày (Daily Due Tasks Accountability Specification)
+1. **Quy tắc Nghiệp vụ**: Kiểm tra và cảnh báo đối với các nhân sự **chưa có công việc nào đến hạn ngày hôm nay (`dueDate === today`)**, nhằm bảo đảm mọi thành viên đều có kế hoạch hành động cụ thể trong ngày làm việc.
+2. **Phân quyền Hiển thị Cảnh báo theo Cấp bậc (RBAC Scoped Alert)**:
+   - **Admin (Quản trị viên)**: Hiển thị cảnh báo **tổng thể toàn bộ phận Sản phẩm** (PM, Designer, SEO, Data). Giúp Trưởng ban bao quát toàn diện tình trạng lên kế hoạch ngày của cả bộ phận.
+   - **Manager (Quản lý sản phẩm PM)**: Hiển thị cảnh báo **toàn bộ nhân sự được khai báo chính thức trong các dự án phụ trách** (`roles.pm`, `roles.designer`, `roles.seo`, `roles.data`, `leadName`).
+     - *Quy tắc phạm vi*: Chỉ tính nhân sự được khai báo trong dự án. Một số tình huống nhân sự ngoài dự án tham gia hỗ trợ một vài task sẽ **không** tính vào dự án.
+   - **Executive (Chuyên viên Designer, SEO, Data)**: Hiển thị cảnh báo **với từng cá nhân**. Nếu cá nhân chưa có task nào đến hạn hôm nay, hiển thị nhắc nhở cá nhân để chủ động cập nhật hạn chót hoặc tạo việc mới trong ngày.
+3. **Cơ chế Giao diện Trực quan (`DailyCompletionAlert`)**:
+   - Đặt trong cột chuẩn 800px của trang Công việc.
+   - **Tiêu đề ngắn gọn, súc tích**:
+     - Admin: `Cảnh báo: {count} nhân sự chưa có task đến hạn hôm nay`
+     - Manager: `Cảnh báo: {count} nhân sự chưa có task đến hạn hôm nay`
+     - Executive: `Cảnh báo: Bạn chưa có task đến hạn hôm nay`
+     - Loại bỏ các thành phần rườm rà: Nút "Sao chép đôn đốc", tag pill số lượng, và dòng phụ đề "Phạm vi quản lý...".
+   - **Danh sách nhân sự chưa có task**:
+     - Nhãn hiển thị: `Nhân sự chưa có task đến hạn:` (thống nhất cho cả Admin và Manager).
+     - Định dạng tên: Kết hợp dạng `[Tên] [Họ]` (ví dụ: `Trung Tiêu`, `Trung Vũ`, `Vinh Ngô`, `Hiếu Nguyễn`, `Sơn Vũ`, `Tùng Trần`...) giúp phân biệt rõ ràng khi có nhiều nhân sự trùng tên gọi.
+     - Sắp xếp tự động theo thứ tự bảng chữ cái ABC tiếng Việt (A-Z) ưu tiên theo Tên gọi (`firstName`), nếu trùng tên sẽ xét tiếp theo Họ (`lastName`).
+     - Bấm vào tên để lọc nhanh danh sách công việc của nhân sự đó (bấm lại để hoàn tác).
+   - Khi 100% nhân sự trong phạm vi đã có task đến hạn hôm nay: Hiển thị thanh thông báo xanh chúc mừng tinh gọn (`Tất cả nhân sự đã có task đến hạn hôm nay` / `Tất cả nhân sự trong dự án đã có task đến hạn hôm nay`).
 
 ---
 
@@ -647,6 +655,12 @@ Tại danh sách dự án thuộc Left Sidebar:
    - `is_read`: Boolean trạng thái đã đọc hay chưa.
    - `created_at`: Thời gian tạo (ISO Timestamp).
 4. **Tương tác**: Cho phép click vào thông báo để mở trực tiếp Task hoặc Project tương ứng, hỗ trợ nút "Đánh dấu tất cả đã đọc".
+5. **Tính năng Thông báo Đẩy Trình duyệt (Web Push Notifications)**:
+   - Tích hợp chuẩn Web Notification API & Service Worker (`public/sw.js`).
+   - Nhận thông báo trực tiếp trên màn hình desktop/mobile ngay cả khi người dùng đang chuyển sang tab khác hoặc thu nhỏ trình duyệt.
+   - Tích hợp thanh điều khiển Web Push trong `NotificationDrawer`: Nút yêu cầu cấp quyền ("Bật ngay"), chuyển đổi Trạng thái Bật/Tắt, nút "Thử thông báo" để kiểm tra tức thì trên màn hình, và hướng dẫn khi trình duyệt chặn quyền.
+   - Tự động kích hoạt thông báo đẩy khi thành viên được giao việc mới (`task_assigned`), task hoàn thành (`task_completed`), task bị nghẽn (`task_blocked`), hoặc nhắc nhở các việc đến hạn/quá hạn trong ngày khi mở ứng dụng.
+   - Khi bấm vào thông báo Web Push trên màn hình hệ thống: Tự động chuyển tiêu điểm (focus) về tab WMS và mở trực tiếp chi tiết công việc liên quan.
 
 ---
 
