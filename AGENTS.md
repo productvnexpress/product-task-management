@@ -101,7 +101,10 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Tiêu đề danh sách: Text **`Công việc đang thực hiện (xx)`** sử dụng kiểu chữ thường (`font-normal`), không in đậm (`font-bold`) để tạo cảm giác nhẹ nhàng, tinh gọn cho giao diện.
    - Tiêu đề nhóm dự án: Tên dự án sử dụng `font-normal` (bỏ `font-bold`), sử dụng biểu tượng thư mục đơn giản (`Folder` icon thanh mảnh từ bộ Lucide) thay cho emoji thư mục vàng cũ.
 5. **Bố cục 2 Cột Phân nhóm Dự án (2-Column Project Grouping Layout)**:
-   - **Cột Trái (Project Anchor Rail ~220px)**: Đặt tên dự án lệch hẳn sang trái bên ngoài card công việc (`font-title` Merriweather Sans, `font-normal`, text `#202020`), icon thư mục `Folder` thanh mảnh, nhãn mã dự án (`code`), số lượng việc (`xx việc`), và link mở nhanh Drawer chi tiết dự án (`Chi tiết →`). Neo cố định (`md:sticky md:top-24 self-start`) tự động pin theo khi dự án có nhiều công việc lúc cuộn màn hình.
+   - **Cột Trái (Project Anchor Rail ~220px)**: Đặt tên dự án lệch hẳn sang trái bên ngoài card công việc (`font-title` Merriweather Sans, `font-normal`, text `#202020`), icon thư mục `Folder` thanh mảnh, nhãn mã dự án (`code`), số lượng việc (`xx việc`). Neo cố định (`md:sticky md:top-24 self-start`) tự động pin theo khi dự án có nhiều công việc lúc cuộn màn hình.
+   - **Tách 2 Vùng Tương tác Độc lập tại Cột Trái**:
+     - **Vùng 1 (Tên dự án & Mã dự án)**: Bấm vào để **lọc danh sách công việc theo dự án** đó (bấm lại để bỏ lọc và xem tất cả).
+     - **Vùng 2 ("Thông tin dự án →")**: Thay thế text cũ `"Chi tiết"`, bấm vào để **mở Right Sidebar Drawer** hiển thị toàn bộ thông tin chi tiết dự án.
    - **Cột Phải (Task List Card - Flex-1)**: Khối card công việc màu trắng chuẩn nguyên bản (`bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0]`), chứa đầy đủ các hàng công việc (`TaskItemRow`) với trải nghiệm rộng thoáng, giải phóng hoàn toàn các thanh bar ngang cắt vụn giao diện.
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
@@ -119,6 +122,19 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 6. **Thiết kế Nền & Khung trung tính (Clean & Neutral Styling)**:
    - Toàn hệ thống không sử dụng các ô background màu quá nổi bật hoặc tương phản mạnh gây rác thị giác.
    - Sử dụng các khung chứa trung tính, phớt xám nhẹ (`bg-[#ffffff]`, `bg-[#f9f9f9]`, `border-[#e0e0e0]`).
+
+### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Hoàn thành Công việc Từng ngày (Daily Accountability Specification)
+1. **Đối tượng Áp dụng Bắt buộc**: Toàn bộ nhân sự thuộc Ban Sản phẩm có vai trò từ cấp **Manager** (Quản lý sản phẩm PM) và **Executive** (Chuyên viên UX/UI Designer, SEO, Data).
+2. **Quy tắc Nghiệp vụ (Daily Completion Requirement)**: Mỗi nhân sự thuộc diện áp dụng bắt buộc phải có **ít nhất 1 công việc trạng thái `'Hoàn thành'` trong ngày hôm nay** (dựa trên trường `completedAt`, lịch sử thay đổi `logs`, hoặc cập nhật `updatedAt` trong ngày).
+3. **Cơ chế Cảnh báo Trực quan (`DailyCompletionAlert`)**:
+   - Khi có bất kỳ nhân sự nào chưa có task hoàn thành trong ngày:
+     - Hệ thống hiển thị khối Cảnh báo Tiến độ Ngày (`bg-[#fffdfa] border-[#f59e0b]/40 rounded-[12px] p-4 shadow-2xs`) nổi bật tại cột 800px của trang Công việc.
+     - Hiển thị rõ số lượng: `X/Y nhân sự chưa có task hoàn thành hôm nay (Thứ, DD/MM/YYYY)`.
+     - Liệt kê danh sách chip các nhân sự chưa hoàn thành (kèm vai trò và số việc đang làm).
+     - **Tương tác Lọc nhanh**: Bấm vào chip nhân sự để lọc ngay các công việc của người đó, giúp Quản lý/Lead kiểm tra và đôn đốc tức thì.
+     - **Cảnh báo Cá nhân**: Nếu chính người dùng đang đăng nhập (`currentAuthUser`) chưa có task hoàn thành hôm nay, hiển thị thông báo nhắc nhở cá nhân nổi bật màu đỏ nhạt (`bg-[#fff1f2] border-[#fecdd3]`).
+     - **Nút Sao chép Đôn đốc**: Tự động sinh nội dung văn bản chuẩn để copy gửi nhanh vào nhóm chat/email.
+   - Khi 100% nhân sự đã đạt chỉ tiêu: Hiển thị thanh thông báo xanh chúc mừng `🎉 100% nhân sự Manager & Executive đã có công việc hoàn thành hôm nay!`.
 
 ---
 

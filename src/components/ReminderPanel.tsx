@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { TaskItem, DueFilterType } from '../types';
+import { MemberItem, TaskItem, DueFilterType } from '../types';
+import { getDailyAccountabilityStats } from '../utils/dailyAccountability';
 import {
   isTaskOverdue,
   isTaskDueToday,
@@ -30,6 +31,7 @@ import {
 
 interface ReminderPanelProps {
   tasks: TaskItem[];
+  members?: MemberItem[];
   activeDueFilter: DueFilterType;
   onSelectDueFilter: (filter: DueFilterType) => void;
   onSelectTask: (task: TaskItem) => void;
@@ -37,6 +39,7 @@ interface ReminderPanelProps {
 
 export const ReminderPanel: React.FC<ReminderPanelProps> = ({
   tasks,
+  members,
   activeDueFilter,
   onSelectDueFilter,
   onSelectTask,
@@ -55,6 +58,18 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
   const handleCopyUrgeReport = () => {
     let report = `📢 BÁO CÁO ĐÔN ĐỐC TIẾN ĐỘ CÔNG VIỆC (${formatDateWithEnDay(new Date())})\n`;
     report += `===============================================\n\n`;
+
+    // 1. Cảnh báo tiến độ ngày: Nhân sự chưa có task hoàn thành hôm nay
+    if (members && members.length > 0) {
+      const dailyStats = getDailyAccountabilityStats(members, tasks);
+      if (dailyStats.missingMembers.length > 0) {
+        report += `🚨 NHÂN SỰ CHƯA CÓ TASK HOÀN THÀNH HÔM NAY (${dailyStats.missingMembers.length}/${dailyStats.totalApplicable}):\n`;
+        dailyStats.missingMembers.forEach((item, i) => {
+          report += `${i + 1}. [${item.role}] ${item.member.name} (${item.member.team}) - Đang có ${item.activeTasksCount} việc chưa xong\n`;
+        });
+        report += `\n`;
+      }
+    }
 
     if (overdueTasks.length > 0) {
       report += `🚨 CÔNG VIỆC QUÁ HẠN (${overdueTasks.length}):\n`;

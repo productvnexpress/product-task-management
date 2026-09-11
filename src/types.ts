@@ -160,6 +160,7 @@ export interface TaskItem {
   resultLink?: string;
   progress?: number;
   logs?: TaskLogItem[];
+  completedAt?: string; // Thời điểm đánh dấu hoàn thành (ISO string)
   latestUpdateNote?: string;
   createdBy?: string; // Người tạo công việc (phục vụ phân quyền RBAC)
 }

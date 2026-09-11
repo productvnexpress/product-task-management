@@ -37,6 +37,7 @@ import { LoginView } from './components/LoginView';
 import { ProfileModal } from './components/ProfileModal';
 import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/authService';
 import { ReminderPanel } from './components/ReminderPanel';
+import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon } from './utils/dateUtils';
@@ -597,6 +598,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             status: isComp ? 'Đang làm' : 'Hoàn thành',
             progress: isComp ? 50 : 100,
             updatedAt: new Date().toISOString(),
+            completedAt: isComp ? undefined : new Date().toISOString(),
           };
           const logged = recordTaskChanges(t, updated, actor || t.assignee);
           if (selectedTask?.id === taskId) {
@@ -616,10 +618,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
+          const isComp = newStatus === 'Hoàn thành';
           const updated: TaskItem = {
             ...t,
             status: newStatus,
+            progress: isComp ? 100 : (t.status === 'Hoàn thành' ? 50 : t.progress),
             updatedAt: new Date().toISOString(),
+            completedAt: isComp ? (t.completedAt || new Date().toISOString()) : undefined,
           };
           const logged = recordTaskChanges(t, updated, actor || t.assignee, customNote);
           if (selectedTask?.id === taskId) {
@@ -683,7 +688,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === updatedTask.id) {
-          const logged = recordTaskChanges(t, updatedTask, actor || updatedTask.assignee, customNote);
+          const isComp = updatedTask.status === 'Hoàn thành';
+          const taskWithCompletedAt: TaskItem = {
+            ...updatedTask,
+            completedAt: isComp ? (updatedTask.completedAt || t.completedAt || new Date().toISOString()) : undefined,
+          };
+          const logged = recordTaskChanges(t, taskWithCompletedAt, actor || updatedTask.assignee, customNote);
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(logged);
           }
@@ -1282,9 +1292,21 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         />
                       )}
 
+                      {/* Daily Completion Accountability Alert for Manager & Executive */}
+                      <DailyCompletionAlert
+                        members={members}
+                        tasks={tasks}
+                        currentAuthUser={currentAuthUser}
+                        selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
+                        onSelectAssignee={(assigneeName) => {
+                          setFilterState((f) => ({ ...f, assignee: assigneeName }));
+                        }}
+                      />
+
                       {/* Reminder & Urge Control Panel */}
                       <ReminderPanel
                         tasks={scopedTasksForDue}
+                        members={members}
                         activeDueFilter={filterState.dueFilter}
                         onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
                         onSelectTask={(task) => {
@@ -1453,44 +1475,62 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                               <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                                 {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
                                 <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (targetProj) {
-                                        handleOpenProjectDetail(targetProj.id);
-                                      }
-                                    }}
-                                    className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
-                                    title={`Bấm để xem chi tiết dự án: ${projName}`}
-                                  >
-                                    <div className="flex items-start gap-2 min-w-0">
-                                      <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
-                                      <div className="min-w-0 flex-1">
-                                        <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
-                                          {projName}
+                                  <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
+                                    {/* Vùng 1: Bấm vào tên dự án sẽ lọc công việc theo dự án */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (targetProj) {
+                                          setFilterState((prev) => ({
+                                            ...prev,
+                                            projectId: prev.projectId === targetProj.id ? 'all' : targetProj.id,
+                                          }));
+                                        }
+                                      }}
+                                      className="group/title text-left cursor-pointer block w-full"
+                                      title={`Bấm để lọc công việc theo dự án: ${projName}`}
+                                    >
+                                      <div className="flex items-start gap-2 min-w-0">
+                                        <Folder className="w-4 h-4 text-[#71717a] group-hover/title:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                        <div className="min-w-0 flex-1">
+                                          <span className="font-title text-[14px] font-normal text-[#202020] group-hover/title:text-[#1e609c] group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                            {projName}
+                                          </span>
+                                        </div>
+                                        {targetProj?.isStrategic && (
+                                          <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                        {targetProj?.code && (
+                                          <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                            {targetProj.code}
+                                          </span>
+                                        )}
+                                        <span className="text-[11px] font-ui text-[#64748b]">
+                                          {projTasks.length} việc
                                         </span>
                                       </div>
-                                      {targetProj?.isStrategic && (
-                                        <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
-                                      )}
+                                    </button>
+
+                                    {/* Vùng 2: Bấm vào Thông tin dự án sẽ hiển thị thông tin ở Right Sidebar */}
+                                    <div className="pl-6 pt-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (targetProj) {
+                                            handleOpenProjectDetail(targetProj.id);
+                                          }
+                                        }}
+                                        className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                        title={`Bấm để xem thông tin dự án ${projName} ở Right Sidebar`}
+                                      >
+                                        <span>Thông tin dự án</span>
+                                        <span className="group-hover/info:translate-x-0.5 transition-transform">→</span>
+                                      </button>
                                     </div>
-                                    <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
-                                      {targetProj?.code && (
-                                        <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
-                                          {targetProj.code}
-                                        </span>
-                                      )}
-                                      <span className="text-[11px] font-ui text-[#64748b]">
-                                        {projTasks.length} việc
-                                      </span>
-                                    </div>
-                                    <div className="pl-6 pt-1">
-                                      <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-                                        <span>Chi tiết</span>
-                                        <span>→</span>
-                                      </span>
-                                    </div>
-                                  </button>
+                                  </div>
                                 </div>
 
                                 {/* Cột phải: 800px Card công việc trình bày như cũ (card trắng bo tròn 12px, viền e0e0e0, divide-y f0f0f0) */}
@@ -1531,40 +1571,58 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                             {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
                             <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
                               {curProj ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenProjectDetail(curProj.id)}
-                                  className="group text-left cursor-pointer block w-full p-2 -ml-2 rounded-[8px] hover:bg-black/[0.04] transition-colors"
-                                  title={`Bấm để xem chi tiết dự án: ${curProj.name}`}
-                                >
-                                  <div className="flex items-start gap-2 min-w-0">
-                                    <Folder className="w-4 h-4 text-[#71717a] group-hover:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
-                                    <div className="min-w-0 flex-1">
-                                      <span className="font-title text-[14px] font-normal text-[#202020] group-hover:text-[#1e609c] group-hover:underline underline-offset-2 transition-colors block leading-snug break-words">
-                                        {curProj.name}
+                                <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
+                                  {/* Vùng 1: Bấm vào tên dự án sẽ bỏ lọc dự án (xem tất cả) */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFilterState((prev) => ({ ...prev, projectId: 'all' }));
+                                    }}
+                                    className="group/title text-left cursor-pointer block w-full"
+                                    title={`Đang lọc dự án: ${curProj.name}. Bấm để xem tất cả dự án`}
+                                  >
+                                    <div className="flex items-start gap-2 min-w-0">
+                                      <Folder className="w-4 h-4 text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="font-title text-[14px] font-normal text-[#1e609c] group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                          {curProj.name}
+                                        </span>
+                                      </div>
+                                      {curProj.isStrategic && (
+                                        <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                      {curProj.code && (
+                                        <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                          {curProj.code}
+                                        </span>
+                                      )}
+                                      <span className="text-[11px] font-ui text-[#64748b]">
+                                        {activeTasks.length} việc
+                                      </span>
+                                      <span className="text-[10px] font-ui text-[#963861] ml-auto group-hover/title:underline">
+                                        ✕ Bỏ lọc
                                       </span>
                                     </div>
-                                    {curProj.isStrategic && (
-                                      <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
-                                    )}
+                                  </button>
+
+                                  {/* Vùng 2: Bấm vào Thông tin dự án sẽ hiển thị thông tin ở Right Sidebar */}
+                                  <div className="pl-6 pt-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenProjectDetail(curProj.id);
+                                      }}
+                                      className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                      title={`Bấm để xem thông tin dự án ${curProj.name} ở Right Sidebar`}
+                                    >
+                                      <span>Thông tin dự án</span>
+                                      <span className="group-hover/info:translate-x-0.5 transition-transform">→</span>
+                                    </button>
                                   </div>
-                                  <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
-                                    {curProj.code && (
-                                      <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
-                                        {curProj.code}
-                                      </span>
-                                    )}
-                                    <span className="text-[11px] font-ui text-[#64748b]">
-                                      {activeTasks.length} việc
-                                    </span>
-                                  </div>
-                                  <div className="pl-6 pt-1">
-                                    <span className="text-[11px] font-ui text-[#1e609c] opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-                                      <span>Chi tiết</span>
-                                      <span>→</span>
-                                    </span>
-                                  </div>
-                                </button>
+                                </div>
                               ) : (
                                 <div className="text-xs font-ui text-[#64748b] p-2">Dự án</div>
                               )}
