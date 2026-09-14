@@ -5,13 +5,11 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { TaskItem, TaskStatus, MemberItem } from '../types';
+import { TaskItem, TaskStatus, MemberItem, ProjectItem } from '../types';
 import {
-  Check,
   AlertTriangle,
   Calendar,
-  CheckSquare,
-  Trash2,
+  Check,
   ChevronRight,
   User,
   Tag,
@@ -22,14 +20,16 @@ import {
   ExternalLink,
   CheckCircle2,
   Clock,
+  Trash2,
 } from 'lucide-react';
-import { formatDateShort, formatMemberNameOnly } from '../utils/formatters';
-import { getTaskDueDateInfo } from '../utils/dateUtils';
+import { formatDateShort, formatDateWithEnDay, formatMemberNameOnly } from '../utils/formatters';
+import { getTaskDueDateInfo, formatTaskDueDisplay } from '../utils/dateUtils';
 import { canEditTask, canDeleteTask } from '../utils/rbac';
 
 interface TaskItemRowProps {
   task: TaskItem;
   members?: MemberItem[];
+  projects?: ProjectItem[];
   currentAuthUser?: MemberItem | null;
   onToggleComplete: (id: string) => void;
   onSelectTask: (task: TaskItem) => void;
@@ -43,6 +43,7 @@ interface TaskItemRowProps {
 export const TaskItemRow: React.FC<TaskItemRowProps> = ({
   task,
   members,
+  projects,
   currentAuthUser,
   onToggleComplete,
   onSelectTask,
@@ -52,8 +53,8 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
   isMyTask = false,
   onOpenProjectDetail,
 }) => {
-  const userCanEdit = canEditTask(currentAuthUser, task);
-  const userCanDelete = canDeleteTask(currentAuthUser, task);
+  const userCanEdit = canEditTask(currentAuthUser, task, projects);
+  const userCanDelete = canDeleteTask(currentAuthUser, task, projects);
   const isCompleted = task.status === 'Hoàn thành';
   const isBlocked = task.status === 'Bị nghẽn';
 
@@ -293,7 +294,9 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
         {/* Thời gian */}
         <span
           className={`inline-flex items-center gap-1 font-ui text-[11px] ${
-            dueInfo.status === 'overdue'
+            isCompleted
+              ? 'text-[#71717a]'
+              : dueInfo.status === 'overdue'
               ? 'text-[#be123c] font-bold'
               : dueInfo.status === 'due_today'
               ? 'text-[#c2410c] font-bold'
@@ -301,22 +304,18 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
               ? 'text-[#a16207] font-medium'
               : 'text-[#71717a]'
           }`}
-          title={`Hạn: ${formatDateShort(task.dueDate)}`}
+          title={`Hạn hoàn thành: ${formatDateWithEnDay(task.dueDate)}`}
         >
-          {dueInfo.status === 'overdue' ? (
+          {isCompleted ? (
+            <Calendar className="w-3 h-3 text-[#71717a]" />
+          ) : dueInfo.status === 'overdue' ? (
             <AlertTriangle className="w-3 h-3 text-[#be123c]" />
           ) : dueInfo.status === 'due_today' ? (
             <Clock className="w-3 h-3 text-[#c2410c]" />
           ) : (
             <Calendar className="w-3 h-3 text-[#71717a]" />
           )}
-          <span>
-            {dueInfo.status === 'due_today'
-              ? 'Hôm nay'
-              : dueInfo.status === 'overdue'
-              ? dueInfo.label
-              : formatDateShort(task.dueDate)}
-          </span>
+          <span>{formatTaskDueDisplay(task.dueDate)}</span>
         </span>
 
         {/* Mức độ ưu tiên */}

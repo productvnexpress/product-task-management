@@ -72,7 +72,7 @@ import {
   sortPhasesByDate,
   normalizeAndNumberPhases,
 } from '../utils/phaseUtils';
-import { canEditProject } from '../utils/rbac';
+import { canEditProject, canEditProjectLinks } from '../utils/rbac';
 import { normalizeProjectStatus } from '../utils/projectSortingUtils';
 
 interface ProjectDetailsDrawerProps {
@@ -139,6 +139,9 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const [customLinks, setCustomLinks] = useState<ProjectCustomLink[]>(
     project?.links?.custom || project?.customLinks || []
   );
+
+  // Section 3: Links Editing State (cho phép UX/UI Designer và PM chỉnh sửa riêng phần Links)
+  const [isEditingLinksSection, setIsEditingLinksSection] = useState(false);
 
   // Quick Add Custom Link State
   const [isAddingCustomLink, setIsAddingCustomLink] = useState(false);
@@ -934,6 +937,62 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     setTimeout(() => setIsSavedToast(false), 2500);
   };
 
+  // Handler lưu riêng cho Section 3: Liên kết (hỗ trợ UX/UI Designer & PM cập nhật nhanh)
+  const handleSaveLinksSection = () => {
+    if (!project) return;
+
+    const validCustomLinks = customLinks.filter((l) => l.title.trim() && l.url.trim());
+
+    const links: ProjectLinks = {
+      orderTech: linkOrderTech.trim() || undefined,
+      chat: linkChat.trim() || undefined,
+      dashboard: linkDashboard.trim() || undefined,
+      report: linkReport.trim() || undefined,
+      beta: linkBeta.trim() || undefined,
+      production: linkProduction.trim() || undefined,
+      custom: validCustomLinks,
+    };
+
+    const preliminaryProject: ProjectItem = {
+      ...project,
+      links,
+      customLinks: validCustomLinks,
+    };
+
+    let updatedHistory = historyLogs;
+    const overviewLog = recordProjectOverviewChanges(
+      project,
+      preliminaryProject,
+      currentActorName
+    );
+    if (overviewLog) {
+      updatedHistory = [overviewLog, ...historyLogs];
+      setHistoryLogs(updatedHistory);
+    }
+
+    const updatedProject: ProjectItem = {
+      ...preliminaryProject,
+      history: updatedHistory,
+    };
+
+    onSaveProject(updatedProject);
+    setIsSavedToast(true);
+    setIsEditingLinksSection(false);
+    setTimeout(() => setIsSavedToast(false), 2500);
+  };
+
+  const handleCancelEditLinksSection = () => {
+    setLinkOrderTech(project?.links?.orderTech || '');
+    setLinkChat(project?.links?.chat || '');
+    setLinkDashboard(project?.links?.dashboard || '');
+    setLinkReport(project?.links?.report || '');
+    setLinkBeta(project?.links?.beta || '');
+    setLinkProduction(project?.links?.production || '');
+    setCustomLinks(project?.links?.custom || project?.customLinks || []);
+    setIsAddingCustomLink(false);
+    setIsEditingLinksSection(false);
+  };
+
   // Task Stats for this project
   const projTasks = project
     ? tasks.filter((t) => t.projectId === project.id || t.projectName === project.name)
@@ -977,6 +1036,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   };
 
   const canEdit = isCreateMode ? true : canEditProject(effectiveUser, currentProjectView);
+  const canEditLinks = isCreateMode ? true : canEditProjectLinks(effectiveUser, currentProjectView);
 
   const forecast = calculateProjectForecast(currentProjectView, projTasks);
 
@@ -2020,7 +2080,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
           {/* ==================== SECTION 3: LIÊN KẾT ==================== */}
           <div id="project-drawer-section-links" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
-            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
+            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#e2f6e9] border border-[#b8e8c4] text-[#24a148] flex items-center justify-center font-bold">
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -2029,13 +2089,47 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   3. Liên kết
                 </h3>
               </div>
-              <span className="text-[11px] text-[#7f7f7f] font-ui">
-                {isEditing ? 'Nhập đường dẫn liên kết' : 'Chọn liên kết để truy cập trực tiếp'}
-              </span>
+
+              <div className="flex items-center gap-2">
+                {!isEditing && canEditLinks && (
+                  !isEditingLinksSection ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingLinksSection(true)}
+                      className="px-2.5 py-1 rounded-[6px] bg-[#e2f6e9] hover:bg-[#d0f0db] text-[#166534] border border-[#b8e8c4] text-xs font-ui font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Chỉnh sửa các liên kết của dự án (UX/UI Designer & PM)"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>Sửa liên kết</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleCancelEditLinksSection}
+                        className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveLinksSection}
+                        className="px-2.5 py-1 rounded-[6px] bg-[#24a148] hover:bg-[#1f873d] text-white text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Save className="w-3 h-3" />
+                        <span>Lưu liên kết</span>
+                      </button>
+                    </div>
+                  )
+                )}
+                <span className="text-[11px] text-[#7f7f7f] font-ui hidden sm:inline">
+                  {isEditing || isEditingLinksSection ? 'Nhập đường dẫn liên kết' : 'Chọn liên kết để truy cập trực tiếp'}
+                </span>
+              </div>
             </div>
 
             {/* 6 Tiêu chuẩn: Order Tech, Chat Group, Dashboard, Report, Beta, Production */}
-            {isEditing ? (
+            {isEditing || isEditingLinksSection ? (
               /* EDIT MODE FOR 6 STANDARD LINKS */
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {linkItems.map((item) => {
@@ -2125,7 +2219,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <Link2 className="w-3.5 h-3.5 text-[#1d508d]" />
                   <span>Liên kết tùy chọn bổ sung ({customLinks.length}):</span>
                 </span>
-                {!isAddingCustomLink && (
+                {!isAddingCustomLink && canEditLinks && (
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomLink(true)}
@@ -2217,14 +2311,16 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           <span>Mở</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCustomLink(cl.id)}
-                          className="p-1 text-[#a0a0a0] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] transition-colors cursor-pointer"
-                          title="Xóa liên kết"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canEditLinks && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomLink(cl.id)}
+                            className="p-1 text-[#a0a0a0] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] transition-colors cursor-pointer"
+                            title="Xóa liên kết"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -185,19 +185,65 @@ export const canViewTask = (_user: MemberItem | null | undefined): boolean => {
   return true;
 };
 
-export const canEditTask = (user: MemberItem | null | undefined, task: TaskItem): boolean => {
+/**
+ * Kiểm tra quyền chỉnh sửa công việc:
+ * - Admin: Toàn quyền chỉnh sửa mọi công việc
+ * - Manager: Có quyền chỉnh sửa việc của các nhân sự trong dự án mà mình phụ trách;
+ *            không được phép chỉnh sửa dự án không phụ trách (trừ việc do mình tạo).
+ * - Executive: Chỉ sửa công việc do chính mình tạo / được giao.
+ */
+export const canEditTask = (
+  user: MemberItem | null | undefined,
+  task: TaskItem,
+  projects?: ProjectItem[]
+): boolean => {
   if (!user) return false;
   const role = getUserRole(user);
   if (role === 'Admin') return true;
-  // a3: Manager & Executive chỉ sửa công việc do mình tạo
+
+  if (role === 'Manager') {
+    if (projects && projects.length > 0 && task.projectId) {
+      const targetProj = projects.find((p) => p.id === task.projectId);
+      if (targetProj) {
+        if (isProjectCreator(targetProj, user)) {
+          return true; // Phụ trách dự án này: được sửa việc của mọi nhân sự trong dự án
+        }
+        // Không phụ trách dự án này: chỉ được sửa nếu là việc do chính mình tạo
+        return isTaskCreator(task, user);
+      }
+    }
+    return isTaskCreator(task, user);
+  }
+
+  // Executive: Chỉ sửa công việc do mình tạo/được giao
   return isTaskCreator(task, user);
 };
 
-export const canDeleteTask = (user: MemberItem | null | undefined, task: TaskItem): boolean => {
+/**
+ * Kiểm tra quyền xóa công việc
+ */
+export const canDeleteTask = (
+  user: MemberItem | null | undefined,
+  task: TaskItem,
+  projects?: ProjectItem[]
+): boolean => {
   if (!user) return false;
   const role = getUserRole(user);
   if (role === 'Admin') return true;
-  // a4: Manager & Executive chỉ xoá công việc do mình tạo
+
+  if (role === 'Manager') {
+    if (projects && projects.length > 0 && task.projectId) {
+      const targetProj = projects.find((p) => p.id === task.projectId);
+      if (targetProj) {
+        if (isProjectCreator(targetProj, user)) {
+          return true;
+        }
+        return isTaskCreator(task, user);
+      }
+    }
+    return isTaskCreator(task, user);
+  }
+
   return isTaskCreator(task, user);
 };
 
@@ -238,6 +284,59 @@ export const canDeleteProject = (user: MemberItem | null | undefined, project: P
     return isProjectCreator(project, user);
   }
   // Executive: b2 (chỉ xem, không xoá)
+  return false;
+};
+
+/**
+ * Kiểm tra xem người dùng có phải là nhân sự UX/UI Designer không
+ */
+export const isUserDesigner = (user: MemberItem | null | undefined): boolean => {
+  if (!user) return false;
+  const team = (user.team || '').toLowerCase();
+  const title = (user.title || '').toLowerCase();
+  const group = (user.group || '').toLowerCase();
+  const dept = (user.department || '').toLowerCase();
+  return (
+    team.includes('designer') ||
+    team.includes('ux/ui') ||
+    title.includes('designer') ||
+    title.includes('thiết kế') ||
+    group.includes('designer') ||
+    dept.includes('designer')
+  );
+};
+
+/**
+ * Kiểm tra quyền chỉnh sửa liên kết trong Dự án (Section 3: Liên kết):
+ * - Admin: Toàn quyền
+ * - Manager phụ trách dự án: Có quyền
+ * - UX/UI Designer: Có quyền chỉnh sửa thông tin các link trong Dự án để hỗ trợ cho PM
+ */
+export const canEditProjectLinks = (
+  user: MemberItem | null | undefined,
+  project?: ProjectItem | null
+): boolean => {
+  if (!user) return false;
+  const role = getUserRole(user);
+  if (role === 'Admin') return true;
+
+  // Manager phụ trách dự án
+  if (role === 'Manager' && project && isProjectCreator(project, user)) {
+    return true;
+  }
+
+  // Nhân sự UX/UI Designer:
+  // 1. Thuộc nhóm/chức danh UX/UI Designer
+  if (isUserDesigner(user)) return true;
+
+  // 2. Hoặc được phân công làm Designer trong dự án này
+  if (project?.roles?.designer && Array.isArray(project.roles.designer)) {
+    const userName = (user.name || '').trim().toLowerCase();
+    if (project.roles.designer.some((d) => (d || '').toLowerCase().includes(userName))) {
+      return true;
+    }
+  }
+
   return false;
 };
 

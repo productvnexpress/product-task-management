@@ -96,6 +96,25 @@ export function getTaskDueDateInfo(dueDateStr: string, status: TaskStatus, refDa
 }
 
 /**
+ * Định dạng hiển thị hạn công việc trong danh sách (TaskItemRow):
+ * - "Hôm nay" (nếu đến hạn hôm nay)
+ * - "Hôm qua" (nếu quá hạn 1 ngày)
+ * - "Ngày mai" (nếu đến hạn ngày mai)
+ * - Nằm ngoài 3 thời gian này: hiển thị chuẩn "Tue, 15 Sep 2026" (formatDateWithEnDay)
+ */
+export function formatTaskDueDisplay(dueDateStr?: string | null, refDate: Date = new Date()): string {
+  if (!dueDateStr) return '';
+  const todayStr = getTodayDateString(refDate);
+  const daysDiff = getDaysDifference(dueDateStr, todayStr);
+
+  if (daysDiff === 0) return 'Hôm nay';
+  if (daysDiff === -1) return 'Hôm qua';
+  if (daysDiff === 1) return 'Ngày mai';
+
+  return formatDateWithEnDay(dueDateStr);
+}
+
+/**
  * Filter tasks by due date status
  */
 export function isTaskDueToday(task: TaskItem, refDate: Date = new Date()): boolean {

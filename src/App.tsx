@@ -1827,6 +1827,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         key={task.id}
                                         task={task}
                                         members={members}
+                                        projects={projects}
                                         currentAuthUser={currentAuthUser}
                                         isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
                                         onToggleComplete={handleToggleComplete}
@@ -1922,6 +1923,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     key={task.id}
                                     task={task}
                                     members={members}
+                                    projects={projects}
                                     currentAuthUser={currentAuthUser}
                                     isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
                                     onToggleComplete={handleToggleComplete}
@@ -1969,6 +1971,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                 key={task.id}
                                 task={task}
                                 members={members}
+                                projects={projects}
                                 currentAuthUser={currentAuthUser}
                                 isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
                                 onToggleComplete={handleToggleComplete}

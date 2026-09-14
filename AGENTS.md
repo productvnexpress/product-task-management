@@ -63,12 +63,13 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 6. **Bắt buộc nhập Link hoàn thành khi chuyển trạng thái Hoàn thành**:
    - Khi bấm checkbox hoàn thành hoặc chuyển dropdown sang `'Hoàn thành'`: Nếu công việc chưa có link kết quả (`resultLink`), hệ thống bắt buộc mở modal `CompleteTaskModal` yêu cầu nhập Link hoàn thành (Figma, PRD, Báo cáo, Code, Staging...). Cho phép bấm nhanh "Dùng link làm việc" nếu công việc đã có sẵn `workLink`.
    - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` khi trạng thái là `'Hoàn thành'`. Không cho phép lưu nếu trường này bị bỏ trống.
+   - Khi chọn trạng thái `'Đang làm'`: **Không bắt buộc** nhập Link làm việc (`workLink`).
 
 ### 1.4. Giao diện Chi tiết Công việc (TaskDetailDrawer)
 - Giao diện dạng **Right Sidebar Drawer** trượt từ bên phải sang (chiều rộng tối ưu ~500-550px).
 - Hỗ trợ 2 Tabs điều hướng chính:
   1. **Tab `Thông tin`**: Hiển thị và chỉnh sửa các trường thông tin tác nghiệp chuẩn hóa:
-     - **Trạng thái**: Dropdown chọn 4 trạng thái chuẩn (`Chưa làm`, `Đang làm`, `Bị nghẽn`, `Hoàn thành`). Kèm ô nhập lý do nếu chọn `Bị nghẽn`.
+     - **Trạng thái**: Dropdown chọn 4 trạng thái chuẩn (`Chưa làm`, `Đang làm`, `Bị nghẽn`, `Hoàn thành`). Kèm ô nhập lý do nếu chọn `Bị nghẽn`. Không bắt buộc nhập Link làm việc khi chọn `Đang làm`.
      - **Link làm việc (Figma, Google, Notion,...)**: Ô nhập đường dẫn làm việc (luôn được nhập trước), hỗ trợ nút mở link nhanh.
      - **Link kết quả (Figma, Beta, Production...)**: Ô nhập đường dẫn kết quả sản phẩm. Hỗ trợ tùy chọn **"Link kết quả và Link làm việc là một"** (Checkbox đồng bộ tự động giá trị từ Link làm việc để tránh phải nhập 2 lần, tự động khóa ô nhập và mở link tương ứng).
      - **Công việc**: Textarea tiêu đề công việc, **bắt buộc sử dụng font `Merriweather Sans` (`font-title`)**.
@@ -94,7 +95,8 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - **Tầng 2 (Hàng dưới - Thanh siêu dữ liệu dàn trải cân đối)**: Thụt lề `pl-8` thẳng hàng với tiêu đề công việc, dàn trải đều sang 2 bên trên một hàng duy nhất:
      - *Bên trái*: Tên dự án (nếu bật), Link làm việc (`Link`), Link kết quả (`CheckCircle2`).
      - *Bên phải (`ml-auto`)*: Cụm thông tin tác nghiệp dàn ngang gồm: **Giai đoạn** (`phaseName`) • **Nhân sự** (`assignee`) • **Thời gian** (`dueDate`) • **Mức độ** (`priority` - chỉ hiện khi khẩn cấp/ưu tiên cao), phân tách bằng dấu chấm `•` tinh tế và micro-icons.
-2. **Quy chuẩn Font chữ Thời gian / Ngày tháng**:
+2. **Quy chuẩn Font chữ & Hiển thị Thời gian / Ngày tháng**:
+   - **Định dạng hiển thị hạn**: Trong danh sách công việc, hiển thị hạn theo quy chuẩn: `Hôm nay`, `Hôm qua`, `Ngày mai`; nếu nằm ngoài 3 thời gian này mới hiển thị `"Tue, 15 Sep 2026"` (sử dụng hàm `formatTaskDueDisplay(dueDate)`).
    - **Tuyệt đối sử dụng font `Merriweather Sans` (`font-ui`)**, không dùng font `Roboto Mono` (`font-num`).
    - Phân cấp màu chữ trực quan theo tình trạng: Đỏ cho Quá hạn, Cam cho Hôm nay, Vàng cho Sắp đến hạn, Xám trung tính cho ngày bình thường (không dùng nền hộp).
 3. **Quy chuẩn Nhận diện Việc của Tôi**:
@@ -677,14 +679,15 @@ Hệ thống hoạt động trên nguyên tắc **Mặt phẳng chung (Unified W
 
 | Nhóm quyền | Đối tượng áp dụng | Công việc (a) | Dự án (b) | Nhân sự (c) | Thùng rác (d) | Ghi chú quyền hạn |
 |---|---|---|---|---|---|---|
-| **1. Executive** (Chuyên viên) | UX/UI Designer, SEO, Data Specialist | `a1234` | `b2` | `c2` | `d25` | • Chỉ sửa, xoá công việc do chính mình tạo (`createdBy`/`assignee`).<br>• Dự án & Nhân sự: Chỉ xem.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá (`deletedBy`). |
-| **2. Manager** (Quản lý) | Product Manager (ngoại trừ Admin) | `a1234` | `b12345` | `c2` | `d25` | • Sửa, xoá công việc do mình tạo.<br>• Tạo dự án mới; chỉ sửa, xoá dự án do mình tạo/phụ trách.<br>• Nhân sự: Chỉ xem.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá. |
+| **1. Executive** (Chuyên viên) | UX/UI Designer, SEO, Data Specialist | `a1234` | `b2` | `c2` | `d25` | • Chỉ sửa, xoá công việc do chính mình tạo (`createdBy`/`assignee`).<br>• Dự án & Nhân sự: Chỉ xem. **Riêng nhân sự UX/UI Designer có quyền chỉnh sửa thông tin các liên kết trong Dự án (Section 3: Liên kết) để hỗ trợ cho PM**.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá (`deletedBy`). |
+| **2. Manager** (Quản lý) | Product Manager (ngoại trừ Admin) | `a1234` | `b12345` | `c2` | `d25` | • Sửa, xoá công việc do mình tạo. **Có quyền chỉnh sửa việc của các nhân sự trong dự án mà mình phụ trách (`leadName`/PM/người tạo), không được phép chỉnh sửa dự án không phụ trách (trừ việc do mình tạo)**.<br>• Tạo dự án mới; chỉ sửa, xoá dự án do mình tạo/phụ trách.<br>• Nhân sự: Chỉ xem.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá. |
 | **3. Admin** (Quản trị viên) | Tài khoản Đặng Tiến Ngọc (`tienngoc`) | `a1234` | `b12345` | `c12345` | `d245` | • Toàn quyền tối cao trên toàn bộ hệ thống: Tạo, Xem, Sửa, Xoá, Khôi phục mọi Công việc, Dự án, Nhân sự.<br>• Độc quyền thực hiện Xoá vĩnh viễn và Dọn sạch toàn bộ Thùng rác. |
 
 #### 4. Quy tắc Nghiệp vụ Quyền sở hữu (Ownership Rules)
-1. **Quyền sở hữu Công việc**: Xác định qua trường `createdBy` (hoặc log khởi tạo ban đầu, fallback về người phụ trách `assignee`).
+1. **Quyền sở hữu Công việc**: Xác định qua trường `createdBy` (hoặc log khởi tạo ban đầu, fallback về người phụ trách `assignee`). Riêng Manager phụ trách dự án có quyền sửa công việc của tất cả nhân sự trong dự án đó.
 2. **Quyền sở hữu Dự án**: Xác định qua trường `createdBy` (hoặc người phụ trách Lead, PM của dự án).
-3. **Quyền khôi phục Thùng rác**: Xác định qua trường `deletedBy` tự động lưu lại danh tính tài khoản tại thời điểm xoá.
+3. **Quyền chỉnh sửa Liên kết Dự án**: Cả Lead, PM và nhân sự UX/UI Designer đều có quyền cập nhật nhanh các đường dẫn làm việc/kết quả tại Section 3 của Chi tiết Dự án.
+4. **Quyền khôi phục Thùng rác**: Xác định qua trường `deletedBy` tự động lưu lại danh tính tài khoản tại thời điểm xoá.
 
 ---
 

@@ -64,8 +64,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   onOpenProjectDetail,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
-  const userCanEdit = task ? canEditTask(effectiveUser, task) : true;
-  const userCanDelete = task ? canDeleteTask(effectiveUser, task) : true;
+  const userCanEdit = task ? canEditTask(effectiveUser, task, projects) : true;
+  const userCanDelete = task ? canDeleteTask(effectiveUser, task, projects) : true;
   const [activeDrawerTab, setActiveDrawerTab] = useState<'details' | 'history'>('details');
 
   const [title, setTitle] = useState(task?.title || '');
@@ -206,12 +206,6 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
     const finalWorkLink = workLink.trim();
     const finalResultLink = isSameAsWorkLink ? finalWorkLink : resultLink.trim();
-
-    // Validation for Work Link when status is 'Đang làm'
-    if (status === 'Đang làm' && !finalWorkLink) {
-      setValidationError('⚠️ Khi công việc ở trạng thái "Đang làm", vui lòng bổ sung Link làm việc (Figma, PRD, Ticket...).');
-      return;
-    }
 
     // Validation for Result Link when status is 'Hoàn thành'
     if (status === 'Hoàn thành' && !finalResultLink) {
@@ -416,7 +410,6 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
                   <Link className="w-3.5 h-3.5 text-[#1d508d]" />
                   <span>Link làm việc (Figma, Google, Notion,...):</span>
-                  {status === 'Đang làm' && <span className="text-[#da1e28] font-bold text-sm">*</span>}
                 </label>
                 {workLink && (
                   <a
@@ -435,11 +428,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 value={workLink}
                 onChange={handleWorkLinkChange}
                 placeholder="https://figma.com/... hoặc https://docs.google.com/..."
-                className={`w-full text-xs font-body p-2.5 bg-white border rounded-[6px] focus:outline-hidden text-[#202020] ${
-                  status === 'Đang làm' && !workLink.trim()
-                    ? 'border-[#da1e28]'
-                    : 'border-[#d6d6d6]'
-                }`}
+                className="w-full text-xs font-body p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] focus:outline-hidden text-[#202020]"
               />
             </div>
 
