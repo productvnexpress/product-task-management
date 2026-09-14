@@ -29,7 +29,8 @@ import {
   X,
   UserCheck,
   Trash2,
-  Settings
+  Settings,
+  BarChart3
 } from 'lucide-react';
 import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
 
@@ -377,6 +378,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {isAdmin && (
                   <button
+                    onClick={() => onTabChange('reports')}
+                    className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                      activeTab === 'reports'
+                        ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]'
+                        : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BarChart3 className="w-4 h-4 text-[#963861]" />
+                      <span>Báo cáo</span>
+                    </div>
+                    <span className="text-[10px] bg-[#fdf2f7] text-[#913257] px-1.5 py-0.5 rounded font-ui font-bold">
+                      Admin
+                    </span>
+                  </button>
+                )}
+
+                {isAdmin && (
+                  <button
                     onClick={() => onTabChange('settings')}
                     className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                       activeTab === 'settings'
@@ -395,9 +415,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </>
             ) : (
-              // If collapsed, but user is currently on members, trash or settings, show active tab indicator
-              (activeTab === 'members' || activeTab === 'trash' || activeTab === 'settings') && (
+              // If collapsed, but user is currently on reports, members, trash or settings, show active tab indicator
+              (activeTab === 'reports' || activeTab === 'members' || activeTab === 'trash' || activeTab === 'settings') && (
                 <div className="pt-0.5">
+                  {activeTab === 'reports' && (
+                    <button
+                      onClick={() => onTabChange('reports')}
+                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <BarChart3 className="w-4 h-4 text-[#963861]" />
+                        <span>Báo cáo</span>
+                      </div>
+                      <span className="text-[10px] bg-[#fdf2f7] text-[#913257] px-1.5 py-0.5 rounded font-ui font-bold">
+                        Admin
+                      </span>
+                    </button>
+                  )}
                   {activeTab === 'members' && (
                     <button
                       onClick={() => onTabChange('members')}

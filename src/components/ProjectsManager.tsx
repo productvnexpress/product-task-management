@@ -6,6 +6,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRoles, ProjectLinks, FilterState } from '../types';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
+import { ProjectCalendarView } from './ProjectCalendarView';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
 import { diffInDays, parseDateSafe } from '../utils/projectForecastUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
@@ -104,6 +105,9 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
 
   // Unified Workspace: Default to 'all' projects so everyone works on a single flat surface
   const [projectScope, setProjectScope] = useState<'all' | 'my_projects'>('all');
+
+  // View Layout: Cards vs Calendar & Timeline
+  const [viewLayout, setViewLayout] = useState<'cards' | 'calendar'>('cards');
 
   const targetMemberForProjects = activeProductMember || currentAuthUser;
 
@@ -348,7 +352,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
   };
 
   return (
-    <div className="space-y-4 animate-fade-in w-full max-w-[800px] mx-auto">
+    <div className={`space-y-4 animate-fade-in w-full ${viewLayout === 'calendar' ? 'max-w-full' : 'max-w-[800px]'} mx-auto`}>
       {/* PERSPECTIVE CONTROL BAR FOR PROJECTS */}
       <div className="bg-white border border-[#e2e8f0] rounded-[10px] p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -386,6 +390,34 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
           )}
         </div>
 
+        {/* View Layout Switcher: Cards vs Calendar */}
+        <div className="flex items-center gap-1 bg-[#f1f5f9] p-1 rounded-[8px] border border-[#e2e8f0]">
+          <button
+            type="button"
+            onClick={() => setViewLayout('cards')}
+            className={`px-2.5 py-1 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewLayout === 'cards'
+                ? 'bg-white text-[#963861] shadow-2xs border border-[#e0e0e0]'
+                : 'text-[#5f5f5f] hover:text-[#202020]'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>Thẻ dự án</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewLayout('calendar')}
+            className={`px-2.5 py-1 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewLayout === 'calendar'
+                ? 'bg-white text-[#963861] shadow-2xs border border-[#e0e0e0]'
+                : 'text-[#5f5f5f] hover:text-[#202020]'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Lịch & Timeline</span>
+          </button>
+        </div>
+
         {activeProductMember && (
           <div className="flex items-center gap-2 ml-auto text-xs font-ui">
             <span className="text-[#64748b]">
@@ -405,7 +437,17 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
         )}
       </div>
 
-      {/* QUICK FILTER BAR */}
+      {viewLayout === 'calendar' ? (
+        <ProjectCalendarView
+          projects={filteredProjects}
+          tasks={tasks}
+          members={members}
+          onOpenProjectDetail={onOpenProjectDetail}
+          activeProductMember={activeProductMember}
+        />
+      ) : (
+        <>
+          {/* QUICK FILTER BAR */}
       <div className="bg-white rounded-[4px] border border-[#d6d6d6] px-3 py-2 flex flex-wrap items-center justify-between gap-2.5 transition-all">
         {/* Left: Quick Search Input */}
         <div className="relative w-52 sm:w-64">
@@ -988,6 +1030,8 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
           );
         })}
       </div>
+    </>
+  )}
 
       {/* QUICK PHASE MANAGEMENT MODAL */}
       {selectedPhaseProject && (

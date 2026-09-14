@@ -23,6 +23,8 @@ const TAB_PATH_MAP: Record<string, ActiveTab> = {
   'thiet-lap': 'settings',
   trash: 'trash',
   'thung-rac': 'trash',
+  reports: 'reports',
+  'bao-cao': 'reports',
 };
 
 /**

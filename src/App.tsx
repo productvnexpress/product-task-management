@@ -34,6 +34,7 @@ import { ProjectsManager } from './components/ProjectsManager';
 import { MembersManager } from './components/MembersManager';
 import { TrashManager } from './components/TrashManager';
 import { SettingsManager } from './components/SettingsManager';
+import { AdminReportView } from './components/AdminReportView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StandupModal } from './components/StandupModal';
 import { LoginView } from './components/LoginView';
@@ -1344,6 +1345,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     members: 'Nhân sự',
     trash: 'Thùng rác',
     settings: 'Thiết lập',
+    reports: 'Báo cáo',
   };
 
   // If not authenticated, display LoginView
@@ -2054,6 +2056,32 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     projects={projects}
                     currentAuthUser={currentAuthUser}
                   />
+                </ErrorBoundary>
+              )}
+
+              {/* VIEW 6: ADMIN REPORTS (ADMIN ONLY) */}
+              {activeTab === 'reports' && (
+                <ErrorBoundary fallbackTitle="Không thể tải giao diện Báo cáo Quản trị">
+                  {getUserRole(currentAuthUser) === 'Admin' ? (
+                    <AdminReportView
+                      tasks={tasks}
+                      projects={projects}
+                      members={members}
+                      currentAuthUser={currentAuthUser}
+                      onOpenTaskDetail={(task) => {
+                        setSelectedTask(task);
+                        setIsDrawerOpen(true);
+                      }}
+                      onSelectProject={(projId) => {
+                        setFilterState((f) => ({ ...f, projectId: projId }));
+                        setActiveTab('tasks');
+                      }}
+                    />
+                  ) : (
+                    <div className="p-12 text-center text-xs font-ui text-[#7f7f7f]">
+                      Bạn không có quyền truy cập trang Báo cáo Quản trị. Vui lòng đăng nhập với tài khoản Admin.
+                    </div>
+                  )}
                 </ErrorBoundary>
               )}
             </motion.div>

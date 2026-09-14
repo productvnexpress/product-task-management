@@ -11,7 +11,7 @@ export type TaskStatus = 'Chưa làm' | 'Đang làm' | 'Bị nghẽn' | 'Hoàn t
 
 export type PriorityLevel = 'Khẩn cấp' | 'Ưu tiên cao' | 'Bình thường';
 
-export type ActiveTab = 'tasks' | 'projects' | 'members' | 'trash' | 'settings';
+export type ActiveTab = 'tasks' | 'projects' | 'members' | 'trash' | 'settings' | 'reports';
 
 export type PhaseStatus = 'Chưa bắt đầu' | 'Đang triển khai' | 'Bị nghẽn' | 'Đã hoàn thành';
 
