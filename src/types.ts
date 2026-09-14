@@ -177,6 +177,35 @@ export interface TaskItem {
   completedAt?: string; // Thời điểm đánh dấu hoàn thành (ISO string)
   latestUpdateNote?: string;
   createdBy?: string; // Người tạo công việc (phục vụ phân quyền RBAC)
+  recurringRuleId?: string; // Khóa ngoại liên kết với quy tắc lặp (nếu có)
+  isRecurring?: boolean;    // Đánh dấu công việc có tính chu kỳ
+  recurringFrequency?: RecurrenceFrequency; // Chu kỳ lặp
+}
+
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type RecurrenceEndType = 'never' | 'specific_date';
+
+export interface RecurringRuleConfig {
+  id: string;                      // Unique ID dạng rec_xxx
+  title: string;                   // Tiêu đề công việc mẫu
+  projectId: string;               // ID dự án liên kết
+  projectName: string;             // Tên dự án
+  phaseId?: string;
+  phaseName?: string;
+  team: TeamType;                  // Nhóm chuyên môn
+  assignee: string;                // Nhân sự nhận việc
+  priority: PriorityLevel;         // Mức ưu tiên: 'Khẩn cấp' | 'Bình thường'
+  details?: string;                // Hướng dẫn / mô tả
+  frequency: RecurrenceFrequency;  // 'weekly' | 'biweekly' | 'monthly'
+  endType: RecurrenceEndType;      // 'never' | 'specific_date'
+  endDate?: string;                // YYYY-MM-DD khi endType === 'specific_date'
+  nextRunDate: string;             // YYYY-MM-DD ngày tạo task kế tiếp
+  nextRunTime: string;             // Mặc định '08:00'
+  lastGeneratedAt?: string;        // Thời điểm sinh task gần nhất
+  lastGeneratedTaskId?: string;    // ID task sinh ra gần nhất
+  status: 'active' | 'paused' | 'completed'; // Trạng thái quy tắc
+  createdAt: string;               // Thời điểm tạo quy tắc
+  createdBy: string;               // Admin khởi tạo
 }
 
 export type TaskPersonalScope = 'my_tasks' | 'my_projects_tasks' | 'all';

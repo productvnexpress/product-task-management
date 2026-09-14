@@ -18,6 +18,7 @@ import {
   TrashItem,
   TaskLogItem,
   NotificationItem,
+  RecurrenceFrequency,
 } from './types';
 import { INITIAL_PROJECTS, INITIAL_MEMBERS, INITIAL_TASKS } from './data/initialData';
 import { Sidebar } from './components/Sidebar';
@@ -46,6 +47,7 @@ import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotic
 import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
+import { recurringTaskService } from './services/recurringTaskService';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
@@ -755,6 +757,38 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     }
   };
 
+  // Automated Recurring Tasks Engine (Admin/System)
+  // Tự động kiểm tra và sinh task mới lúc 8:00 AM vào các ngày theo chu kỳ lặp lại
+  useEffect(() => {
+    const runCheck = () => {
+      recurringTaskService.checkAndExecuteDueRecurringTasks(
+        (newTask) => {
+          console.log(
+            `%c[RecurringEngine] 🔁 Tự động tạo task mới theo chu kỳ: "${newTask.title}" cho ${newTask.assignee}`,
+            'color: #963861; font-weight: bold;'
+          );
+          setTasks((prev) => {
+            if (prev.some((t) => t.id === newTask.id)) return prev;
+            return [newTask, ...prev];
+          });
+          wmsDataService
+            .saveTask(newTask, newTask.logs?.[0])
+            .catch((e) => console.error('Supabase recurring task save error:', e));
+          createAndDispatchNotifications(newTask, 'created', 'Hệ thống (Theo chu kỳ)');
+        },
+        new Date()
+      );
+    };
+
+    // 1. Quét ngay khi khởi động
+    runCheck();
+
+    // 2. Chạy ticker mỗi 60 giây để đảm bảo đúng mốc 08:00 AM
+    const ticker = setInterval(runCheck, 60000);
+
+    return () => clearInterval(ticker);
+  }, []);
+
   const handleSelectNotification = (item: NotificationItem) => {
     // 1. Đánh dấu đã đọc
     setNotifications((prev) =>
@@ -814,6 +848,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
           createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, { oldStatus: t.status });
+          if (!isComp && t.recurringRuleId) {
+            recurringTaskService.onTaskCompleted(t.recurringRuleId);
+          }
           return logged;
         }
         return t;
@@ -849,6 +886,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
           createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, { oldStatus: t.status, note: customNote });
+          if (isComp && t.recurringRuleId) {
+            recurringTaskService.onTaskCompleted(t.recurringRuleId);
+          }
           return logged;
         }
         return t;
@@ -880,6 +920,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             oldStatus: t.status,
             note,
           });
+          if (t.recurringRuleId) {
+            recurringTaskService.onTaskCompleted(t.recurringRuleId);
+          }
           return logged;
         }
         return t;
@@ -897,6 +940,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       dueDate: string;
       priority: PriorityLevel;
       details?: string;
+      phaseId?: string;
+      phaseName?: string;
+      isRecurring?: boolean;
+      recurringRuleId?: string;
+      recurringFrequency?: RecurrenceFrequency;
     },
     authorName?: string
   ) => {
@@ -915,6 +963,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       details: newTaskData.details || '',
+      phaseId: newTaskData.phaseId,
+      phaseName: newTaskData.phaseName,
+      isRecurring: newTaskData.isRecurring,
+      recurringRuleId: newTaskData.recurringRuleId,
+      recurringFrequency: newTaskData.recurringFrequency,
       subtasks: [],
       logs: [],
       createdBy: creator,
@@ -951,6 +1004,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           if (updatedTask.assignee !== t.assignee) {
             createAndDispatchNotifications(logged, 'reassigned', actor || logged.assignee, { oldAssignee: t.assignee });
+          }
+          if (isComp && t.status !== 'Hoàn thành' && t.recurringRuleId) {
+            recurringTaskService.onTaskCompleted(t.recurringRuleId);
           }
           return logged;
         }
@@ -2055,6 +2111,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     tasks={tasks}
                     projects={projects}
                     currentAuthUser={currentAuthUser}
+                    onAddTask={handleAddTask}
                   />
                 </ErrorBoundary>
               )}

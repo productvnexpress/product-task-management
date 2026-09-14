@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock,
   Trash2,
+  RotateCw,
 } from 'lucide-react';
 import { formatDateShort, formatDateWithEnDay, formatMemberNameOnly } from '../utils/formatters';
 import { getTaskDueDateInfo, formatTaskDueDisplay } from '../utils/dateUtils';
@@ -117,6 +118,15 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
               }`}
             >
               {task.title}
+              {task.isRecurring && (
+                <span
+                  className="inline-flex items-center gap-1 text-[11px] font-ui font-medium px-1.5 py-0.2 rounded-[4px] bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] shrink-0 ml-2 align-middle"
+                  title="Công việc định kỳ tự động tạo lúc 08:00 AM"
+                >
+                  <RotateCw className="w-2.5 h-2.5" />
+                  <span>Chu kỳ</span>
+                </span>
+              )}
             </h3>
 
             {isBlocked && task.blockerReason && (

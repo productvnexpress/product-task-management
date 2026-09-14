@@ -33,8 +33,10 @@ import {
   UserCheck,
   Edit3,
   Share2,
+  RotateCw,
 } from 'lucide-react';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
+import { formatFrequencyLabel } from '../services/recurringTaskService';
 
 interface TaskDetailDrawerProps {
   task: TaskItem | null;
@@ -652,6 +654,24 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 <span>Ưu tiên = Khẩn cấp (Cần ưu tiên thực hiện)</span>
               </label>
             </div>
+
+            {/* 9.1 Thông tin Chu kỳ lặp lại */}
+            {task.isRecurring && (
+              <div className="p-3 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] flex items-center justify-between gap-3 text-xs font-ui animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <RotateCw className="w-4 h-4 text-[#963861] shrink-0" />
+                  <div>
+                    <span className="font-bold text-[#963861]">Công việc định kỳ:</span>
+                    <p className="text-[11px] text-[#52525b] mt-0.5">
+                      Tự động tạo task mới lúc 08:00 AM ({task.recurringFrequency ? formatFrequencyLabel(task.recurringFrequency) : 'Theo chu kỳ'}).
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-[#963861] text-white px-2 py-0.5 rounded font-bold shrink-0">
+                  Chu kỳ
+                </span>
+              </div>
+            )}
 
             {/* 10. Ghi chú */}
             <div className="p-4 bg-[#f8fafc] rounded-[8px] border border-[#e2e8f0] space-y-3">

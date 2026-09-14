@@ -5,14 +5,26 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ProjectItem, MemberItem, TeamType, PriorityLevel, TaskItem, ProjectChecklistItem } from '../types';
-import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks } from 'lucide-react';
+import {
+  ProjectItem,
+  MemberItem,
+  TeamType,
+  PriorityLevel,
+  TaskItem,
+  ProjectChecklistItem,
+  RecurrenceFrequency,
+  RecurrenceEndType,
+  RecurringRuleConfig,
+} from '../types';
+import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups, isOthersProject } from '../utils/projectSortingUtils';
 import { ProjectChecklistModal } from './ProjectChecklistModal';
 import { calculateChecklistStats } from '../data/defaultProjectChecklist';
+import { getUserRole } from '../utils/rbac';
+import { recurringTaskService, calculateNextCycleDate } from '../services/recurringTaskService';
 
 interface QuickAddBarProps {
   projects: ProjectItem[];
@@ -29,6 +41,9 @@ interface QuickAddBarProps {
     dueDate: string;
     priority: PriorityLevel;
     details?: string;
+    recurringRuleId?: string;
+    isRecurring?: boolean;
+    recurringFrequency?: RecurrenceFrequency;
   }) => void;
   defaultProjectId?: string;
   defaultAssignee?: string;
@@ -83,8 +98,15 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   const [dueDate, setDueDate] = useState<string>(() => getTodayDateString());
   const dateInputRef = useRef<HTMLInputElement>(null);
 
+  const isAdmin = getUserRole(currentUser) === 'Admin';
   const [isUrgent, setIsUrgent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Recurring task states (Admin only)
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurrenceFrequency>('weekly');
+  const [recurringEndType, setRecurringEndType] = useState<RecurrenceEndType>('never');
+  const [recurringEndDate, setRecurringEndDate] = useState<string>('');
 
   useEffect(() => {
     if (defaultAssignee) {
@@ -144,6 +166,37 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
+    const initialDueDate = dueDate || getTodayDateString();
+
+    let recurringRuleId: string | undefined = undefined;
+
+    // Lưu quy tắc lặp nếu là Admin và bật tính năng chu kỳ
+    if (isRecurring && isAdmin) {
+      recurringRuleId = `rec-${Date.now()}`;
+      const nextRun = calculateNextCycleDate(initialDueDate, recurringFrequency);
+
+      const newRule: RecurringRuleConfig = {
+        id: recurringRuleId,
+        title: title.trim(),
+        projectId,
+        projectName: projName,
+        phaseId: foundPhase ? foundPhase.id : undefined,
+        phaseName: foundPhase ? foundPhase.name : undefined,
+        team,
+        assignee,
+        priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
+        frequency: recurringFrequency,
+        endType: recurringEndType,
+        endDate: recurringEndType === 'specific_date' && recurringEndDate ? recurringEndDate : undefined,
+        nextRunDate: nextRun,
+        nextRunTime: '08:00',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.name || 'Admin',
+      };
+
+      recurringTaskService.saveRule(newRule);
+    }
 
     onAddTask({
       title: title.trim(),
@@ -153,13 +206,19 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       phaseName: foundPhase ? foundPhase.name : undefined,
       team,
       assignee,
-      dueDate: dueDate || getTodayDateString(),
+      dueDate: initialDueDate,
       priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
+      recurringRuleId,
+      isRecurring: Boolean(isRecurring && isAdmin),
+      recurringFrequency: isRecurring && isAdmin ? recurringFrequency : undefined,
     });
 
     setTitle('');
     setDueDate(getTodayDateString());
     setIsUrgent(false);
+    setIsRecurring(false);
+    setRecurringEndType('never');
+    setRecurringEndDate('');
     setIsExpanded(false);
   };
 
@@ -337,6 +396,27 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                   🚨 Khẩn cấp
                 </span>
               </label>
+
+              {/* Recurring Checkbox (Admin Only) */}
+              {isAdmin && (
+                <label className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] border cursor-pointer text-xs font-ui select-none transition-colors ${
+                  isRecurring
+                    ? 'bg-[#fdf2f7] border-[#f3c2d4] text-[#963861] font-bold shadow-2xs'
+                    : 'bg-[#f9f9f9] border-[#e0e0e0] text-[#52525b] hover:bg-[#f4f4f5]'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="w-3.5 h-3.5 text-[#963861] rounded border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                  />
+                  <RotateCw className={`w-3.5 h-3.5 ${isRecurring ? 'text-[#963861]' : 'text-[#7f7f7f]'}`} />
+                  <span>Lặp lại chu kỳ</span>
+                  <span className="text-[10px] bg-[#963861] text-white px-1 py-0.2 rounded font-ui font-bold ml-0.5">
+                    Admin
+                  </span>
+                </label>
+              )}
             </div>
 
             <button
@@ -347,6 +427,68 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
               Thu gọn
             </button>
           </div>
+
+          {/* Recurring Options Bar (Admin Only) */}
+          {isAdmin && isRecurring && (
+            <div className="w-full mt-2.5 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-ui animate-fade-in">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Frequency selector: Weekly, Biweekly, Monthly */}
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[#963861]">Chu kỳ:</span>
+                  <select
+                    value={recurringFrequency}
+                    onChange={(e) => setRecurringFrequency(e.target.value as RecurrenceFrequency)}
+                    className="bg-white border border-[#d6d6d6] text-[#202020] text-xs font-ui rounded-[4px] px-2 py-1 focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="weekly">Hàng tuần (Weekly)</option>
+                    <option value="biweekly">2 tuần một lần (Biweekly)</option>
+                    <option value="monthly">Hàng tháng (Monthly)</option>
+                  </select>
+                </div>
+
+                {/* End condition: Never or Specific date */}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#963861]">Kết thúc:</span>
+                  <div className="flex items-center gap-3 bg-white border border-[#d6d6d6] rounded-[4px] px-2.5 py-1">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recurring_end_type"
+                        checked={recurringEndType === 'never'}
+                        onChange={() => setRecurringEndType('never')}
+                        className="text-[#963861] focus:ring-[#963861] cursor-pointer"
+                      />
+                      <span>Không bao giờ (Never)</span>
+                    </label>
+                    <label className="flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recurring_end_type"
+                        checked={recurringEndType === 'specific_date'}
+                        onChange={() => setRecurringEndType('specific_date')}
+                        className="text-[#963861] focus:ring-[#963861] cursor-pointer"
+                      />
+                      <span>Chọn ngày cụ thể</span>
+                    </label>
+                  </div>
+
+                  {recurringEndType === 'specific_date' && (
+                    <input
+                      type="date"
+                      min={dueDate || getTodayDateString()}
+                      value={recurringEndDate}
+                      onChange={(e) => setRecurringEndDate(e.target.value)}
+                      className="bg-white border border-[#d6d6d6] text-[#202020] text-xs font-ui rounded-[4px] px-2 py-1 focus:outline-hidden cursor-pointer"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <span className="text-[11px] text-[#7f7f7f] italic">
+                ⏰ Tự động tạo task lúc 08:00 AM mỗi chu kỳ
+              </span>
+            </div>
+          )}
             </motion.div>
           )}
         </AnimatePresence>

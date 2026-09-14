@@ -13,9 +13,22 @@ import {
   MemberItem,
   TaskItem,
   ProjectItem,
+  PriorityLevel,
+  TeamType,
+  RecurringRuleConfig,
+  RecurrenceFrequency,
+  RecurrenceEndType,
 } from '../types';
 import { workingTimeService, formatWorkingDaysCount } from '../services/workingTimeService';
 import { formatDateWithEnDay } from '../utils/formatters';
+import { getTodayDateString } from '../utils/dateUtils';
+import { getUserRole } from '../utils/rbac';
+import {
+  recurringTaskService,
+  formatFrequencyLabel,
+  formatEndTypeLabel,
+  calculateNextCycleDate,
+} from '../services/recurringTaskService';
 import {
   ChecklistTemplateItem,
   CHECKLIST_PHASES,
@@ -41,6 +54,10 @@ import {
   CheckSquare,
   ArrowUp,
   ArrowDown,
+  RotateCw,
+  Play,
+  Pause,
+  Zap,
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -48,13 +65,16 @@ interface SettingsManagerProps {
   tasks?: TaskItem[];
   projects?: ProjectItem[];
   currentAuthUser?: MemberItem | null;
+  onAddTask?: (task: any, author?: string) => void;
 }
 
-type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist';
+type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist' | 'recurring';
 
 export const SettingsManager: React.FC<SettingsManagerProps> = ({
   members,
+  projects = [],
   currentAuthUser,
+  onAddTask,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SettingsTab>('schedule');
 
@@ -126,6 +146,132 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   const [itemInsertPosition, setItemInsertPosition] = useState<'end' | 'start'>('end');
   const [deletingChecklistItem, setDeletingChecklistItem] = useState<ChecklistTemplateItem | null>(null);
   const [checklistToast, setChecklistToast] = useState<string | null>(null);
+
+  // 7. Recurring Tasks state (Admin only)
+  const isAdmin = getUserRole(currentAuthUser) === 'Admin';
+  const [recurringRules, setRecurringRules] = useState<RecurringRuleConfig[]>(() =>
+    recurringTaskService.getRules()
+  );
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [editingRecurringRule, setEditingRecurringRule] = useState<RecurringRuleConfig | null>(null);
+  const [recTitle, setRecTitle] = useState('');
+  const [recProjectId, setRecProjectId] = useState(projects[0]?.id || '');
+  const [recPhaseId, setRecPhaseId] = useState('');
+  const [recAssignee, setRecAssignee] = useState(productMembers[0]?.name || members[0]?.name || '');
+  const [recPriority, setRecPriority] = useState<PriorityLevel>('Bình thường');
+  const [recFrequency, setRecFrequency] = useState<RecurrenceFrequency>('weekly');
+  const [recEndType, setRecEndType] = useState<RecurrenceEndType>('never');
+  const [recEndDate, setRecEndDate] = useState('');
+  const [recToast, setRecToast] = useState<string | null>(null);
+
+  const handleOpenAddRecurring = () => {
+    setEditingRecurringRule(null);
+    setRecTitle('');
+    setRecProjectId(projects[0]?.id || '');
+    setRecPhaseId('');
+    setRecAssignee(productMembers[0]?.name || members[0]?.name || '');
+    setRecPriority('Bình thường');
+    setRecFrequency('weekly');
+    setRecEndType('never');
+    setRecEndDate('');
+    setIsRecurringModalOpen(true);
+  };
+
+  const handleOpenEditRecurring = (rule: RecurringRuleConfig) => {
+    setEditingRecurringRule(rule);
+    setRecTitle(rule.title);
+    setRecProjectId(rule.projectId);
+    setRecPhaseId(rule.phaseId || '');
+    setRecAssignee(rule.assignee);
+    setRecPriority(rule.priority);
+    setRecFrequency(rule.frequency);
+    setRecEndType(rule.endType);
+    setRecEndDate(rule.endDate || '');
+    setIsRecurringModalOpen(true);
+  };
+
+  const handleSaveRecurringRule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recTitle.trim()) return;
+
+    const proj = projects.find((p) => p.id === recProjectId);
+    const selectedMember = members.find((m) => m.name === recAssignee);
+    const team: TeamType = selectedMember?.team || 'Product Manager';
+    const todayStr = getTodayDateString();
+    const nextRun = calculateNextCycleDate(todayStr, recFrequency);
+
+    if (editingRecurringRule) {
+      const updated: RecurringRuleConfig = {
+        ...editingRecurringRule,
+        title: recTitle.trim(),
+        projectId: recProjectId,
+        projectName: proj?.name || editingRecurringRule.projectName,
+        phaseId: recPhaseId || undefined,
+        team,
+        assignee: recAssignee,
+        priority: recPriority,
+        frequency: recFrequency,
+        endType: recEndType,
+        endDate: recEndType === 'specific_date' && recEndDate ? recEndDate : undefined,
+      };
+      recurringTaskService.saveRule(updated);
+      setRecToast('Đã cập nhật quy tắc chu kỳ!');
+    } else {
+      const newRule: RecurringRuleConfig = {
+        id: `rec-${Date.now()}`,
+        title: recTitle.trim(),
+        projectId: recProjectId,
+        projectName: proj?.name || 'Chưa xác định (Others)',
+        phaseId: recPhaseId || undefined,
+        team,
+        assignee: recAssignee,
+        priority: recPriority,
+        frequency: recFrequency,
+        endType: recEndType,
+        endDate: recEndType === 'specific_date' && recEndDate ? recEndDate : undefined,
+        nextRunDate: nextRun,
+        nextRunTime: '08:00',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        createdBy: currentAuthUser?.name || 'Admin',
+      };
+      recurringTaskService.saveRule(newRule);
+      setRecToast('Đã tạo quy tắc việc chu kỳ mới!');
+    }
+
+    setRecurringRules(recurringTaskService.getRules());
+    setIsRecurringModalOpen(false);
+    setTimeout(() => setRecToast(null), 3000);
+  };
+
+  const handleTogglePauseRecurring = (id: string) => {
+    recurringTaskService.togglePauseRule(id);
+    setRecurringRules(recurringTaskService.getRules());
+    setRecToast('Đã chuyển đổi trạng thái quy tắc!');
+    setTimeout(() => setRecToast(null), 3000);
+  };
+
+  const handleDeleteRecurring = (id: string) => {
+    if (confirm('Bạn chắc chắn muốn xoá quy tắc việc chu kỳ này?')) {
+      recurringTaskService.deleteRule(id);
+      setRecurringRules(recurringTaskService.getRules());
+      setRecToast('Đã xoá quy tắc việc chu kỳ!');
+      setTimeout(() => setRecToast(null), 3000);
+    }
+  };
+
+  const handleTriggerRunNow = (id: string) => {
+    const success = recurringTaskService.triggerRunNow(id, (newTask) => {
+      if (onAddTask) {
+        onAddTask(newTask, `${currentAuthUser?.name || 'Admin'} (Kích hoạt thủ công)`);
+      }
+    });
+    if (success) {
+      setRecurringRules(recurringTaskService.getRules());
+      setRecToast('Đã tạo ngay 1 task mới thành công!');
+      setTimeout(() => setRecToast(null), 3000);
+    }
+  };
 
   // Tự động đồng bộ từ Supabase khi mở màn hình Thiết lập
   useEffect(() => {
@@ -506,10 +652,20 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-[6px] bg-[#963861] text-white flex items-center justify-center font-bold shadow-2xs">
-                {activeSubTab === 'checklist' ? <CheckSquare className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                {activeSubTab === 'checklist' ? (
+                  <CheckSquare className="w-4 h-4" />
+                ) : activeSubTab === 'recurring' ? (
+                  <RotateCw className="w-4 h-4" />
+                ) : (
+                  <Clock className="w-4 h-4" />
+                )}
               </div>
               <h1 className="font-title text-xl font-bold text-[#202020]">
-                {activeSubTab === 'checklist' ? 'Quản trị Checklist' : 'Thời gian làm việc'}
+                {activeSubTab === 'checklist'
+                  ? 'Quản trị Checklist'
+                  : activeSubTab === 'recurring'
+                  ? 'Việc chu kỳ'
+                  : 'Thời gian làm việc'}
               </h1>
               <span className="bg-[#ede9fe] text-[#6d28d9] border border-[#ddd6fe] text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px]">
                 Admin
@@ -518,6 +674,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
             <p className="text-xs font-ui text-[#5f5f5f]">
               {activeSubTab === 'checklist'
                 ? 'Cấu hình danh mục tiêu chuẩn Product Management (thêm, sửa, xoá, sắp xếp vị trí các tiêu chuẩn theo từng giai đoạn).'
+                : activeSubTab === 'recurring'
+                ? 'Quản lý các công việc lặp lại tự động tạo lúc 08:00 AM theo chu kỳ Hàng tuần, 2 Tuần hoặc Hàng tháng.'
                 : 'Lịch làm việc, ngày lễ, làm bù và nghỉ phép dùng tính ngày công nhân sự.'}
             </p>
           </div>
@@ -602,6 +760,20 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
             <CheckSquare className="w-3.5 h-3.5" />
             <span>Checklist ({checklistTemplate.length})</span>
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => setActiveSubTab('recurring')}
+              className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                activeSubTab === 'recurring'
+                  ? 'border-[#963861] text-[#963861]'
+                  : 'border-transparent text-[#71717a] hover:text-[#202020]'
+              }`}
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              <span>Việc chu kỳ ({recurringRules.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1333,6 +1505,188 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         </div>
       )}
 
+      {/* TAB 7: QUẢN LÝ VIỆC CHU KỲ (ADMIN ONLY) */}
+      {activeSubTab === 'recurring' && isAdmin && (
+        <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-[#f0f0f0] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#fafafa]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded bg-[#963861]/10 text-[#963861]">
+                  <RotateCw className="w-4 h-4" />
+                </span>
+                <h3 className="font-ui font-bold text-sm text-[#202020]">
+                  Danh sách Quy tắc Giao việc Chu kỳ
+                </h3>
+                <span className="text-[11px] font-semibold text-[#963861] bg-[#fcf0f5] border border-[#f3c2d4] px-2 py-0.5 rounded-full">
+                  {recurringRules.length} quy tắc
+                </span>
+              </div>
+              <p className="text-xs text-[#71717a] font-ui mt-1">
+                Tự động tạo task mới cho nhân sự vào lúc 08:00 AM các ngày theo chu kỳ lặp lại (Weekly, Biweekly, Monthly).
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddRecurring}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#963861] hover:bg-[#b13460] text-white text-xs font-ui font-bold rounded-[6px] shadow-2xs transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Thêm việc chu kỳ
+            </button>
+          </div>
+
+          {/* Table list of recurring rules */}
+          {recurringRules.length === 0 ? (
+            <div className="p-12 text-center text-[#71717a] font-ui text-xs">
+              <RotateCw className="w-8 h-8 text-[#d4d4d8] mx-auto mb-2" />
+              Chưa có quy tắc việc chu kỳ nào được thiết lập.
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleOpenAddRecurring}
+                  className="px-3 py-1.5 bg-[#f4f4f5] hover:bg-[#e4e4e7] text-[#202020] text-xs font-ui font-semibold rounded-[6px] border border-[#d4d4d8] transition-colors cursor-pointer"
+                >
+                  + Tạo quy tắc đầu tiên
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-ui border-collapse">
+                <thead>
+                  <tr className="border-b border-[#f0f0f0] bg-[#fafafa] text-[#71717a] font-bold">
+                    <th className="py-2.5 px-4">Tên công việc</th>
+                    <th className="py-2.5 px-4">Dự án</th>
+                    <th className="py-2.5 px-4">Phụ trách</th>
+                    <th className="py-2.5 px-4">Chu kỳ</th>
+                    <th className="py-2.5 px-4">Kết thúc</th>
+                    <th className="py-2.5 px-4">Tạo lần tới</th>
+                    <th className="py-2.5 px-4">Trạng thái</th>
+                    <th className="py-2.5 px-4 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f0f0f0]">
+                  {recurringRules.map((rule) => {
+                    const isPaused = rule.status === 'paused';
+                    return (
+                      <tr
+                        key={rule.id}
+                        className={`hover:bg-[#fafafa] transition-colors ${
+                          isPaused ? 'opacity-60 bg-[#fbfbfb]' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4 font-semibold text-[#202020] max-w-[240px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#963861] shrink-0">
+                              <RotateCw className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="truncate" title={rule.title}>
+                              {rule.title}
+                            </span>
+                          </div>
+                          {rule.priority === 'Khẩn cấp' && (
+                            <span className="inline-block mt-0.5 text-[10px] font-bold text-[#ef4444] bg-[#fee2e2] px-1.5 py-0.2 rounded">
+                              Khẩn cấp
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-[#52525b] max-w-[160px] truncate" title={rule.projectName}>
+                          {rule.projectName}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-[#202020]">{rule.assignee}</span>
+                          <span className="block text-[11px] text-[#71717a]">{rule.team}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-[#f0fdf4] text-[#16a34a] border border-[#bbf7d0]">
+                            {formatFrequencyLabel(rule.frequency)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-[#71717a]">
+                          {formatEndTypeLabel(rule)}
+                        </td>
+                        <td className="py-3 px-4 font-ui">
+                          <span className="font-semibold text-[#202020]">
+                            {rule.nextRunDate}
+                          </span>
+                          <span className="block text-[11px] text-[#71717a]">
+                            {rule.nextRunTime || '08:00'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {isPaused ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#71717a] bg-[#f4f4f5] px-2 py-0.5 rounded border border-[#e4e4e7]">
+                              <Pause className="w-3 h-3 text-[#71717a]" /> Tạm dừng
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#16a34a] bg-[#ecfdf5] px-2 py-0.5 rounded border border-[#a7f3d0]">
+                              <Play className="w-3 h-3 text-[#16a34a] fill-current" /> Đang chạy
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Run now */}
+                            <button
+                              type="button"
+                              onClick={() => handleTriggerRunNow(rule.id)}
+                              className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#16a34a] text-[#52525b] hover:text-[#16a34a] hover:bg-[#f0fdf4] transition-colors cursor-pointer"
+                              title="Tạo ngay 1 task cho hôm nay"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Pause / Resume */}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePauseRecurring(rule.id)}
+                              className={`p-1.5 rounded-[4px] border transition-colors cursor-pointer ${
+                                isPaused
+                                  ? 'border-[#bbf7d0] text-[#16a34a] hover:bg-[#f0fdf4]'
+                                  : 'border-[#e4e4e7] text-[#52525b] hover:text-[#d97706] hover:bg-[#fffbeb]'
+                              }`}
+                              title={isPaused ? 'Kích hoạt lại' : 'Tạm dừng quy tắc'}
+                            >
+                              {isPaused ? (
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Pause className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+
+                            {/* Edit */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditRecurring(rule)}
+                              className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#3b82f6] text-[#52525b] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer"
+                              title="Chỉnh sửa quy tắc"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRecurring(rule.id)}
+                              className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#fda4af] text-[#52525b] hover:text-[#e11d48] hover:bg-[#fff1f2] transition-colors cursor-pointer"
+                              title="Xoá quy tắc"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MODAL: THÊM / SỬA NGÀY LỄ */}
       {isHolidayModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
@@ -1809,6 +2163,201 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         <div className="fixed bottom-6 right-6 z-50 bg-[#202020] text-white px-4 py-2.5 rounded-[8px] shadow-lg text-xs font-ui flex items-center gap-2 animate-fade-in border border-[#404040]">
           <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
           <span>{checklistToast}</span>
+        </div>
+      )}
+
+      {/* MODAL: THÊM / SỬA QUY TẮC VIỆC CHU KỲ */}
+      {isRecurringModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fade-in">
+          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-lg w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded bg-[#963861]/10 text-[#963861]">
+                  <RotateCw className="w-4 h-4" />
+                </span>
+                <h3 className="font-ui font-bold text-sm text-[#202020]">
+                  {editingRecurringRule ? 'Sửa quy tắc việc chu kỳ' : 'Thêm việc chu kỳ mới'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecurringModalOpen(false)}
+                className="p-1 rounded text-[#71717a] hover:text-[#202020] hover:bg-[#f0f0f0] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecurringRule} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                  Tiêu đề công việc:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={recTitle}
+                  onChange={(e) => setRecTitle(e.target.value)}
+                  placeholder="Ví dụ: Báo cáo số liệu traffic tuần, Kiểm tra checklist SEO..."
+                  className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] focus:outline-none focus:border-[#963861]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Dự án:
+                  </label>
+                  <select
+                    value={recProjectId}
+                    onChange={(e) => {
+                      setRecProjectId(e.target.value);
+                      setRecPhaseId('');
+                    }}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Giai đoạn (tuỳ chọn):
+                  </label>
+                  <select
+                    value={recPhaseId}
+                    onChange={(e) => setRecPhaseId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  >
+                    <option value="">-- Không chỉ định --</option>
+                    {projects
+                      .find((p) => p.id === recProjectId)
+                      ?.phases?.map((ph) => (
+                        <option key={ph.id} value={ph.id}>
+                          {ph.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Nhân sự phụ trách:
+                  </label>
+                  <select
+                    value={recAssignee}
+                    onChange={(e) => setRecAssignee(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  >
+                    {productMembers.map((m) => (
+                      <option key={m.id} value={m.name}>
+                        {m.name} ({m.team})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Mức độ ưu tiên:
+                  </label>
+                  <div className="pt-2">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-ui font-medium text-[#202020]">
+                      <input
+                        type="checkbox"
+                        checked={recPriority === 'Khẩn cấp'}
+                        onChange={(e) =>
+                          setRecPriority(e.target.checked ? 'Khẩn cấp' : 'Bình thường')
+                        }
+                        className="w-4 h-4 rounded text-[#ef4444] focus:ring-[#ef4444]"
+                      />
+                      <span>🚨 Khẩn cấp</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#f0f0f0]">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Chu kỳ lặp (Repeat):
+                  </label>
+                  <select
+                    value={recFrequency}
+                    onChange={(e) => setRecFrequency(e.target.value as RecurrenceFrequency)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861] font-semibold text-[#963861]"
+                  >
+                    <option value="weekly">Hàng tuần (Weekly)</option>
+                    <option value="biweekly">2 tuần một lần (Biweekly)</option>
+                    <option value="monthly">Hàng tháng (Monthly)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Kết thúc lặp (End Repeat):
+                  </label>
+                  <select
+                    value={recEndType}
+                    onChange={(e) => setRecEndType(e.target.value as RecurrenceEndType)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  >
+                    <option value="never">Không bao giờ (Never)</option>
+                    <option value="specific_date">Chọn ngày cụ thể</option>
+                  </select>
+                </div>
+              </div>
+
+              {recEndType === 'specific_date' && (
+                <div className="space-y-1.5 p-3 bg-[#fafafa] rounded-[6px] border border-[#e4e4e7]">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Ngày kết thúc lặp:
+                  </label>
+                  <input
+                    type="date"
+                    required={recEndType === 'specific_date'}
+                    value={recEndDate}
+                    onChange={(e) => setRecEndDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  />
+                </div>
+              )}
+
+              <div className="text-[11px] text-[#71717a] font-ui bg-[#fcf0f5] p-2.5 rounded-[6px] border border-[#f3c2d4]">
+                ℹ️ Hệ thống sẽ tự động tạo task mới lúc <strong>08:00 AM</strong> vào ngày chu kỳ tiếp theo với trạng thái <em>Chưa làm</em> và gửi thông báo cho nhân sự.
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#f0f0f0]">
+                <button
+                  type="button"
+                  onClick={() => setIsRecurringModalOpen(false)}
+                  className="px-4 py-2 rounded-[6px] border border-[#d4d4d8] text-xs font-ui font-semibold text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+                >
+                  Huỷ
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-[6px] bg-[#963861] hover:bg-[#b13460] text-white text-xs font-ui font-bold shadow-xs cursor-pointer"
+                >
+                  {editingRecurringRule ? 'Lưu thay đổi' : 'Tạo quy tắc'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING TOAST FOR RECURRING */}
+      {recToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#202020] text-white px-4 py-2.5 rounded-[8px] shadow-lg text-xs font-ui flex items-center gap-2 animate-fade-in border border-[#404040]">
+          <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
+          <span>{recToast}</span>
         </div>
       )}
     </div>
