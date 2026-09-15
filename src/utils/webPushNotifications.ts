@@ -381,7 +381,7 @@ export function detectClientPlatform(): ClientPlatform {
     isMobile = true;
   } else if (/Mac|Macintosh/i.test(ua) || /Mac/i.test(platformStr)) {
     os = 'macOS';
-    osLabel = 'macOS (Mac)';
+    osLabel = 'macOS';
   } else if (/Win/i.test(ua) || /Win/i.test(platformStr)) {
     os = 'Windows';
     osLabel = 'Windows';
@@ -399,16 +399,16 @@ export function detectClientPlatform(): ClientPlatform {
     browserLabel = 'Cốc Cốc';
   } else if (/Edg/i.test(ua)) {
     browser = 'Edge';
-    browserLabel = 'Microsoft Edge';
+    browserLabel = 'Edge';
   } else if (/Firefox|FxiOS/i.test(ua)) {
     browser = 'Firefox';
-    browserLabel = 'Mozilla Firefox';
+    browserLabel = 'Firefox';
   } else if (/Chrome|CriOS/i.test(ua)) {
     browser = 'Chrome';
-    browserLabel = 'Google Chrome';
+    browserLabel = 'Chrome';
   } else if (/Safari/i.test(ua) && !/Chrome|CriOS|Android/i.test(ua)) {
     browser = 'Safari';
-    browserLabel = 'Apple Safari';
+    browserLabel = 'Safari';
   }
 
   return {
@@ -514,13 +514,13 @@ export function getPersonalizedNotificationGuide(
     }
 
     if (os === 'macOS') {
-      osTip = `Mẹo trên Mac: Hãy đảm bảo Cài đặt hệ thống Mac > Thông báo > ${browserLabel} đang bật để nhận banner trượt ra ở góc màn hình.`;
+      osTip = `Đảm bảo Cài đặt hệ thống > Thông báo > ${browserLabel} đang bật để nhận banner ở góc màn hình.`;
     }
 
     return {
-      title: `Nhận thông báo công việc trên ${browserLabel}`,
-      badge: 'Chưa bật',
-      summary: `Bật nhận thông báo tức thì trên ${browserLabel} (${osLabel}) khi bạn được giao việc mới hoặc task bị nghẽn.`,
+      title: `Bật thông báo ${browserLabel}`,
+      badge: 'Đề xuất',
+      summary: 'Nhận thông báo tức thì khi có việc mới hoặc task bị nghẽn.',
       steps,
       osTip,
       actionText: 'Bật ngay',
@@ -529,13 +529,13 @@ export function getPersonalizedNotificationGuide(
 
   // TRƯỜNG HỢP 3: ĐÃ CẤP QUYỀN (GRANTED)
   return {
-    title: `Đã bật thông báo trên ${browserLabel}`,
-    badge: 'Đã bật',
-    summary: `Hệ thống sẽ gửi thông báo đẩy đến ${browserLabel} (${osLabel}) khi bạn được giao việc mới, task hoàn thành hoặc bị nghẽn.`,
+    title: `Đã bật thông báo ${browserLabel}`,
+    badge: 'Đang bật',
+    summary: 'Nhận thông báo đẩy khi có việc mới, hoàn thành hoặc bị nghẽn.',
     steps: [],
     osTip:
       os === 'macOS'
-        ? `Mẹo trên Mac: Nếu không thấy banner trượt ra ở góc phải, hãy kiểm tra Cài đặt hệ thống Mac > Thông báo > ${browserLabel} và tắt chế độ Không làm phiền (Focus). Bạn cũng có thể bấm vào ngày giờ ở góc trên bên phải Mac để xem Trung tâm thông báo.`
+        ? `Nếu không thấy banner góc phải, kiểm tra Cài đặt hệ thống > Thông báo > ${browserLabel} và tắt chế độ Không làm phiền.`
         : undefined,
     actionText: 'Đã sẵn sàng',
   };

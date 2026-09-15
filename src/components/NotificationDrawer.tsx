@@ -179,7 +179,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 </div>
                 <div>
                   <h3 className="font-title text-base font-bold text-[#1e293b] flex items-center gap-2">
-                    <span>Thông báo của bạn</span>
+                    <span>Thông báo</span>
                     {unreadCount > 0 && (
                       <span className="text-[11px] font-num font-bold px-1.5 py-0.2 rounded-full bg-[#dc2626] text-white">
                         {unreadCount}
@@ -187,7 +187,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                     )}
                   </h3>
                   <p className="text-[11px] font-ui text-[#64748b]">
-                    {currentUser ? `Theo dõi công việc dự án của ${currentUser.name}` : 'Theo dõi cập nhật dự án'}
+                    Cập nhật công việc và dự án
                   </p>
                 </div>
               </div>

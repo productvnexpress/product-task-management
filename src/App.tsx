@@ -897,8 +897,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         (p) => p.id === item.projectId || p.name === item.projectName
       );
       if (foundProj) {
-        setSelectedProject(foundProj);
-        setIsProjectDetailOpen(true);
+        handleOpenProjectDetail(foundProj.id);
         setIsNotificationDrawerOpen(false);
       }
     }

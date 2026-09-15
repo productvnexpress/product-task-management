@@ -205,7 +205,7 @@ export const PersonalizedWebPushCard: React.FC<PersonalizedWebPushCardProps> = (
             <div className="font-title font-bold text-[#78234a] text-xs flex items-center gap-1.5">
               <span>{guide.title}</span>
               <span className="text-[10px] font-ui px-1.5 py-0.2 rounded bg-[#963861] text-white font-semibold">
-                Tiện ích
+                Đề xuất
               </span>
             </div>
             <p className="text-[11px] font-ui text-[#8a335a] mt-0.5 leading-relaxed">
@@ -224,18 +224,18 @@ export const PersonalizedWebPushCard: React.FC<PersonalizedWebPushCardProps> = (
         </button>
       </div>
 
-      {/* Accordion hướng dẫn 2 bước */}
+      {/* Accordion hướng dẫn */}
       <div className="px-4 py-1.5 bg-[#fae8f0] border-t border-[#f4c2d7] flex items-center justify-between text-[11px] font-ui">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-[#963861] hover:underline font-medium flex items-center gap-1 cursor-pointer"
         >
-          <span>Hướng dẫn thao tác trên {platform.browserLabel}</span>
+          <span>Xem cách bật trên {platform.browserLabel}</span>
           {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
-        <span className="text-[#8a335a] text-[10px]">
-          Thiết bị: {platform.osLabel}
+        <span className="text-[#8a335a] text-[10px] font-medium">
+          {platform.osLabel}
         </span>
       </div>
 
