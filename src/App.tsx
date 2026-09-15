@@ -48,9 +48,10 @@ import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
 import { recurringTaskService } from './services/recurringTaskService';
+import { fetchMasterChecklistTemplateFromSupabase } from './data/defaultProjectChecklist';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
-import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName } from './utils/memberPersonalization';
+import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
@@ -531,6 +532,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             console.warn('[workingTimeService] Supabase init warning:', e);
             return null;
           }),
+          recurringTaskService.initFromSupabase().catch((e) => {
+            console.warn('[recurringTaskService] Supabase init warning:', e);
+            return null;
+          }),
+          fetchMasterChecklistTemplateFromSupabase().catch((e) => {
+            console.warn('[defaultProjectChecklist] Supabase init warning:', e);
+            return null;
+          }),
         ]);
 
         if (!isMounted) return;
@@ -541,7 +550,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         }
         if (tsks) setTasks(tsks);
         if (trsh) setTrash(trsh);
-        if (notifs) setNotifications(notifs);
+        if (notifs && notifs.length > 0) setNotifications(notifs);
 
         setIsDbConnected(true);
         console.log(
@@ -581,7 +590,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       onNotificationsChange: async () => {
         try {
           const freshNotifs = await wmsDataService.fetchNotifications();
-          if (freshNotifs) setNotifications(freshNotifs);
+          if (freshNotifs && freshNotifs.length > 0) setNotifications(freshNotifs);
         } catch (e) {}
       },
     });
@@ -611,11 +620,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     }
   };
 
-  // Notifications filtering for active account
-  const currentUserName = currentAuthUser?.name || activeProductMember?.name;
+  // Notifications filtering for active account (hỗ trợ cả tài khoản đăng nhập và nhân sự đang chọn xem)
+  const currentViewingUser = activeProductMember || currentAuthUser;
+  const currentUserName = currentViewingUser?.name;
   const userNotifications = useMemo(() => {
     if (!currentUserName) return [];
-    return notifications.filter((n) => n.recipientName === currentUserName);
+    return notifications.filter((n) => isSamePersonName(n.recipientName, currentUserName));
   }, [notifications, currentUserName]);
 
   const unreadNotificationsCount = useMemo(() => {
@@ -625,7 +635,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // Helper dispatching targeted notifications based on project roles
   const createAndDispatchNotifications = (
     newOrUpdatedTask: TaskItem,
-    actionType: 'created' | 'status_changed' | 'reassigned',
+    actionType: 'created' | 'status_changed' | 'reassigned' | 'updated',
     actorName: string,
     extra?: { oldAssignee?: string; oldStatus?: string; note?: string }
   ) => {
@@ -633,17 +643,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       (p) => p.id === newOrUpdatedTask.projectId || p.name === newOrUpdatedTask.projectName
     );
     const projectName = proj?.name || newOrUpdatedTask.projectName || 'Dự án';
-    const pms = proj?.roles?.pm || (proj?.leadName ? proj.leadName.split(',').map((s) => s.trim()) : []);
+    // Tìm tất cả PM phụ trách dự án (roles.pm, leadName, createdBy hoặc fallback về PM ban)
+    const pms = getProjectPMs(proj, members);
 
     const newNotifs: NotificationItem[] = [];
 
     if (actionType === 'created') {
       // 1. Executive tạo task trong dự án -> Bắn thông báo cho Product Manager phụ trách dự án đó
       pms.forEach((pmName) => {
-        if (pmName && pmName !== actorName) {
+        if (pmName && !isSamePersonName(pmName, actorName)) {
+          const pmMember = members.find((m) => isSamePersonName(m.name, pmName));
           newNotifs.push({
             id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
             recipientName: pmName,
+            recipientId: pmMember?.username || pmMember?.id,
             actorName,
             projectId: proj?.id,
             projectName,
@@ -659,10 +672,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       });
 
       // 2. Giao việc cho người khác -> Bắn thông báo cho người nhận việc
-      if (newOrUpdatedTask.assignee && newOrUpdatedTask.assignee !== actorName) {
+      if (newOrUpdatedTask.assignee && !isSamePersonName(newOrUpdatedTask.assignee, actorName)) {
+        const assigneeMember = members.find((m) => isSamePersonName(m.name, newOrUpdatedTask.assignee));
         newNotifs.push({
           id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           recipientName: newOrUpdatedTask.assignee,
+          recipientId: assigneeMember?.username || assigneeMember?.id,
           actorName,
           projectId: proj?.id,
           projectName,
@@ -679,10 +694,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       if (newOrUpdatedTask.status === 'Hoàn thành') {
         const recipients = new Set([...pms, newOrUpdatedTask.createdBy || '']);
         recipients.forEach((recip) => {
-          if (recip && recip !== actorName) {
+          if (recip && !isSamePersonName(recip, actorName)) {
+            const recipMember = members.find((m) => isSamePersonName(m.name, recip));
             newNotifs.push({
               id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
               recipientName: recip,
+              recipientId: recipMember?.username || recipMember?.id,
               actorName,
               projectId: proj?.id,
               projectName,
@@ -697,11 +714,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
         });
       } else if (newOrUpdatedTask.status === 'Bị nghẽn') {
-        pms.forEach((pmName) => {
-          if (pmName && pmName !== actorName) {
+        const recipients = new Set([...pms, newOrUpdatedTask.createdBy || '']);
+        recipients.forEach((recip) => {
+          if (recip && !isSamePersonName(recip, actorName)) {
+            const recipMember = members.find((m) => isSamePersonName(m.name, recip));
             newNotifs.push({
               id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-              recipientName: pmName,
+              recipientName: recip,
+              recipientId: recipMember?.username || recipMember?.id,
               actorName,
               projectId: proj?.id,
               projectName,
@@ -715,12 +735,57 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             });
           }
         });
+      } else if (newOrUpdatedTask.status === 'Đang làm') {
+        // Thông báo cho PM khi task bắt đầu được làm
+        pms.forEach((pmName) => {
+          if (pmName && !isSamePersonName(pmName, actorName)) {
+            const pmMember = members.find((m) => isSamePersonName(m.name, pmName));
+            newNotifs.push({
+              id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+              recipientName: pmName,
+              recipientId: pmMember?.username || pmMember?.id,
+              actorName,
+              projectId: proj?.id,
+              projectName,
+              taskId: newOrUpdatedTask.id,
+              taskTitle: newOrUpdatedTask.title,
+              type: 'task_updated',
+              title: `Bắt đầu làm việc trong ${projectName.replace('Dự án ', '')}`,
+              content: `${actorName} đã chuyển sang Đang làm: "${newOrUpdatedTask.title}"`,
+              isRead: false,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        });
       }
+    } else if (actionType === 'updated') {
+      pms.forEach((pmName) => {
+        if (pmName && !isSamePersonName(pmName, actorName)) {
+          const pmMember = members.find((m) => isSamePersonName(m.name, pmName));
+          newNotifs.push({
+            id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            recipientName: pmName,
+            recipientId: pmMember?.username || pmMember?.id,
+            actorName,
+            projectId: proj?.id,
+            projectName,
+            taskId: newOrUpdatedTask.id,
+            taskTitle: newOrUpdatedTask.title,
+            type: 'task_updated',
+            title: `Cập nhật công việc trong ${projectName.replace('Dự án ', '')}`,
+            content: `${actorName} đã cập nhật công việc "${newOrUpdatedTask.title}"${extra?.note ? `: ${extra.note}` : ''}`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
     } else if (actionType === 'reassigned') {
-      if (newOrUpdatedTask.assignee && newOrUpdatedTask.assignee !== actorName) {
+      if (newOrUpdatedTask.assignee && !isSamePersonName(newOrUpdatedTask.assignee, actorName)) {
+        const assigneeMember = members.find((m) => isSamePersonName(m.name, newOrUpdatedTask.assignee));
         newNotifs.push({
           id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           recipientName: newOrUpdatedTask.assignee,
+          recipientId: assigneeMember?.username || assigneeMember?.id,
           actorName,
           projectId: proj?.id,
           projectName,
@@ -755,6 +820,25 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         }
       });
     }
+  };
+
+  // Tạo thông báo thử nghiệm nhanh để kiểm tra kênh chuông
+  const handleSendTestNotification = () => {
+    if (!currentUserName) return;
+    const testNotif: NotificationItem = {
+      id: 'notif-test-' + Date.now(),
+      recipientName: currentUserName,
+      actorName: 'Hệ thống WMS',
+      projectName: 'Dự án mẫu',
+      type: 'task_created',
+      title: 'Kiểm tra chuông thông báo WMS',
+      content: `Kênh thông báo cá nhân của ${currentUserName} đang hoạt động chuẩn xác!`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications((prev) => [testNotif, ...prev]);
+    wmsDataService.saveNotification(testNotif).catch(console.warn);
+    dispatchNotificationWebPush(testNotif);
   };
 
   // Automated Recurring Tasks Engine (Admin/System)
@@ -803,6 +887,19 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         setSelectedTask(foundTask);
         setIsDrawerOpen(true);
         setIsNotificationDrawerOpen(false);
+        return;
+      }
+    }
+
+    // 3. Nếu không có taskId nhưng có projectId thì mở Drawer chi tiết dự án
+    if (item.projectId) {
+      const foundProj = projects.find(
+        (p) => p.id === item.projectId || p.name === item.projectName
+      );
+      if (foundProj) {
+        setSelectedProject(foundProj);
+        setIsProjectDetailOpen(true);
+        setIsNotificationDrawerOpen(false);
       }
     }
   };
@@ -810,7 +907,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   const handleMarkAllNotificationsAsRead = () => {
     if (!currentUserName) return;
     setNotifications((prev) =>
-      prev.map((n) => (n.recipientName === currentUserName ? { ...n, isRead: true } : n))
+      prev.map((n) => (isSamePersonName(n.recipientName, currentUserName) ? { ...n, isRead: true } : n))
     );
     wmsDataService.markAllNotificationsAsRead(currentUserName).catch(console.warn);
   };
@@ -1004,6 +1101,16 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           if (updatedTask.assignee !== t.assignee) {
             createAndDispatchNotifications(logged, 'reassigned', actor || logged.assignee, { oldAssignee: t.assignee });
+          }
+          const hasContentChanges =
+            updatedTask.title !== t.title ||
+            updatedTask.dueDate !== t.dueDate ||
+            updatedTask.priority !== t.priority ||
+            updatedTask.resultLink !== t.resultLink ||
+            Boolean(customNote);
+
+          if (hasContentChanges && updatedTask.status === t.status && updatedTask.assignee === t.assignee) {
+            createAndDispatchNotifications(logged, 'updated', actor || logged.assignee, { note: customNote });
           }
           if (isComp && t.status !== 'Hoàn thành' && t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
@@ -2187,10 +2294,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         isOpen={isNotificationDrawerOpen}
         onClose={() => setIsNotificationDrawerOpen(false)}
         notifications={userNotifications}
-        currentUser={currentAuthUser || activeProductMember}
+        allNotifications={notifications}
+        currentUser={currentViewingUser}
         onSelectNotification={handleSelectNotification}
         onMarkAllAsRead={handleMarkAllNotificationsAsRead}
         onDeleteNotification={handleDeleteNotification}
+        onSendTestNotification={handleSendTestNotification}
       />
 
       {/* Standup Report Modal */}

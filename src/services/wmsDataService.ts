@@ -324,6 +324,9 @@ export const wmsDataService = {
         resultLink: t.result_link || undefined,
         latestUpdateNote: t.latest_update_note || undefined,
         createdBy: t.created_by || undefined,
+        isRecurring: Boolean(t.is_recurring),
+        recurringRuleId: t.recurring_rule_id || undefined,
+        recurringFrequency: t.recurring_frequency || undefined,
         logs: sortedLogs,
       };
     });
@@ -331,7 +334,7 @@ export const wmsDataService = {
 
   async saveTask(task: TaskItem, newLog?: TaskLogItem): Promise<void> {
     // 1. Lưu task
-    const { error: taskErr } = await supabase.from('tasks').upsert({
+    const taskPayload: any = {
       id: task.id,
       title: task.title,
       project_id: task.projectId,
@@ -351,9 +354,20 @@ export const wmsDataService = {
       result_link: task.resultLink || null,
       latest_update_note: task.latestUpdateNote || null,
       created_by: task.createdBy || null,
+      is_recurring: Boolean(task.isRecurring),
+      recurring_rule_id: task.recurringRuleId || null,
+      recurring_frequency: task.recurringFrequency || null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    };
 
+    let { error: taskErr } = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+    if (taskErr && (taskErr.message?.toLowerCase().includes('recurring') || (taskErr as any).code === '42703')) {
+      delete taskPayload.is_recurring;
+      delete taskPayload.recurring_rule_id;
+      delete taskPayload.recurring_frequency;
+      const retry = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+      taskErr = retry.error;
+    }
     if (taskErr) throw taskErr;
 
     // 2. Lưu log thay đổi nếu có
@@ -479,7 +493,7 @@ export const wmsDataService = {
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(60);
+        .limit(100);
 
       if (recipientName) {
         query = query.eq('recipient_name', recipientName);
@@ -488,33 +502,63 @@ export const wmsDataService = {
       const { data, error } = await query;
       if (error) {
         console.warn('Lỗi tải notifications từ Supabase (bảng có thể chưa tạo):', error.message);
-        return [];
+        try {
+          const local = localStorage.getItem('vne_notifications_v1');
+          return local ? JSON.parse(local) : [];
+        } catch {
+          return [];
+        }
       }
 
-      return (data || []).map((n: any) => ({
+      const items: NotificationItem[] = (data || []).map((n: any) => ({
         id: n.id,
-        recipientName: n.recipient_name,
+        recipientName: n.recipient_name || n.recipient_id || '',
         recipientId: n.recipient_id || undefined,
-        actorName: n.actor_name,
+        actorName: n.actor_name || n.actor_id || '',
         projectId: n.project_id || undefined,
-        projectName: n.project_name,
-        taskId: n.task_id || undefined,
+        projectName: n.project_name || '',
+        taskId: n.task_id || (n.entity_type === 'task' ? n.entity_id : undefined),
         taskTitle: n.task_title || undefined,
         type: n.type,
         title: n.title,
-        content: n.content,
+        content: n.content || n.message || '',
         isRead: Boolean(n.is_read),
         createdAt: n.created_at,
       }));
+
+      // Đồng bộ vào localStorage để dự phòng ngoại tuyến
+      if (items.length > 0) {
+        try {
+          localStorage.setItem('vne_notifications_v1', JSON.stringify(items));
+        } catch (e) {}
+      }
+
+      return items;
     } catch (e) {
       console.warn('Exception khi fetchNotifications:', e);
-      return [];
+      try {
+        const local = localStorage.getItem('vne_notifications_v1');
+        return local ? JSON.parse(local) : [];
+      } catch {
+        return [];
+      }
     }
   },
 
   async saveNotification(item: NotificationItem): Promise<void> {
+    // 1. Luôn lưu dự phòng vào localStorage trước
     try {
-      const { error } = await supabase.from('notifications').insert({
+      const local = localStorage.getItem('vne_notifications_v1');
+      const list: NotificationItem[] = local ? JSON.parse(local) : [];
+      const updated = [item, ...list.filter((n) => n.id !== item.id)].slice(0, 100);
+      localStorage.setItem('vne_notifications_v1', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Không thể lưu notification vào localStorage:', e);
+    }
+
+    // 2. Lưu lên Supabase nếu bảng tồn tại
+    try {
+      const payload: any = {
         id: item.id,
         recipient_name: item.recipientName,
         recipient_id: item.recipientId || null,
@@ -528,9 +572,28 @@ export const wmsDataService = {
         content: item.content,
         is_read: Boolean(item.isRead),
         created_at: item.createdAt,
-      });
+      };
+
+      const { error } = await supabase.from('notifications').insert(payload);
       if (error) {
         console.warn('Lỗi lưu notification lên Supabase:', error.message);
+        // Dự phòng tương thích nếu bảng cũ dùng cột message / recipient_id
+        if (error.message?.toLowerCase().includes('content') || error.message?.toLowerCase().includes('recipient_name')) {
+          const fallbackPayload: any = {
+            id: item.id,
+            recipient_id: item.recipientId || item.recipientName,
+            actor_name: item.actorName,
+            type: item.type,
+            title: item.title,
+            message: item.content,
+            entity_type: item.taskId ? 'task' : 'project',
+            entity_id: item.taskId || item.projectId || null,
+            project_id: item.projectId || null,
+            is_read: Boolean(item.isRead),
+            created_at: item.createdAt,
+          };
+          await supabase.from('notifications').insert(fallbackPayload);
+        }
       }
     } catch (e) {
       console.warn('Exception khi saveNotification:', e);
@@ -538,6 +601,17 @@ export const wmsDataService = {
   },
 
   async markNotificationAsRead(id: string): Promise<void> {
+    // 1. Cập nhật localStorage
+    try {
+      const local = localStorage.getItem('vne_notifications_v1');
+      if (local) {
+        const list: NotificationItem[] = JSON.parse(local);
+        const updated = list.map((n) => (n.id === id ? { ...n, isRead: true } : n));
+        localStorage.setItem('vne_notifications_v1', JSON.stringify(updated));
+      }
+    } catch (e) {}
+
+    // 2. Cập nhật Supabase
     try {
       const { error } = await supabase
         .from('notifications')
@@ -552,6 +626,17 @@ export const wmsDataService = {
   },
 
   async markAllNotificationsAsRead(recipientName: string): Promise<void> {
+    // 1. Cập nhật localStorage
+    try {
+      const local = localStorage.getItem('vne_notifications_v1');
+      if (local) {
+        const list: NotificationItem[] = JSON.parse(local);
+        const updated = list.map((n) => ({ ...n, isRead: true }));
+        localStorage.setItem('vne_notifications_v1', JSON.stringify(updated));
+      }
+    } catch (e) {}
+
+    // 2. Cập nhật Supabase
     try {
       const { error } = await supabase
         .from('notifications')
@@ -566,7 +651,41 @@ export const wmsDataService = {
   },
 
   // ==========================================
-  // 7. REALTIME SUBSCRIPTIONS
+  // 7. CẤU HÌNH HỆ THỐNG (SYSTEM SETTINGS)
+  // ==========================================
+  async getSystemSetting<T = any>(key: string, defaultValue?: T): Promise<T | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', key)
+        .maybeSingle();
+
+      if (!error && data && data.value !== undefined) {
+        return data.value as T;
+      }
+    } catch (e) {
+      console.warn(`[wmsDataService] getSystemSetting(${key}) error:`, e);
+    }
+    return defaultValue;
+  },
+
+  async setSystemSetting(key: string, value: any, updatedBy?: string): Promise<void> {
+    try {
+      const { error } = await supabase.from('system_settings').upsert({
+        key,
+        value,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy || null,
+      }, { onConflict: 'key' });
+      if (error) throw error;
+    } catch (e) {
+      console.warn(`[wmsDataService] setSystemSetting(${key}) error:`, e);
+    }
+  },
+
+  // ==========================================
+  // 8. REALTIME SUBSCRIPTIONS
   // ==========================================
   subscribeToChanges(callbacks: {
     onTasksChange?: () => void;

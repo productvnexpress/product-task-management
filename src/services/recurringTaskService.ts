@@ -73,6 +73,57 @@ export function formatEndTypeLabel(rule: RecurringRuleConfig): string {
 
 export const recurringTaskService = {
   /**
+   * Khởi tạo và đồng bộ quy tắc lặp từ Supabase khi mở ứng dụng
+   */
+  async initFromSupabase(): Promise<RecurringRuleConfig[]> {
+    try {
+      const { data, error } = await supabase
+        .from('recurring_rules')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        if (data.length > 0) {
+          const rules: RecurringRuleConfig[] = data.map((r: any) => ({
+            id: r.id,
+            title: r.title,
+            projectId: r.project_id,
+            projectName: r.project_name,
+            phaseId: r.phase_id || undefined,
+            phaseName: r.phase_name || undefined,
+            team: r.team,
+            assignee: r.assignee,
+            priority: r.priority,
+            details: r.details || undefined,
+            frequency: r.frequency,
+            endType: r.end_type,
+            endDate: r.end_date || undefined,
+            nextRunDate: r.next_run_date,
+            nextRunTime: r.next_run_time || '08:00',
+            lastGeneratedAt: r.last_generated_at || undefined,
+            lastGeneratedTaskId: undefined,
+            status: r.status,
+            createdBy: r.created_by || undefined,
+            createdAt: r.created_at,
+          }));
+          localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(rules));
+          return rules;
+        } else {
+          // Bảng trên DB chưa có quy tắc nào, kiểm tra đồng bộ quy tắc local lên nếu có
+          const localRules = this.getRules();
+          if (localRules.length > 0) {
+            this.syncToSupabase(localRules).catch(() => {});
+          }
+          return localRules;
+        }
+      }
+    } catch (err) {
+      console.warn('[recurringTaskService] initFromSupabase error:', err);
+    }
+    return this.getRules();
+  },
+
+  /**
    * Lấy danh sách quy tắc lặp từ bộ nhớ
    */
   getRules(): RecurringRuleConfig[] {
@@ -132,6 +183,13 @@ export const recurringTaskService = {
   deleteRule(id: string): void {
     const rules = this.getRules().filter((r) => r.id !== id);
     this.saveRules(rules);
+    supabase
+      .from('recurring_rules')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('[recurringTaskService] Lỗi khi xoá rule trên Supabase:', error);
+      });
   },
 
   /**

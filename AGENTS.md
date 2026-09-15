@@ -742,16 +742,43 @@ Tại danh sách dự án thuộc Left Sidebar:
    - Khi **Product Manager** tạo hoặc phân công công việc: Hệ thống gửi thông báo trực tiếp đến **Executive** được giao việc (`assignee`).
    - Tránh việc gửi thông báo tràn lan (Spam Notifications) cho toàn bộ thành viên không liên quan.
 3. **Cấu trúc Dữ liệu Bảng `notifications` (Supabase Table)**:
-   - `id`: UUID khóa chính.
-   - `recipient_id`: Username người nhận thông báo (`huyanh`, `nguyenhieu`, `tienngoc`, v.v.).
-   - `actor_id` & `actor_name`: Username và họ tên người thực hiện hành động.
-   - `type`: Loại thông báo (`task_assigned`, `task_status_changed`, `project_updated`, `comment_added`).
+   - `id`: TEXT khóa chính (`notif-timestamp-hash`).
+   - `recipient_name`: Họ tên người nhận thông báo (`Trần Huy Anh`, `Đặng Tiến Ngọc`, v.v.).
+   - `recipient_id`: Username/ID người nhận thông báo (`huyanh`, `nguyenhieu`, `tienngoc`, v.v.).
+   - `actor_name`: Họ tên người thực hiện hành động (Executive, PM hoặc Hệ thống).
+   - `project_id` & `project_name`: ID và Tên dự án liên quan.
+   - `task_id` & `task_title`: ID và Tiêu đề công việc liên quan.
+   - `type`: Loại thông báo (`task_created`, `task_completed`, `task_blocked`, `task_assigned`, `task_updated`).
    - `title`: Tiêu đề tóm tắt ngắn gọn.
-   - `message`: Chi tiết nội dung thông báo.
-   - `entity_type` & `entity_id`: Loại và ID đối tượng liên quan (`task` / `project`).
-   - `project_id`: Mã dự án liên quan.
-   - `is_read`: Boolean trạng thái đã đọc hay chưa.
-   - `created_at`: Thời gian tạo (ISO Timestamp).
+   - `content`: Chi tiết nội dung thông báo.
+   - `is_read`: Boolean trạng thái đã đọc hay chưa (mặc định `false`).
+   - `created_at`: Thời gian tạo (TIMESTAMPTZ).
+   - *Mã SQL khởi tạo Supabase*:
+     ```sql
+     CREATE TABLE IF NOT EXISTS public.notifications (
+       id TEXT PRIMARY KEY,
+       recipient_name TEXT NOT NULL,
+       recipient_id TEXT,
+       actor_name TEXT,
+       project_id TEXT,
+       project_name TEXT,
+       task_id TEXT,
+       task_title TEXT,
+       type TEXT NOT NULL,
+       title TEXT NOT NULL,
+       content TEXT NOT NULL,
+       is_read BOOLEAN DEFAULT false,
+       created_at TIMESTAMPTZ DEFAULT now()
+     );
+     CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON public.notifications (recipient_name);
+     CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications (created_at DESC);
+     ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+     CREATE POLICY "Allow all read on notifications" ON public.notifications FOR SELECT USING (true);
+     CREATE POLICY "Allow all insert on notifications" ON public.notifications FOR INSERT WITH CHECK (true);
+     CREATE POLICY "Allow all update on notifications" ON public.notifications FOR UPDATE USING (true);
+     CREATE POLICY "Allow all delete on notifications" ON public.notifications FOR DELETE USING (true);
+     ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+     ```
 4. **Tương tác**: Cho phép click vào thông báo để mở trực tiếp Task hoặc Project tương ứng, hỗ trợ nút "Đánh dấu tất cả đã đọc".
 5. **Tính năng Thông báo Đẩy Trình duyệt (Web Push Notifications)**:
    - Tích hợp chuẩn Web Notification API & Service Worker (`public/sw.js`).
@@ -847,7 +874,14 @@ Tại danh sách dự án thuộc Left Sidebar:
      - **Xoá**: Gỡ bỏ tiêu chuẩn khỏi bộ tiêu chuẩn mẫu với modal xác nhận an toàn.
      - **Thay đổi vị trí (Reorder)**: Di chuyển lên / Di chuyển xuống trực tiếp trong cùng giai đoạn bằng các nút `ArrowUp` / `ArrowDown`.
      - **Khôi phục gốc (Reset to Defaults)**: Khôi phục lại bộ 34 tiêu chuẩn chuẩn hóa ban đầu của Ban Sản phẩm bất kỳ lúc nào.
+   - **Cơ chế Lưu trữ Supabase**: Dữ liệu Master Checklist Template được lưu trữ vĩnh viễn và tập trung tại bảng `system_settings` (khóa `master_checklist_template`), tự động nạp khi khởi động ứng dụng và màn hình Thiết lập, giải quyết triệt để lỗi hoàn nguyên về mặc định.
    - Khi Master Checklist thay đổi, hệ thống phát tín hiệu `wms_checklist_template_updated` để tự động cập nhật ngay trên các màn hình mở việc và chi tiết dự án.
+
+7. **Quản trị Công việc Lặp lại Chu kỳ (Automated Recurring Tasks Engine)**:
+   - Tích hợp tab **`Việc chu kỳ ({count})`** dành riêng cho Admin trong mục Thiết lập hệ thống (`SettingsManager`).
+   - Quy tắc lặp được lưu trữ tập trung tại bảng `recurring_rules` trên Supabase, hỗ trợ nạp tự động qua `initFromSupabase()`.
+   - Mỗi task sinh ra mang đầy đủ các trường `isRecurring`, `recurringRuleId`, `recurringFrequency` được lưu giữ trên bảng `tasks` của Supabase.
+   - Khi công việc chu kỳ được đánh dấu Hoàn thành, hệ thống tự động tính toán và cập nhật `nextRunDate` của quy tắc sang chu kỳ kế tiếp.
 
 ---
 

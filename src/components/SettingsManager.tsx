@@ -33,6 +33,7 @@ import {
   ChecklistTemplateItem,
   CHECKLIST_PHASES,
   getMasterChecklistTemplate,
+  fetchMasterChecklistTemplateFromSupabase,
   saveMasterChecklistTemplate,
   resetMasterChecklistTemplate,
 } from '../data/defaultProjectChecklist';
@@ -280,6 +281,12 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
       setHolidays(workingTimeService.getHolidays());
       setCompensatoryList(workingTimeService.getCompensatoryWorkdays());
       setLeaves(workingTimeService.getMemberLeaves());
+    });
+    recurringTaskService.initFromSupabase().then((rules) => {
+      setRecurringRules(rules);
+    });
+    fetchMasterChecklistTemplateFromSupabase().then((items) => {
+      setChecklistTemplate(items);
     });
   }, []);
 
@@ -560,7 +567,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     }
 
     setChecklistTemplate(updated);
-    saveMasterChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated, currentAuthUser?.name);
     setIsChecklistModalOpen(false);
     setTimeout(() => setChecklistToast(null), 3000);
   };
@@ -569,7 +576,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     if (!deletingChecklistItem) return;
     const updated = checklistTemplate.filter((it) => it.id !== deletingChecklistItem.id);
     setChecklistTemplate(updated);
-    saveMasterChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated, currentAuthUser?.name);
     setDeletingChecklistItem(null);
     setChecklistToast('Đã xoá tiêu chuẩn khỏi Checklist!');
     setTimeout(() => setChecklistToast(null), 3000);
@@ -597,14 +604,14 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     updated[idx2] = temp;
 
     setChecklistTemplate(updated);
-    saveMasterChecklistTemplate(updated);
+    saveMasterChecklistTemplate(updated, currentAuthUser?.name);
     setChecklistToast('Đã thay đổi vị trí tiêu chuẩn!');
     setTimeout(() => setChecklistToast(null), 2000);
   };
 
   const handleResetChecklistDefaults = () => {
     if (confirm('Bạn có chắc chắn muốn khôi phục lại bộ 34 tiêu chuẩn chuẩn hóa ban đầu của Ban Sản phẩm không? Mọi chỉnh sửa tùy biến trước đó sẽ được đặt lại.')) {
-      const restored = resetMasterChecklistTemplate();
+      const restored = resetMasterChecklistTemplate(currentAuthUser?.name);
       setChecklistTemplate(restored);
       setChecklistToast('Đã khôi phục 34 tiêu chuẩn gốc!');
       setTimeout(() => setChecklistToast(null), 3000);

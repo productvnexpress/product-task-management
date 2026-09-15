@@ -4,6 +4,7 @@
  */
 
 import { ProjectChecklistItem } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 export interface ChecklistPhaseMeta {
   id: number;
@@ -176,23 +177,87 @@ export function getMasterChecklistTemplate(): ChecklistTemplateItem[] {
 }
 
 /**
- * Lưu Master Checklist Template vào LocalStorage
+ * Tải Master Checklist Template từ Supabase (bảng system_settings, key = 'master_checklist_template')
  */
-export function saveMasterChecklistTemplate(items: ChecklistTemplateItem[]): void {
+export async function fetchMasterChecklistTemplateFromSupabase(): Promise<ChecklistTemplateItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'master_checklist_template')
+      .maybeSingle();
+
+    if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+      const items: ChecklistTemplateItem[] = data.value
+        .map((item: any, idx: number) => ({
+          id: item.id ? String(item.id) : `chk-${item.phaseId || 1}-${idx + 1}`,
+          phaseId: Number(item.phaseId) || 1,
+          phaseTitle:
+            item.phaseTitle ||
+            CHECKLIST_PHASES.find((p) => p.id === Number(item.phaseId))?.title ||
+            `Giai đoạn ${item.phaseId || 1}`,
+          text: String(item.text || '').trim(),
+        }))
+        .filter((item: any) => item.text);
+
+      if (items.length > 0) {
+        localStorage.setItem(CHECKLIST_TEMPLATE_STORAGE_KEY, JSON.stringify(items));
+        window.dispatchEvent(new CustomEvent('wms_checklist_template_updated'));
+        return items;
+      }
+    } else if (!error && (!data || !data.value)) {
+      // Nếu DB chưa có bản ghi, đẩy danh mục hiện tại lên
+      const current = getMasterChecklistTemplate();
+      saveMasterChecklistTemplateToSupabase(current).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[defaultProjectChecklist] fetchMasterChecklistTemplateFromSupabase error:', err);
+  }
+  return getMasterChecklistTemplate();
+}
+
+/**
+ * Lưu Master Checklist Template lên Supabase (bảng system_settings)
+ */
+export async function saveMasterChecklistTemplateToSupabase(
+  items: ChecklistTemplateItem[],
+  updatedBy?: string
+): Promise<void> {
+  try {
+    const { error } = await supabase.from('system_settings').upsert({
+      key: 'master_checklist_template',
+      value: items,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedBy || null,
+    }, { onConflict: 'key' });
+
+    if (error) {
+      console.warn('[defaultProjectChecklist] Không thể lưu checklist template lên Supabase (bảng system_settings có thể chưa tạo):', error);
+    }
+  } catch (err) {
+    console.warn('[defaultProjectChecklist] Lỗi ghi checklist template lên Supabase:', err);
+  }
+}
+
+/**
+ * Lưu Master Checklist Template vào LocalStorage và đồng bộ lên Supabase
+ */
+export function saveMasterChecklistTemplate(items: ChecklistTemplateItem[], updatedBy?: string): void {
   try {
     localStorage.setItem(CHECKLIST_TEMPLATE_STORAGE_KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent('wms_checklist_template_updated'));
+    saveMasterChecklistTemplateToSupabase(items, updatedBy).catch(() => {});
   } catch (err) {
     console.error('Lỗi khi lưu master checklist template:', err);
   }
 }
 
 /**
- * Khôi phục Master Checklist Template về 34 tiêu chuẩn gốc
+ * Khôi phục Master Checklist Template về 34 tiêu chuẩn gốc và đồng bộ lên Supabase
  */
-export function resetMasterChecklistTemplate(): ChecklistTemplateItem[] {
+export function resetMasterChecklistTemplate(updatedBy?: string): ChecklistTemplateItem[] {
   const defaults = getInitialMasterChecklistTemplate();
-  saveMasterChecklistTemplate(defaults);
+  saveMasterChecklistTemplate(defaults, updatedBy);
   return defaults;
 }
 

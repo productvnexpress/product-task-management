@@ -249,3 +249,54 @@ export function isTaskInMemberProjects(
   if (!relatedProj) return false;
   return getMemberProjectRelation(relatedProj, member).isRelated;
 }
+
+/**
+ * Lấy danh sách họ tên tất cả PM phụ trách dự án để gửi thông báo có định hướng
+ */
+export function getProjectPMs(
+  proj: ProjectItem | undefined | null,
+  allMembers: MemberItem[] = []
+): string[] {
+  if (!proj) return [];
+  const pmNames = new Set<string>();
+
+  // 1. proj.roles.pm
+  if (proj.roles?.pm && Array.isArray(proj.roles.pm) && proj.roles.pm.length > 0) {
+    proj.roles.pm.forEach((name) => {
+      if (name && name.trim()) pmNames.add(name.trim());
+    });
+  }
+
+  // 2. proj.leadName (có thể chứa nhiều tên cách nhau bởi dấu phẩy hoặc &)
+  if (proj.leadName) {
+    const leads = proj.leadName.split(/[,&]/).map((s) => s.trim()).filter(Boolean);
+    leads.forEach((lead) => {
+      const member = allMembers.find((m) => isSamePersonName(m.name, lead));
+      if (member) {
+        if (member.team === 'Product Manager' || member.id === 'tienngoc') {
+          pmNames.add(member.name);
+        }
+      } else if (pmNames.size === 0) {
+        pmNames.add(lead);
+      }
+    });
+  }
+
+  // 3. proj.createdBy (nếu người tạo dự án là PM hoặc Admin)
+  if (proj.createdBy) {
+    const creator = allMembers.find((m) => isSamePersonName(m.name, proj.createdBy));
+    if (creator && (creator.team === 'Product Manager' || creator.id === 'tienngoc')) {
+      pmNames.add(creator.name);
+    }
+  }
+
+  // 4. Nếu dự án vẫn chưa có PM (ví dụ "Chưa xác định" hoặc phát sinh mới), fallback về tất cả PM
+  if (pmNames.size === 0) {
+    allMembers
+      .filter((m) => m.team === 'Product Manager' || m.id === 'tienngoc')
+      .forEach((m) => pmNames.add(m.name));
+  }
+
+  return Array.from(pmNames);
+}
+

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { NotificationItem, NotificationType, MemberItem } from '../types';
+import { getUserRole } from '../utils/rbac';
 import {
   getWebPushPermission,
   isWebPushEnabledByUser,
@@ -34,10 +35,12 @@ interface NotificationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   notifications: NotificationItem[];
+  allNotifications?: NotificationItem[];
   currentUser: MemberItem | null;
   onSelectNotification: (item: NotificationItem) => void;
   onMarkAllAsRead: () => void;
   onDeleteNotification?: (id: string) => void;
+  onSendTestNotification?: () => void;
 }
 
 function formatNotificationTime(isoStr: string): string {
@@ -67,11 +70,16 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   isOpen,
   onClose,
   notifications,
+  allNotifications,
   currentUser,
   onSelectNotification,
   onMarkAllAsRead,
   onDeleteNotification,
+  onSendTestNotification,
 }) => {
+  const role = getUserRole(currentUser);
+  const isManagerOrAdmin = role === 'Admin' || role === 'Manager';
+  const [scope, setScope] = useState<'mine' | 'department'>('mine');
   const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all');
   const [pushPermission, setPushPermission] = useState<WebPushPermissionState>('default');
   const [isPushEnabled, setIsPushEnabled] = useState<boolean>(true);
@@ -94,9 +102,14 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const activeSourceList =
+    isManagerOrAdmin && scope === 'department'
+      ? (allNotifications && allNotifications.length > 0 ? allNotifications : notifications)
+      : notifications;
 
-  const displayedNotifications = notifications.filter((n) => {
+  const unreadCount = activeSourceList.filter((n) => !n.isRead).length;
+
+  const displayedNotifications = activeSourceList.filter((n) => {
     if (filterMode === 'unread') return !n.isRead;
     return true;
   });
@@ -204,43 +217,87 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             )}
 
             {/* Filter Tabs & Quick Action Bar */}
-            <div className="px-5 py-2.5 bg-white border-b border-[#e5e7eb] flex items-center justify-between gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 text-xs font-ui">
-                <button
-                  type="button"
-                  onClick={() => setFilterMode('all')}
-                  className={`px-2.5 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
-                    filterMode === 'all'
-                      ? 'bg-[#1e293b] text-white'
-                      : 'text-[#64748b] hover:bg-[#f1f5f9]'
-                  }`}
-                >
-                  Tất cả ({notifications.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterMode('unread')}
-                  className={`px-2.5 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
-                    filterMode === 'unread'
-                      ? 'bg-[#1e293b] text-white'
-                      : 'text-[#64748b] hover:bg-[#f1f5f9]'
-                  }`}
-                >
-                  Chưa đọc ({unreadCount})
-                </button>
-              </div>
-
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={onMarkAllAsRead}
-                  className="text-[11px] font-ui font-medium text-[#963861] hover:text-[#78234a] hover:underline flex items-center gap-1 cursor-pointer"
-                  title="Đánh dấu tất cả đã đọc"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  <span>Đã đọc tất cả</span>
-                </button>
+            <div className="px-5 py-2.5 bg-white border-b border-[#e5e7eb] flex flex-col gap-2 shrink-0">
+              {/* Scope Switcher for Manager and Admin */}
+              {isManagerOrAdmin && allNotifications && (
+                <div className="flex items-center gap-1.5 p-1 bg-[#f8fafc] border border-[#e2e8f0] rounded-[6px]">
+                  <button
+                    type="button"
+                    onClick={() => setScope('mine')}
+                    className={`flex-1 py-1 text-xs font-ui font-semibold rounded-[4px] transition-all cursor-pointer ${
+                      scope === 'mine'
+                        ? 'bg-white text-[#963861] shadow-2xs'
+                        : 'text-[#64748b] hover:text-[#1e293b]'
+                    }`}
+                  >
+                    Việc của tôi ({notifications.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScope('department')}
+                    className={`flex-1 py-1 text-xs font-ui font-semibold rounded-[4px] transition-all cursor-pointer ${
+                      scope === 'department'
+                        ? 'bg-white text-[#963861] shadow-2xs'
+                        : 'text-[#64748b] hover:text-[#1e293b]'
+                    }`}
+                  >
+                    Toàn bộ phận ({allNotifications.length})
+                  </button>
+                </div>
               )}
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-ui">
+                  <button
+                    type="button"
+                    onClick={() => setFilterMode('all')}
+                    className={`px-2.5 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+                      filterMode === 'all'
+                        ? 'bg-[#1e293b] text-white'
+                        : 'text-[#64748b] hover:bg-[#f1f5f9]'
+                    }`}
+                  >
+                    Tất cả ({activeSourceList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterMode('unread')}
+                    className={`px-2.5 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+                      filterMode === 'unread'
+                        ? 'bg-[#1e293b] text-white'
+                        : 'text-[#64748b] hover:bg-[#f1f5f9]'
+                    }`}
+                  >
+                    Chưa đọc ({unreadCount})
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {onSendTestNotification && (
+                    <button
+                      type="button"
+                      onClick={onSendTestNotification}
+                      className="text-[11px] font-ui font-medium text-[#64748b] hover:text-[#963861] flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Gửi 1 thông báo thử nghiệm để kiểm tra kênh nhận"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span className="hidden sm:inline">Thử chuông</span>
+                    </button>
+                  )}
+
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={onMarkAllAsRead}
+                      className="text-[11px] font-ui font-medium text-[#963861] hover:text-[#78234a] hover:underline flex items-center gap-1 cursor-pointer"
+                      title="Đánh dấu tất cả đã đọc"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      <span>Đã đọc</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Notifications List Body */}
@@ -254,8 +311,18 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                     {filterMode === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
                   </p>
                   <p className="text-xs font-body text-[#94a3b8] max-w-xs mx-auto leading-relaxed">
-                    Khi thành viên trong dự án giao việc, tạo task mới hoặc cập nhật tiến độ, bạn sẽ nhận được thông báo tại đây.
+                    Khi các thành viên Executive tạo việc, hoàn thành hoặc cập nhật tiến độ, bạn sẽ nhận được thông báo tại đây.
                   </p>
+                  {onSendTestNotification && (
+                    <button
+                      type="button"
+                      onClick={onSendTestNotification}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-[#fcf0f5] hover:bg-[#fae1ed] text-[#963861] border border-[#f3c2d4] text-xs font-ui font-medium cursor-pointer transition-colors shadow-2xs"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Gửi thông báo thử nghiệm</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 displayedNotifications.map((n) => {
