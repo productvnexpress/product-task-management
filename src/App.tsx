@@ -1160,17 +1160,22 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   };
 
   // Project Operations
-  const handleAddProject = (newProjData: Omit<ProjectItem, 'id'>) => {
+  const handleAddProject = async (newProjData: Omit<ProjectItem, 'id'>) => {
     const newProj: ProjectItem = {
       ...newProjData,
       id: 'proj-' + Date.now(),
       createdBy: currentAuthUser?.name || activeProductMember?.name,
     };
     setProjects((prev) => [...prev, newProj]);
-    wmsDataService.saveProject(newProj, newProj.history?.[0]).catch((e) => console.error('Supabase error:', e));
+    try {
+      await wmsDataService.saveProject(newProj, newProj.history?.[0]);
+      console.log(`%c[handleAddProject] ✅ Đã lưu dự án "${newProj.name}" (${newProj.id}) vào Supabase thành công!`, 'color: #059669; font-weight: bold;');
+    } catch (e: any) {
+      console.error('Lỗi khi ghi nhận dự án mới vào Supabase:', e);
+    }
   };
 
-  const handleUpdateProject = (updatedProj: ProjectItem) => {
+  const handleUpdateProject = async (updatedProj: ProjectItem) => {
     setProjects((prev) =>
       prev.map((p) => (p.id === updatedProj.id ? updatedProj : p))
     );
@@ -1182,7 +1187,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           : t
       )
     );
-    wmsDataService.saveProject(updatedProj, updatedProj.history?.[0]).catch((e) => console.error('Supabase error:', e));
+    try {
+      await wmsDataService.saveProject(updatedProj, updatedProj.history?.[0]);
+      console.log(`%c[handleUpdateProject] ✅ Đã cập nhật dự án "${updatedProj.name}" vào Supabase!`, 'color: #059669; font-weight: bold;');
+    } catch (e: any) {
+      console.error('Lỗi khi cập nhật dự án trên Supabase:', e);
+    }
   };
 
   const handleDeleteProject = (projId: string) => {

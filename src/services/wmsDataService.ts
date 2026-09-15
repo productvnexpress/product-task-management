@@ -194,68 +194,105 @@ export const wmsDataService = {
   },
 
   async saveProject(project: ProjectItem, newLog?: ProjectHistoryLog): Promise<void> {
+    const cleanDbDate = (val?: string | null): string | null => {
+      if (!val || typeof val !== 'string' || !val.trim()) return null;
+      const s = val.trim().slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+    };
+
     // 1. Lưu thông tin dự án
     const projectPayload: any = {
       id: project.id,
-      name: project.name,
-      code: project.code,
+      name: project.name ? project.name.trim() : 'Dự án mới',
+      code: (project.code && project.code.trim()) ? project.code.trim().toUpperCase() : `VNE-${Date.now().toString().slice(-4)}`,
       description: project.description || null,
       objective: project.objective || null,
       product_owner: project.productOwner || null,
       lead_name: project.leadName || null,
-      start_date: project.startDate ? project.startDate.slice(0, 10) : null,
-      target_date: project.targetDate ? project.targetDate.slice(0, 10) : '2026-12-31',
+      start_date: cleanDbDate(project.startDate),
+      target_date: cleanDbDate(project.targetDate) || '2026-12-31',
       status: normalizeProjectStatus(project.status),
       is_strategic: Boolean(project.isStrategic),
       roles: project.roles || { pm: [], designer: [], seo: [], data: [] },
-      link_order_tech: project.linkOrderTech || null,
-      link_chat: project.linkChat || null,
-      link_dashboard: project.linkDashboard || null,
-      link_report: project.linkReport || null,
-      link_beta: project.linkBeta || null,
-      link_production: project.linkProduction || null,
-      custom_links: project.customLinks || [],
+      link_order_tech: project.linkOrderTech || project.links?.orderTech || null,
+      link_chat: project.linkChat || project.links?.chat || null,
+      link_dashboard: project.linkDashboard || project.links?.dashboard || null,
+      link_report: project.linkReport || project.links?.report || null,
+      link_beta: project.linkBeta || project.links?.beta || null,
+      link_production: project.linkProduction || project.links?.production || null,
+      custom_links: project.customLinks || project.links?.custom || [],
       checklist: project.checklist || [],
       created_by: project.createdBy || null,
       updated_at: new Date().toISOString(),
     };
 
     let { error: projErr } = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
-    if (projErr && (projErr.message?.toLowerCase().includes('checklist') || (projErr as any).code === '42703')) {
-      console.warn('Cột checklist chưa có trong bảng projects. Đang lưu không kèm cột checklist.');
-      delete projectPayload.checklist;
+
+    // Tự động thử lại bằng cách lược bỏ các cột chưa có trong DDL của Supabase nếu gặp lỗi 42703 (undefined_column)
+    if (projErr && ((projErr as any).code === '42703' || projErr.message?.toLowerCase().includes('column'))) {
+      console.warn('[saveProject] Phát hiện cột chưa hỗ trợ trong bối cảnh Supabase. Đang tiến hành retry lược bỏ bớt các cột mới:', projErr.message);
+      const optionalCols = ['checklist', 'roles', 'custom_links', 'link_order_tech', 'link_chat', 'link_dashboard', 'link_report', 'link_beta', 'link_production', 'is_strategic', 'created_by'];
+      
+      for (const col of optionalCols) {
+        if (projErr.message?.toLowerCase().includes(col) || (projErr as any).code === '42703') {
+          delete projectPayload[col];
+        }
+      }
+
       const retry = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
       projErr = retry.error;
     }
-    if (projErr) throw projErr;
+
+    if (projErr) {
+      console.error('[saveProject] Lỗi nghiêm trọng khi lưu dự án vào Supabase:', projErr);
+      throw projErr;
+    }
 
     // 2. Lưu các phases nếu có
     if (project.phases && project.phases.length > 0) {
       const phaseRows = project.phases.map((ph, idx) => ({
-        id: ph.id,
+        id: ph.id || `phase-${Date.now()}-${idx}`,
         project_id: project.id,
         name: ph.name,
         due_date: ph.dueDate ? ph.dueDate.slice(0, 10) : null,
-        status: ph.status,
+        status: ph.status || 'Chưa bắt đầu',
         description: ph.description || null,
         sort_order: idx + 1,
       }));
       const { error: phErr } = await supabase.from('project_phases').upsert(phaseRows, { onConflict: 'id' });
-      if (phErr) console.error('Lỗi khi lưu phases:', phErr);
+      if (phErr) console.error('[saveProject] Lỗi khi lưu phases:', phErr);
     }
 
-    // 3. Lưu log nếu có
-    if (newLog) {
-      const { error: logErr } = await supabase.from('project_logs').insert({
-        id: newLog.id || `plog-${Date.now()}`,
+    // 3. Lưu ghi chú (notes) nếu có
+    if (project.notes && project.notes.length > 0) {
+      const noteRows = project.notes.map((n, idx) => ({
+        id: n.id || `note-${Date.now()}-${idx}`,
         project_id: project.id,
-        author: newLog.author,
-        action: newLog.action,
-        changes: newLog.changes || [],
-        note: newLog.note || null,
-        created_at: newLog.timestamp || new Date().toISOString(),
-      });
-      if (logErr) console.error('Lỗi khi lưu project log:', logErr);
+        author: n.author,
+        content: n.content,
+        created_at: n.createdAt || new Date().toISOString(),
+      }));
+      const { error: noteErr } = await supabase.from('project_notes').upsert(noteRows, { onConflict: 'id' });
+      if (noteErr) console.error('[saveProject] Lỗi khi lưu project notes:', noteErr);
+    }
+
+    // 4. Lưu lịch sử thay đổi (logs)
+    const logsToSave: ProjectHistoryLog[] = newLog
+      ? [newLog]
+      : (project.history && project.history.length > 0 ? project.history : []);
+
+    if (logsToSave.length > 0) {
+      const logRows = logsToSave.map((l, idx) => ({
+        id: l.id || `plog-${Date.now()}-${idx}`,
+        project_id: project.id,
+        author: l.author,
+        action: l.action,
+        changes: l.changes || [],
+        note: l.note || null,
+        created_at: l.timestamp || new Date().toISOString(),
+      }));
+      const { error: logErr } = await supabase.from('project_logs').upsert(logRows, { onConflict: 'id' });
+      if (logErr) console.error('[saveProject] Lỗi khi lưu project logs:', logErr);
     }
   },
 

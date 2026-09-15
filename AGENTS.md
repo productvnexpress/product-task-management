@@ -3,6 +3,8 @@
 > **Ban Sản phẩm - Công nghệ VnExpress**  
 > *Single Source of Truth (SSOT)*: Tài liệu quy chuẩn hóa toàn bộ cấu trúc dữ liệu, danh mục thực thể, quy tắc nghiệp vụ và giao diện của Hệ thống Quản lý Công việc & Dự án (WMS). Mọi cập nhật trong hệ thống phải tuân thủ nghiêm ngặt theo tài liệu này.
 
+> **QUY TẮC MẶC ĐỊNH BẮT BUỘC (GLOBAL MANDATORY RULE)**: khi làm bất cứ việc gì (lập trình, thiết kế UI/UX, viết văn bản, phản hồi, biên tập thông báo, nhãn dữ liệu...) **bắt buộc phải tham chiếu các tiêu chuẩn từ [EDITOR.md](file:///Volumes/Data/Code/product-task-management/EDITOR.md)** với các tiêu chí tối thượng: **Ngắn gọn, súc tích, trọng tâm, Facts first, KISS, thể chủ động, cắt bỏ từ đệm thừa và không rườm rà**.
+
 ---
 
 ## MỤC LỤC
