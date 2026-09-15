@@ -48,6 +48,67 @@ export function cleanProjectName(name?: string): string {
 }
 
 /**
+ * Generates a clean, unique uppercase project code based on the project name.
+ * e.g. "Xe" -> "VNE-XE"
+ * e.g. "Bất động sản" -> "VNE-BDS"
+ */
+export function generateProjectCode(name: string, existingCodes: string[] = []): string {
+  const clean = cleanProjectName(name);
+  if (!clean) {
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `VNE-PRJ-${rand}`;
+  }
+
+  // Remove accents / diacritics
+  const ascii = clean
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .trim();
+
+  const words = ascii.split(/\s+/).filter(Boolean);
+  let baseSlug = '';
+
+  if (words.length === 1) {
+    baseSlug = words[0].slice(0, 10);
+  } else if (words.length === 2) {
+    baseSlug = `${words[0].slice(0, 5)}${words[1].slice(0, 5)}`;
+  } else if (words.length <= 4) {
+    const totalLen = words.reduce((acc, w) => acc + w.length, 0);
+    if (totalLen <= 10) {
+      baseSlug = words.join('');
+    } else {
+      baseSlug = words.map((w) => w[0]).join('');
+    }
+  } else {
+    baseSlug = words.map((w) => w[0]).join('').slice(0, 8);
+  }
+
+  if (!baseSlug) {
+    baseSlug = `PRJ-${Date.now().toString().slice(-4)}`;
+  }
+
+  const baseCode = `VNE-${baseSlug}`;
+  const existingSet = new Set(
+    existingCodes.map((c) => (c || '').trim().toUpperCase())
+  );
+
+  if (!existingSet.has(baseCode)) {
+    return baseCode;
+  }
+
+  let counter = 2;
+  while (existingSet.has(`${baseCode}-${counter}`)) {
+    counter++;
+  }
+  return `${baseCode}-${counter}`;
+}
+
+
+/**
  * Sorts a list of projects alphabetically by Vietnamese collator,
  * keeping the "Chưa xác định (Others)" project strictly at the very end.
  */

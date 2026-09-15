@@ -544,9 +544,40 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
         if (!isMounted) return;
 
-        if (mems && mems.length > 0) setMembers(mems);
         if (projs && projs.length > 0) {
-          setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+          // Tự động kiểm tra và đồng bộ các dự án được tạo ở local cache chưa kịp lưu vào Supabase
+          const dbProjIds = new Set(projs.map((p) => p.id));
+          const dbProjCodes = new Set(projs.map((p) => (p.code || '').toUpperCase()));
+          const localSaved = localStorage.getItem('vne_projects_v9');
+          let localList: ProjectItem[] = [];
+          if (localSaved) {
+            try {
+              localList = JSON.parse(localSaved);
+            } catch (e) {}
+          }
+          const unsynced = localList.filter(
+            (lp) => !dbProjIds.has(lp.id) && !dbProjCodes.has((lp.code || '').toUpperCase()) && lp.id !== 'proj-others'
+          );
+
+          if (unsynced.length > 0) {
+            console.log(`[Supabase WMS] Phát hiện ${unsynced.length} dự án cục bộ chưa có trên Supabase. Đang tự động đẩy lên...`);
+            for (const up of unsynced) {
+              try {
+                await wmsDataService.saveProject(up);
+                console.log(`[Supabase WMS] ✅ Đã đẩy dự án "${up.name}" lên Supabase thành công!`);
+              } catch (e) {
+                console.warn('[Supabase WMS] Lỗi khi đồng bộ dự án cục bộ:', up.name, e);
+              }
+            }
+            const refreshed = await wmsDataService.fetchProjects();
+            if (refreshed && refreshed.length > 0) {
+              setProjects(refreshed.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+            } else {
+              setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+            }
+          } else {
+            setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+          }
         }
         if (tsks) setTasks(tsks);
         if (trsh) setTrash(trsh);
@@ -1169,9 +1200,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setProjects((prev) => [...prev, newProj]);
     try {
       await wmsDataService.saveProject(newProj, newProj.history?.[0]);
-      console.log(`%c[handleAddProject] ✅ Đã lưu dự án "${newProj.name}" (${newProj.id}) vào Supabase thành công!`, 'color: #059669; font-weight: bold;');
+      console.log(`%c[handleAddProject] ✅ Đã lưu dự án "${newProj.name}" (${newProj.id}) [Mã: ${newProj.code}] vào Supabase thành công!`, 'color: #059669; font-weight: bold;');
+      // Đồng bộ lại mã nếu backend tự sinh mã duy nhất mới
+      setProjects((prev) => prev.map((p) => (p.id === newProj.id ? { ...newProj } : p)));
     } catch (e: any) {
       console.error('Lỗi khi ghi nhận dự án mới vào Supabase:', e);
+      alert(`⚠️ Không thể lưu dự án vào cơ sở dữ liệu: ${e?.message || 'Lỗi kết nối'}`);
     }
   };
 
@@ -2279,6 +2313,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       {/* Project Details Drawer (Accessible from any view, including Tasks page) */}
       <ProjectDetailsDrawer
         project={selectedProjectForDrawer}
+        projects={projects}
         tasks={tasks}
         members={members}
         isOpen={isProjectDrawerOpen}

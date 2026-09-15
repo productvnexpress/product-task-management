@@ -73,10 +73,11 @@ import {
   normalizeAndNumberPhases,
 } from '../utils/phaseUtils';
 import { canEditProject, canEditProjectLinks } from '../utils/rbac';
-import { normalizeProjectStatus } from '../utils/projectSortingUtils';
+import { normalizeProjectStatus, generateProjectCode } from '../utils/projectSortingUtils';
 
 interface ProjectDetailsDrawerProps {
   project: ProjectItem | null;
+  projects?: ProjectItem[];
   tasks: TaskItem[];
   members: MemberItem[];
   isOpen: boolean;
@@ -91,6 +92,7 @@ interface ProjectDetailsDrawerProps {
 
 export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   project,
+  projects = [],
   tasks,
   members,
   isOpen,
@@ -111,6 +113,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   // Form State for Cột Trái (Left Column)
   const [name, setName] = useState(project?.name || '');
   const [code, setCode] = useState(project?.code || '');
+  const [isCodeManuallyEdited, setIsCodeManuallyEdited] = useState(false);
   const [description, setDescription] = useState(project?.description || '');
   const [objective, setObjective] = useState(project?.objective || '');
   const [productOwner, setProductOwner] = useState(project?.productOwner || '');
@@ -270,7 +273,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   useEffect(() => {
     if (isCreateMode || !project) {
       setName('');
-      setCode('VNE-PRJ');
+      setCode('');
+      setIsCodeManuallyEdited(false);
       setDescription('');
       setObjective('');
       setProductOwner('');
@@ -812,6 +816,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const leadNameSummary = allAssigned.length > 0 ? allAssigned.join(', ') : (productOwner.trim() || 'Chưa phân công');
 
     const normalizedPhases = normalizeAndNumberPhases(phases);
+    const existingCodes = (projects || []).map((p) => p.code);
+    const finalCode = (code && code.trim())
+      ? code.trim().toUpperCase()
+      : generateProjectCode(name.trim(), existingCodes);
 
     const initialLog: ProjectHistoryLog = {
       id: `plog-${Date.now()}`,
@@ -820,7 +828,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       action: 'Khởi tạo thông tin dự án mới',
       changes: [
         { field: 'Tên dự án', newValue: name.trim() },
-        { field: 'Mã dự án', newValue: code.trim().toUpperCase() || 'VNE-PRJ' },
+        { field: 'Mã dự án', newValue: finalCode },
         { field: 'Trạng thái', newValue: status },
         { field: 'Phụ trách chính', newValue: leadNameSummary },
       ],
@@ -829,7 +837,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
     const newProjPayload: Omit<ProjectItem, 'id'> = {
       name: name.trim(),
-      code: code.trim().toUpperCase() || 'VNE-PRJ',
+      code: finalCode,
       description: description.trim(),
       objective: objective.trim(),
       productOwner: productOwner.trim(),
@@ -892,10 +900,15 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const allAssigned = Array.from(new Set([...pmMembers, ...designerMembers, ...seoMembers, ...dataMembers]));
     const leadNameSummary = allAssigned.length > 0 ? allAssigned.join(', ') : 'Chưa phân công';
 
+    const otherCodes = (projects || []).filter((p) => p.id !== project?.id).map((p) => p.code);
+    const finalCode = (code && code.trim())
+      ? code.trim().toUpperCase()
+      : (project?.code || generateProjectCode(name.trim(), otherCodes));
+
     const preliminaryProject: ProjectItem = {
       ...(project || {} as ProjectItem),
       name: name.trim(),
-      code: code.trim().toUpperCase() || 'VNE-PRJ',
+      code: finalCode,
       description: description.trim(),
       objective: objective.trim(),
       productOwner: productOwner.trim(),
@@ -1005,7 +1018,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const currentProjectView: ProjectItem = {
     id: project?.id || 'draft-new-project',
     name: name || 'Dự án mới',
-    code: code || 'VNE-PRJ',
+    code: code || (project?.code || generateProjectCode(name, (projects || []).map(p => p.code))),
     description,
     objective,
     productOwner,
@@ -1390,7 +1403,15 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setName(newName);
+                    if (isCreateMode && !isCodeManuallyEdited) {
+                      const existingCodes = (projects || []).map((p) => p.code);
+                      setCode(generateProjectCode(newName, existingCodes));
+                    }
+                  }}
+                  placeholder="Nhập tên dự án..."
                   className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
                 />
               </div>
@@ -1398,6 +1419,37 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
                 <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Tên dự án</span>
                 <h4 className="font-title text-base font-bold text-[#202020]">{name}</h4>
+              </div>
+            )}
+
+            {/* Mã dự án (Code) */}
+            {isEditing ? (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="font-ui text-xs font-semibold text-[#303030] block">
+                    Mã dự án <span className="text-[#da1e28]">*</span>
+                  </label>
+                  <span className="text-[10px] text-[#71717a] font-ui">
+                    Mã định danh duy nhất (ví dụ: VNE-XE)
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => {
+                    setIsCodeManuallyEdited(true);
+                    setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+                  }}
+                  placeholder="VNE-XXX"
+                  className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold uppercase text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                />
+              </div>
+            ) : (
+              <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
+                <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Mã dự án</span>
+                <span className="font-ui text-xs font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4]">
+                  {code || 'Chưa có mã'}
+                </span>
               </div>
             )}
 

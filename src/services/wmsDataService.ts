@@ -200,11 +200,15 @@ export const wmsDataService = {
       return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
     };
 
+    let candidateCode = (project.code && project.code.trim())
+      ? project.code.trim().toUpperCase()
+      : `VNE-${Date.now().toString().slice(-4)}`;
+
     // 1. Lưu thông tin dự án
     const projectPayload: any = {
       id: project.id,
       name: project.name ? project.name.trim() : 'Dự án mới',
-      code: (project.code && project.code.trim()) ? project.code.trim().toUpperCase() : `VNE-${Date.now().toString().slice(-4)}`,
+      code: candidateCode,
       description: project.description || null,
       objective: project.objective || null,
       product_owner: project.productOwner || null,
@@ -228,6 +232,16 @@ export const wmsDataService = {
 
     let { error: projErr } = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
 
+    // Tự động xử lý trùng mã dự án (Unique constraint "projects_code_key" - Error 23505)
+    if (projErr && ((projErr as any).code === '23505' || projErr.message?.toLowerCase().includes('projects_code_key') || projErr.message?.toLowerCase().includes('code'))) {
+      const fallbackCode = `${candidateCode.slice(0, 10)}-${Date.now().toString().slice(-4)}`;
+      console.warn(`[saveProject] Mã dự án ${candidateCode} đã tồn tại trong Supabase. Đang thử lại với mã duy nhất: ${fallbackCode}`);
+      projectPayload.code = fallbackCode;
+      project.code = fallbackCode;
+      const retryCode = await supabase.from('projects').upsert(projectPayload, { onConflict: 'id' });
+      projErr = retryCode.error;
+    }
+
     // Tự động thử lại bằng cách lược bỏ các cột chưa có trong DDL của Supabase nếu gặp lỗi 42703 (undefined_column)
     if (projErr && ((projErr as any).code === '42703' || projErr.message?.toLowerCase().includes('column'))) {
       console.warn('[saveProject] Phát hiện cột chưa hỗ trợ trong bối cảnh Supabase. Đang tiến hành retry lược bỏ bớt các cột mới:', projErr.message);
@@ -247,6 +261,9 @@ export const wmsDataService = {
       console.error('[saveProject] Lỗi nghiêm trọng khi lưu dự án vào Supabase:', projErr);
       throw projErr;
     }
+
+    console.log(`[saveProject] ✅ Đã lưu dự án "${project.name}" (${project.id}) [Mã: ${projectPayload.code}] vào Supabase thành công!`);
+
 
     // 2. Lưu các phases nếu có
     if (project.phases && project.phases.length > 0) {
