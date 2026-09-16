@@ -53,6 +53,7 @@ import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRou
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
+import { formatDateWithEnDay } from './utils/formatters';
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
@@ -1408,6 +1409,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       if (filterState.dueFilter === 'soon' && !isTaskDueSoon(t)) {
         return false;
       }
+      if (
+        filterState.dueFilter === 'custom' &&
+        filterState.customDueDate &&
+        normalizeDateString(t.dueDate) !== filterState.customDueDate
+      ) {
+        return false;
+      }
 
       // 5. Search Query
       if (filterState.searchQuery.trim()) {
@@ -1583,7 +1591,17 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         selectedAssignee={filterState.assignee}
         onSelectAssignee={(assignee) => setFilterState((f) => ({ ...f, assignee }))}
         selectedDueFilter={filterState.dueFilter}
-        onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
+        onSelectDueFilter={(dueFilter) =>
+          setFilterState((f) => ({
+            ...f,
+            dueFilter,
+            customDueDate: dueFilter === 'custom' ? f.customDueDate : undefined,
+          }))
+        }
+        customDueDate={filterState.customDueDate}
+        onSelectCustomDate={(date) =>
+          setFilterState((f) => ({ ...f, dueFilter: 'custom', customDueDate: date }))
+        }
         todayCount={todayCount}
         overdueCount={overdueCount}
         searchQuery={filterState.searchQuery}
@@ -1897,10 +1915,18 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                   ? 'Hạn hôm nay'
                                   : filterState.dueFilter === 'overdue'
                                   ? 'Quá hạn'
+                                  : filterState.dueFilter === 'custom'
+                                  ? `Ngày ${
+                                      filterState.customDueDate
+                                        ? formatDateWithEnDay(filterState.customDueDate)
+                                        : ''
+                                    }`
                                   : 'Sắp đến hạn'}
                               </span>
                               <button
-                                onClick={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
+                                onClick={() =>
+                                  setFilterState((f) => ({ ...f, dueFilter: 'all', customDueDate: undefined }))
+                                }
                                 className="hover:text-[#c2410c] text-[10px]"
                               >
                                 ✕
@@ -1922,6 +1948,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                   status: 'Tất cả',
                                   assignee: 'Tất cả',
                                   dueFilter: 'all',
+                                  customDueDate: undefined,
                                   searchQuery: '',
                                 })
                               }
@@ -2267,29 +2294,29 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                 </ErrorBoundary>
               )}
 
-              {/* VIEW 6: ADMIN REPORTS (ADMIN ONLY) */}
+              {/* VIEW 6: REPORTS (ALL PRODUCT STAFF) */}
               {activeTab === 'reports' && (
-                <ErrorBoundary fallbackTitle="Không thể tải giao diện Báo cáo Quản trị">
-                  {getUserRole(currentAuthUser) === 'Admin' ? (
-                    <AdminReportView
-                      tasks={tasks}
-                      projects={projects}
-                      members={members}
-                      currentAuthUser={currentAuthUser}
-                      onOpenTaskDetail={(task) => {
-                        setSelectedTask(task);
-                        setIsDrawerOpen(true);
-                      }}
-                      onSelectProject={(projId) => {
-                        setFilterState((f) => ({ ...f, projectId: projId }));
-                        setActiveTab('tasks');
-                      }}
-                    />
-                  ) : (
-                    <div className="p-12 text-center text-xs font-ui text-[#7f7f7f]">
-                      Bạn không có quyền truy cập trang Báo cáo Quản trị. Vui lòng đăng nhập với tài khoản Admin.
-                    </div>
-                  )}
+                <ErrorBoundary fallbackTitle="Không thể tải giao diện Báo cáo">
+                  <AdminReportView
+                    tasks={tasks}
+                    projects={projects}
+                    members={members}
+                    activeProductMember={activeProductMember}
+                    selectedProjectId={filterState.projectId}
+                    selectedTeam={filterState.team}
+                    onOpenTaskDetail={(task) => {
+                      setSelectedTask(task);
+                      setIsDrawerOpen(true);
+                    }}
+                    onSelectProject={(projId) => {
+                      setFilterState((f) => ({ ...f, projectId: projId }));
+                      setActiveTab('tasks');
+                    }}
+                    onOpenDateInTasks={(dateStr) => {
+                      setFilterState((f) => ({ ...f, dueFilter: 'custom', customDueDate: dateStr }));
+                      setActiveTab('tasks');
+                    }}
+                  />
                 </ErrorBoundary>
               )}
             </motion.div>

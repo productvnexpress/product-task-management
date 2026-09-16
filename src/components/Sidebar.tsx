@@ -30,7 +30,8 @@ import {
   UserCheck,
   Trash2,
   Settings,
-  BarChart3
+  BarChart3,
+  CalendarDays
 } from 'lucide-react';
 import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
 
@@ -51,6 +52,8 @@ interface SidebarProps {
   onSelectAssignee?: (assignee: string) => void;
   selectedDueFilter?: DueFilterType;
   onSelectDueFilter?: (dueFilter: DueFilterType) => void;
+  customDueDate?: string;
+  onSelectCustomDate?: (date: string) => void;
   todayCount?: number;
   overdueCount?: number;
   searchQuery: string;
@@ -98,6 +101,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectAssignee,
   selectedDueFilter = 'all',
   onSelectDueFilter,
+  customDueDate,
+  onSelectCustomDate,
   todayCount = 0,
   overdueCount = 0,
   searchQuery,
@@ -337,6 +342,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </button>
 
+            {/* Always show Báo cáo, ngay sau Dự án — kể cả khi Work Space đang thu gọn */}
+            <button
+              onClick={() => onTabChange('reports')}
+              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                activeTab === 'reports'
+                  ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]'
+                  : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <BarChart3 className="w-4 h-4 text-[#963861]" />
+                <span>Báo cáo</span>
+              </div>
+            </button>
+
             {/* When expanded: show Nhân sự, Thùng rác */}
             {isWorkspaceExpanded ? (
               <>
@@ -378,25 +398,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {isAdmin && (
                   <button
-                    onClick={() => onTabChange('reports')}
-                    className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                      activeTab === 'reports'
-                        ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]'
-                        : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <BarChart3 className="w-4 h-4 text-[#963861]" />
-                      <span>Báo cáo</span>
-                    </div>
-                    <span className="text-[10px] bg-[#fdf2f7] text-[#913257] px-1.5 py-0.5 rounded font-ui font-bold">
-                      Admin
-                    </span>
-                  </button>
-                )}
-
-                {isAdmin && (
-                  <button
                     onClick={() => onTabChange('settings')}
                     className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                       activeTab === 'settings'
@@ -415,23 +416,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </>
             ) : (
-              // If collapsed, but user is currently on reports, members, trash or settings, show active tab indicator
-              (activeTab === 'reports' || activeTab === 'members' || activeTab === 'trash' || activeTab === 'settings') && (
+              // If collapsed, but user is currently on members, trash or settings, show active tab indicator
+              (activeTab === 'members' || activeTab === 'trash' || activeTab === 'settings') && (
                 <div className="pt-0.5">
-                  {activeTab === 'reports' && (
-                    <button
-                      onClick={() => onTabChange('reports')}
-                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <BarChart3 className="w-4 h-4 text-[#963861]" />
-                        <span>Báo cáo</span>
-                      </div>
-                      <span className="text-[10px] bg-[#fdf2f7] text-[#913257] px-1.5 py-0.5 rounded font-ui font-bold">
-                        Admin
-                      </span>
-                    </button>
-                  )}
                   {activeTab === 'members' && (
                     <button
                       onClick={() => onTabChange('members')}
@@ -589,6 +576,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Sắp đến hạn (3 ngày)</span>
                   </span>
                 </button>
+
+                {onSelectCustomDate && (
+                  <div
+                    className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center justify-between gap-1.5 transition-colors ${
+                      selectedDueFilter === 'custom'
+                        ? 'bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]'
+                        : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                    }`}
+                  >
+                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                      <CalendarDays className="w-3.5 h-3.5 text-[#3b82f6]" />
+                      <span>Theo ngày</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={customDueDate || ''}
+                      onChange={(e) => {
+                        if (e.target.value) onSelectCustomDate(e.target.value);
+                      }}
+                      className="min-w-0 flex-1 bg-white border border-[#e0e0e0] rounded px-1.5 py-0.5 text-[11px] font-ui text-[#202020] cursor-pointer"
+                    />
+                    {selectedDueFilter === 'custom' && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectDueFilter && onSelectDueFilter('all')}
+                        className="text-[#1d4ed8] hover:text-[#1e40af] text-[10px] shrink-0"
+                        title="Bỏ lọc theo ngày"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

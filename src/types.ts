@@ -211,7 +211,7 @@ export interface RecurringRuleConfig {
 
 export type TaskPersonalScope = 'my_tasks' | 'my_projects_tasks' | 'all';
 
-export type DueFilterType = 'all' | 'today' | 'overdue' | 'soon';
+export type DueFilterType = 'all' | 'today' | 'overdue' | 'soon' | 'custom';
 
 export interface FilterState {
   projectId: string; // 'all' or projectId
@@ -219,6 +219,7 @@ export interface FilterState {
   status: 'Tất cả' | TaskStatus;
   assignee: string; // 'Tất cả' or member name
   dueFilter: DueFilterType;
+  customDueDate?: string; // YYYY-MM-DD, dùng khi dueFilter === 'custom'
   searchQuery: string;
 }
 

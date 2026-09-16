@@ -9,8 +9,11 @@ import {
   TimePeriod,
   generateDepartmentReport,
   TaskDisciplineResult,
+  analyzeTaskDiscipline,
 } from '../utils/reportUtils';
 import { formatDateWithEnDay } from '../utils/formatters';
+import { normalizeDateString, getTodayDateString } from '../utils/dateUtils';
+import { isSamePersonName } from '../utils/memberPersonalization';
 import {
   BarChart3,
   CheckCircle2,
@@ -22,39 +25,52 @@ import {
   Award,
   Calendar,
   Layers,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface AdminReportViewProps {
   tasks: TaskItem[];
   projects: ProjectItem[];
   members: MemberItem[];
-  currentAuthUser?: MemberItem | null;
+  activeProductMember?: MemberItem | null;
+  selectedProjectId: string;
+  selectedTeam: 'Tất cả' | TeamType;
   onOpenTaskDetail?: (task: TaskItem) => void;
   onSelectProject?: (projectId: string) => void;
+  onOpenDateInTasks?: (dateStr: string) => void;
 }
 
-type ReportSubTab = 'overview' | 'pm_leadership' | 'executive_performance' | 'task_details';
+type ReportSubTab = 'overview' | 'pm_leadership' | 'executive_performance' | 'task_details' | 'calendar';
 
 export const AdminReportView: React.FC<AdminReportViewProps> = ({
   tasks,
   projects,
   members,
+  activeProductMember,
+  selectedProjectId,
+  selectedTeam,
   onOpenTaskDetail,
   onSelectProject,
+  onOpenDateInTasks,
 }) => {
-  // 1. Filter states
+  // 1. Bộ lọc Thời gian — riêng cho Báo cáo (Sidebar không có khái niệm kỳ báo cáo)
   const [period, setPeriod] = useState<TimePeriod>('this_week');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
-  const [selectedTeam, setSelectedTeam] = useState<string>('Tất cả');
-  const [selectedAssignee, setSelectedAssignee] = useState<string>('Tất cả');
 
-  // 2. Navigation sub-tab
-  const [subTab, setSubTab] = useState<ReportSubTab>('overview');
+  // Dự án / Nhóm / Nhân sự dùng chung với Sidebar và bộ chọn nhân sự trên topbar
+  // (cạnh chuông thông báo) — mặc định focus vào chính người đang đăng nhập.
+  const selectedAssignee = activeProductMember?.name || 'Tất cả';
+
+  // 2. Navigation sub-tab — mặc định mở ngay vào Lịch
+  const [subTab, setSubTab] = useState<ReportSubTab>('calendar');
 
   // 3. Drill-down discipline filter
   const [selectedDisciplineFilter, setSelectedDisciplineFilter] = useState<string>('all');
+
+  // 4. Calendar view state (tháng đang xem)
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
 
   // Calculate report summary using reportUtils
   const summary = useMemo(() => {
@@ -104,19 +120,124 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
     { id: 'custom', label: 'Tùy chọn ngày' },
   ];
 
-  const TEAMS: ('Tất cả' | TeamType)[] = [
-    'Tất cả',
-    'Product Manager',
-    'UX/UI Designer',
-    'SEO',
-    'Data',
-  ];
+  // Khi đã chọn một nhân sự cụ thể, các bảng Dự án / Quản lý / Nhân sự chỉ hiển thị
+  // những dòng liên quan đến người đó thay vì toàn bộ danh sách
+  const isAssigneeFiltered = selectedAssignee !== 'Tất cả';
 
-  const productMembers = useMemo(() => {
-    return members.filter(
-      (m) => m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team)
-    );
-  }, [members]);
+  const displayedProjectStats = useMemo(() => {
+    if (!isAssigneeFiltered) return summary.projectStats;
+    return summary.projectStats.filter((p) => p.totalTasks > 0);
+  }, [summary.projectStats, isAssigneeFiltered]);
+
+  const displayedPmStats = useMemo(() => {
+    if (!isAssigneeFiltered) return summary.pmStats;
+    return summary.pmStats.filter((p) => isSamePersonName(p.pm.name, selectedAssignee));
+  }, [summary.pmStats, isAssigneeFiltered, selectedAssignee]);
+
+  const displayedExecutiveStats = useMemo(() => {
+    if (!isAssigneeFiltered) return summary.executiveStats;
+    return summary.executiveStats.filter((e) => isSamePersonName(e.member.name, selectedAssignee));
+  }, [summary.executiveStats, isAssigneeFiltered, selectedAssignee]);
+
+  // 5. Dữ liệu cho Lịch theo tháng — độc lập với bộ lọc Thời gian (period),
+  // nhưng vẫn tôn trọng bộ lọc Dự án / Nhóm / Nhân sự phía trên
+  const calendarFilteredTasks = useMemo(() => {
+    let list = tasks;
+    if (selectedProjectId !== 'all') {
+      list = list.filter((t) => t.projectId === selectedProjectId);
+    }
+    if (selectedTeam !== 'Tất cả') {
+      list = list.filter((t) => t.team === selectedTeam);
+    }
+    if (selectedAssignee !== 'Tất cả') {
+      list = list.filter((t) => isSamePersonName(t.assignee, selectedAssignee));
+    }
+    return list;
+  }, [tasks, selectedProjectId, selectedTeam, selectedAssignee]);
+
+  const tasksByDueDate = useMemo(() => {
+    const map = new Map<string, TaskItem[]>();
+    calendarFilteredTasks.forEach((t) => {
+      const d = normalizeDateString(t.dueDate);
+      if (!d) return;
+      if (!map.has(d)) map.set(d, []);
+      map.get(d)!.push(t);
+    });
+    return map;
+  }, [calendarFilteredTasks]);
+
+  const todayStr = getTodayDateString();
+
+  // Đếm số việc theo từng trạng thái kỷ luật (đúng hạn / sau hạn / quá hạn / nghẽn / đang làm)
+  // cho mỗi ngày, để tô màu ô lịch — dùng chung logic phân tích với các bảng phía trên
+  const calendarDayCounts = useMemo(() => {
+    const map = new Map<
+      string,
+      { onTime: number; late: number; overdue: number; blocked: number; inProgress: number; total: number }
+    >();
+    tasksByDueDate.forEach((list, dateStr) => {
+      let onTime = 0;
+      let late = 0;
+      let overdue = 0;
+      let blocked = 0;
+      let inProgress = 0;
+      list.forEach((t) => {
+        const res = analyzeTaskDiscipline(t);
+        if (res.discipline === 'on_time_early' || res.discipline === 'on_time_same_day') onTime++;
+        else if (res.discipline === 'late_next_day' || res.discipline === 'late_after_days') late++;
+        else if (res.discipline === 'currently_overdue') overdue++;
+        else if (res.discipline === 'blocked') blocked++;
+        else inProgress++;
+      });
+      map.set(dateStr, { onTime, late, overdue, blocked, inProgress, total: list.length });
+    });
+    return map;
+  }, [tasksByDueDate]);
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startOffset = (firstDay.getDay() + 6) % 7; // Tuần bắt đầu từ Thứ 2
+
+    const cells: { dateStr: string; dayNum: number; inMonth: boolean }[] = [];
+    for (let i = startOffset; i > 0; i--) {
+      const d = new Date(year, month, 1 - i);
+      cells.push({ dateStr: getTodayDateString(d), dayNum: d.getDate(), inMonth: false });
+    }
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const d = new Date(year, month, day);
+      cells.push({ dateStr: getTodayDateString(d), dayNum: day, inMonth: true });
+    }
+    while (cells.length % 7 !== 0) {
+      const last = new Date(cells[cells.length - 1].dateStr + 'T00:00:00');
+      last.setDate(last.getDate() + 1);
+      cells.push({ dateStr: getTodayDateString(last), dayNum: last.getDate(), inMonth: false });
+    }
+    return cells;
+  }, [calendarMonth]);
+
+  const calendarMonthTaskCount = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+    let count = 0;
+    tasksByDueDate.forEach((list, dateStr) => {
+      if (dateStr.startsWith(prefix)) count += list.length;
+    });
+    return count;
+  }, [tasksByDueDate, calendarMonth]);
+
+  const goPrevMonth = () =>
+    setCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const goNextMonth = () =>
+    setCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  const goCurrentMonth = () => setCalendarMonth(new Date());
+
+  const handleSelectCalendarDay = (dateStr: string) => {
+    if (onOpenDateInTasks) onOpenDateInTasks(dateStr);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#fafafa] p-6 space-y-6 scrollbar-thin">
@@ -125,15 +246,12 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded-[4px] border border-[#f4c2d7]">
-                Admin
-              </span>
               <span className="text-xs font-ui text-[#7f7f7f]">
                 {summary.periodLabel}
               </span>
             </div>
             <h1 className="text-xl font-title font-bold text-[#202020] mt-1">
-              Báo cáo Vận hành & Tiến độ
+              Báo cáo
             </h1>
             <p className="text-xs font-body text-[#5f5f5f] mt-0.5">
               Theo dõi tỷ lệ hoàn thành, trễ hạn và sức khỏe dự án.
@@ -187,61 +305,34 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             </div>
           )}
 
-          {/* Filter Dropdowns: Project, Team, Assignee */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
-            {/* Project Filter */}
-            <div className="flex items-center gap-2 bg-[#fafafa] border border-[#e0e0e0] rounded-[6px] px-2.5 py-1.5">
-              <Briefcase className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
-              <span className="text-[11px] font-ui text-[#7f7f7f] shrink-0">Dự án:</span>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="w-full bg-transparent text-xs font-body text-[#202020] focus:outline-hidden cursor-pointer"
-              >
-                <option value="all">Tất cả dự án ({projects.length})</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name.replace(/^Dự án\s+/i, '')}
-                  </option>
-                ))}
-              </select>
+          {/* Dự án / Nhóm / Nhân sự dùng chung với bộ lọc Sidebar & bộ chọn nhân sự trên topbar
+              (cạnh chuông thông báo) — chỉ hiển thị tóm tắt, chỉnh sửa ở nơi gốc để tránh trùng UI */}
+          {(selectedProjectId !== 'all' || selectedTeam !== 'Tất cả' || selectedAssignee !== 'Tất cả') && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[11px] font-ui text-[#9f9f9f] shrink-0">Đang áp dụng:</span>
+              {selectedProjectId !== 'all' && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-ui font-bold bg-[#edf5fd] text-[#1e609c] px-2 py-0.5 rounded-full border border-[#cfe2fe]">
+                  <Briefcase className="w-3 h-3" />
+                  {projects.find((p) => p.id === selectedProjectId)?.name.replace(/^Dự án\s+/i, '') || 'Dự án'}
+                </span>
+              )}
+              {selectedTeam !== 'Tất cả' && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-ui font-bold bg-[#f1f5f9] text-[#334155] px-2 py-0.5 rounded-full border border-[#cbd5e1]">
+                  <Layers className="w-3 h-3" />
+                  {selectedTeam}
+                </span>
+              )}
+              {selectedAssignee !== 'Tất cả' && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-ui font-bold bg-[#fdf2f7] text-[#963861] px-2 py-0.5 rounded-full border border-[#f4c2d7]">
+                  <Users className="w-3 h-3" />
+                  {selectedAssignee}
+                </span>
+              )}
+              <span className="text-[10px] font-ui text-[#b0b0b0]">
+                (chỉnh Dự án/Nhóm tại Sidebar, Nhân sự tại bộ chọn cạnh chuông thông báo)
+              </span>
             </div>
-
-            {/* Team Filter */}
-            <div className="flex items-center gap-2 bg-[#fafafa] border border-[#e0e0e0] rounded-[6px] px-2.5 py-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
-              <span className="text-[11px] font-ui text-[#7f7f7f] shrink-0">Nhóm:</span>
-              <select
-                value={selectedTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
-                className="w-full bg-transparent text-xs font-body text-[#202020] focus:outline-hidden cursor-pointer"
-              >
-                {TEAMS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Assignee Filter */}
-            <div className="flex items-center gap-2 bg-[#fafafa] border border-[#e0e0e0] rounded-[6px] px-2.5 py-1.5">
-              <Users className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
-              <span className="text-[11px] font-ui text-[#7f7f7f] shrink-0">Nhân sự:</span>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                className="w-full bg-transparent text-xs font-body text-[#202020] focus:outline-hidden cursor-pointer"
-              >
-                <option value="Tất cả">Tất cả nhân sự ({productMembers.length})</option>
-                {productMembers.map((m) => (
-                  <option key={m.id} value={m.name}>
-                    {m.name} ({m.team})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -367,7 +458,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
       <div className="bg-white rounded-[12px] border border-[#e0e0e0] p-5 shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-title font-bold text-[#202020]">
-            Phân bổ Hoàn thành & Kỷ luật ({summary.totalTasks} việc)
+            Phân bổ ({summary.totalTasks} việc)
           </h2>
           <span className="text-xs font-ui text-[#7f7f7f]">
             Chọn nhóm để lọc danh sách bên dưới
@@ -548,27 +639,15 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
       {/* 5. Sub-tabs Navigation */}
       <div className="border-b border-[#e0e0e0] flex items-center gap-2">
         <button
-          onClick={() => setSubTab('overview')}
+          onClick={() => setSubTab('calendar')}
           className={`pb-3 px-3 text-xs font-ui font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
-            subTab === 'overview'
+            subTab === 'calendar'
               ? 'border-[#963861] text-[#963861]'
               : 'border-transparent text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
-          <Briefcase className="w-4 h-4" />
-          <span>Sức khỏe Dự án ({summary.projectStats.length})</span>
-        </button>
-
-        <button
-          onClick={() => setSubTab('pm_leadership')}
-          className={`pb-3 px-3 text-xs font-ui font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
-            subTab === 'pm_leadership'
-              ? 'border-[#963861] text-[#963861]'
-              : 'border-transparent text-[#5f5f5f] hover:text-[#202020]'
-          }`}
-        >
-          <Award className="w-4 h-4" />
-          <span>Quản lý Sản phẩm (PM) ({summary.pmStats.length})</span>
+          <Calendar className="w-4 h-4" />
+          <span>Lịch ({calendarMonthTaskCount})</span>
         </button>
 
         <button
@@ -580,7 +659,31 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>Chuyên viên ({summary.executiveStats.length})</span>
+          <span>Nhân sự ({displayedExecutiveStats.length})</span>
+        </button>
+
+        <button
+          onClick={() => setSubTab('overview')}
+          className={`pb-3 px-3 text-xs font-ui font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            subTab === 'overview'
+              ? 'border-[#963861] text-[#963861]'
+              : 'border-transparent text-[#5f5f5f] hover:text-[#202020]'
+          }`}
+        >
+          <Briefcase className="w-4 h-4" />
+          <span>Dự án ({displayedProjectStats.length})</span>
+        </button>
+
+        <button
+          onClick={() => setSubTab('pm_leadership')}
+          className={`pb-3 px-3 text-xs font-ui font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            subTab === 'pm_leadership'
+              ? 'border-[#963861] text-[#963861]'
+              : 'border-transparent text-[#5f5f5f] hover:text-[#202020]'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          <span>Quản lý ({displayedPmStats.length})</span>
         </button>
 
         <button
@@ -592,7 +695,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           }`}
         >
           <BarChart3 className="w-4 h-4" />
-          <span>Chi tiết Công việc ({filteredDrilldownTasks.length})</span>
+          <span>Công việc ({filteredDrilldownTasks.length})</span>
         </button>
       </div>
 
@@ -604,14 +707,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           <div className="p-4 border-b border-[#f0f0f0] flex items-center justify-between">
             <div>
               <h3 className="text-sm font-title font-bold text-[#202020]">
-                Sức khỏe Tiến độ Dự án
+                Dự án
               </h3>
               <p className="text-xs font-body text-[#7f7f7f]">
                 Tỷ lệ đúng hạn và điểm nghẽn theo từng dự án.
               </p>
             </div>
             <span className="text-xs font-ui text-[#5f5f5f]">
-              {summary.projectStats.length} dự án
+              {displayedProjectStats.length} dự án
             </span>
           </div>
 
@@ -631,7 +734,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f0f0] text-[#202020]">
-                {summary.projectStats.map((p) => (
+                {displayedProjectStats.map((p) => (
                   <tr key={p.project.id} className="hover:bg-[#fcfcfc] transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -713,6 +816,15 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                     </td>
                   </tr>
                 ))}
+                {displayedProjectStats.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-xs font-ui text-[#9f9f9f]">
+                      {isAssigneeFiltered
+                        ? `${selectedAssignee} không có công việc thuộc dự án nào trong kỳ này.`
+                        : 'Không có dự án nào trong kỳ này.'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -725,14 +837,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           <div className="p-4 border-b border-[#f0f0f0] flex items-center justify-between">
             <div>
               <h3 className="text-sm font-title font-bold text-[#202020]">
-                Đánh giá Quản lý Sản phẩm (PM)
+                Quản lý
               </h3>
               <p className="text-xs font-body text-[#7f7f7f]">
                 Năng lực kiểm soát tiến độ và tháo gỡ điểm nghẽn dự án.
               </p>
             </div>
             <span className="text-xs font-ui text-[#5f5f5f]">
-              {summary.pmStats.length} PM
+              {displayedPmStats.length} PM
             </span>
           </div>
 
@@ -751,7 +863,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f0f0] text-[#202020]">
-                {summary.pmStats.map((pmStat) => (
+                {displayedPmStats.map((pmStat) => (
                   <tr key={pmStat.pm.id} className="hover:bg-[#fcfcfc] transition-colors">
                     <td className="py-3 px-4">
                       <div className="font-ui font-bold text-[#202020]">
@@ -834,6 +946,15 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                     </td>
                   </tr>
                 ))}
+                {displayedPmStats.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-xs font-ui text-[#9f9f9f]">
+                      {isAssigneeFiltered
+                        ? `${selectedAssignee} không phải Product Manager phụ trách dự án nào.`
+                        : 'Chưa có PM nào trong kỳ này.'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -846,14 +967,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           <div className="p-4 border-b border-[#f0f0f0] flex items-center justify-between">
             <div>
               <h3 className="text-sm font-title font-bold text-[#202020]">
-                Đánh giá Chuyên viên
+                Nhân sự
               </h3>
               <p className="text-xs font-body text-[#7f7f7f]">
                 Tiến độ hoàn thành, nợ quá hạn và link kết quả nghiệm thu.
               </p>
             </div>
             <span className="text-xs font-ui text-[#5f5f5f]">
-              {summary.executiveStats.length} nhân sự
+              {displayedExecutiveStats.length} nhân sự
             </span>
           </div>
 
@@ -874,7 +995,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0f0f0] text-[#202020]">
-                {summary.executiveStats.map((ex) => (
+                {displayedExecutiveStats.map((ex) => (
                   <tr key={ex.member.id} className="hover:bg-[#fcfcfc] transition-colors">
                     <td className="py-3 px-4">
                       <div className="font-ui font-bold text-[#202020]">
@@ -951,6 +1072,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                     </td>
                   </tr>
                 ))}
+                {displayedExecutiveStats.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-xs font-ui text-[#9f9f9f]">
+                      Không tìm thấy nhân sự phù hợp.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -963,7 +1091,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           <div className="p-4 border-b border-[#f0f0f0] flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-title font-bold text-[#202020]">
-                Danh sách Công việc ({filteredDrilldownTasks.length})
+                Công việc ({filteredDrilldownTasks.length})
               </h3>
               <p className="text-xs font-body text-[#7f7f7f]">
                 Đối soát giữa ngày hạn đăng ký và ngày hoàn thành thực tế.
@@ -1118,6 +1246,140 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* PANEL 5: LỊCH THEO THÁNG */}
+      {subTab === 'calendar' && (
+        <div className="bg-white rounded-[12px] border border-[#e0e0e0] overflow-hidden shadow-2xs">
+          <div className="p-4 border-b border-[#f0f0f0] flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-title font-bold text-[#202020]">
+                Lịch{isAssigneeFiltered ? ` — ${selectedAssignee}` : ''}
+              </h3>
+              <p className="text-xs font-body text-[#7f7f7f]">
+                Hạn công việc theo từng ngày trong tháng. Bấm vào ngày để mở trang Công việc lọc theo ngày đó.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={goPrevMonth}
+                className="p-1.5 rounded-[6px] border border-[#e0e0e0] text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] cursor-pointer transition-colors"
+                title="Tháng trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-ui font-bold text-[#202020] w-28 text-center">
+                Tháng {calendarMonth.getMonth() + 1}/{calendarMonth.getFullYear()}
+              </span>
+              <button
+                onClick={goNextMonth}
+                className="p-1.5 rounded-[6px] border border-[#e0e0e0] text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] cursor-pointer transition-colors"
+                title="Tháng sau"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={goCurrentMonth}
+                className="ml-1 px-2.5 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7] hover:bg-[#fae6ee] cursor-pointer transition-colors"
+              >
+                Hôm nay
+              </button>
+            </div>
+          </div>
+
+          {/* Weekday header */}
+          <div className="grid grid-cols-7 border-b border-[#f0f0f0] bg-[#fafafa]">
+            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((wd) => (
+              <div
+                key={wd}
+                className="py-2 text-center text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]"
+              >
+                {wd}
+              </div>
+            ))}
+          </div>
+
+          {/* Day grid */}
+          <div className="grid grid-cols-7">
+            {calendarCells.map((cell) => {
+              const counts = calendarDayCounts.get(cell.dateStr);
+              const isToday = cell.dateStr === todayStr;
+
+              return (
+                <button
+                  key={cell.dateStr}
+                  onClick={() => handleSelectCalendarDay(cell.dateStr)}
+                  title="Bấm để mở trang Công việc lọc theo ngày này"
+                  className={`min-h-[92px] p-1.5 border-b border-r border-[#f0f0f0] text-left flex flex-col gap-1 transition-colors cursor-pointer ${
+                    cell.inMonth ? 'bg-white hover:bg-[#fafafa]' : 'bg-[#fafafa] hover:bg-[#f5f5f5]'
+                  }`}
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-ui font-bold shrink-0 ${
+                      isToday
+                        ? 'bg-[#963861] text-white'
+                        : cell.inMonth
+                        ? 'text-[#202020]'
+                        : 'text-[#c0c0c0]'
+                    }`}
+                  >
+                    {cell.dayNum}
+                  </span>
+
+                  {counts && counts.total > 0 && (
+                    <div className="flex items-center gap-0.5 flex-wrap">
+                      {counts.overdue > 0 && (
+                        <span className="text-[9px] font-ui font-bold text-white bg-[#dc2626] rounded px-1 leading-4">
+                          {counts.overdue} quá hạn
+                        </span>
+                      )}
+                      {counts.late > 0 && (
+                        <span className="text-[9px] font-ui font-bold text-white bg-[#1d4ed8] rounded px-1 leading-4">
+                          {counts.late} sau hạn
+                        </span>
+                      )}
+                      {counts.blocked > 0 && (
+                        <span className="text-[9px] font-ui font-bold text-white bg-[#ea580c] rounded px-1 leading-4">
+                          {counts.blocked} nghẽn
+                        </span>
+                      )}
+                      {counts.inProgress > 0 && (
+                        <span className="text-[9px] font-ui font-bold text-[#475569] bg-[#f1f5f9] rounded px-1 leading-4">
+                          {counts.inProgress} đang làm
+                        </span>
+                      )}
+                      {counts.onTime > 0 && (
+                        <span className="text-[9px] font-ui font-bold text-[#166534] bg-[#f0fdf4] rounded px-1 leading-4">
+                          {counts.onTime} đúng hạn
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-t border-[#f0f0f0] bg-[#fafafa] text-[10px] font-ui text-[#5f5f5f]">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#166534]" /> Đúng hạn
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#1d4ed8]" /> Hoàn thành sau hạn
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#dc2626]" /> Đang quá hạn
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#ea580c]" /> Đang nghẽn
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#475569]" /> Đang làm / chưa làm
+            </span>
           </div>
         </div>
       )}
