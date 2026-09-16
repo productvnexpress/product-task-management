@@ -19,6 +19,11 @@ export type UserRole = 'Admin' | 'Manager' | 'Executive';
 export const getUserRole = (user: MemberItem | null | undefined): UserRole => {
   if (!user) return 'Executive';
 
+  // 0. Role được Admin gán trực tiếp trong Thiết lập > Phân quyền (ưu tiên cao nhất)
+  if (user.role === 'Admin' || user.role === 'Manager' || user.role === 'Executive') {
+    return user.role;
+  }
+
   const username = (user.username || '').trim().toLowerCase();
   const email = (user.email || '').trim().toLowerCase();
   const name = (user.name || '').trim().toLowerCase();
@@ -152,8 +157,12 @@ export const isProjectCreator = (project: ProjectItem, user: MemberItem | null |
   }
 
   // 3. Phân vai PM của dự án
-  if (project.roles?.pm && Array.isArray(project.roles.pm) && project.roles.pm.some((p) => (p || '').toLowerCase().includes(userName))) {
-    return true;
+  if (project.roles?.pm && Array.isArray(project.roles.pm)) {
+    const isPm = project.roles.pm.some((p) => {
+      const pmEntry = (p || '').toLowerCase();
+      return (userName && pmEntry.includes(userName)) || (userUsername && pmEntry.includes(userUsername));
+    });
+    if (isPm) return true;
   }
 
   return false;

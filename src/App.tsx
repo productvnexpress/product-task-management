@@ -2262,6 +2262,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     projects={projects}
                     currentAuthUser={currentAuthUser}
                     onAddTask={handleAddTask}
+                    onUpdateMember={handleUpdateMember}
                   />
                 </ErrorBoundary>
               )}

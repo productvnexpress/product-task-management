@@ -22,7 +22,7 @@ import {
 import { workingTimeService, formatWorkingDaysCount } from '../services/workingTimeService';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getTodayDateString } from '../utils/dateUtils';
-import { getUserRole } from '../utils/rbac';
+import { getUserRole, getRoleDisplayInfo, UserRole } from '../utils/rbac';
 import {
   recurringTaskService,
   formatFrequencyLabel,
@@ -59,6 +59,7 @@ import {
   Play,
   Pause,
   Zap,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SettingsManagerProps {
@@ -67,15 +68,17 @@ interface SettingsManagerProps {
   projects?: ProjectItem[];
   currentAuthUser?: MemberItem | null;
   onAddTask?: (task: any, author?: string) => void;
+  onUpdateMember?: (member: MemberItem) => void;
 }
 
-type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist' | 'recurring';
+type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist' | 'recurring' | 'permissions';
 
 export const SettingsManager: React.FC<SettingsManagerProps> = ({
   members,
   projects = [],
   currentAuthUser,
   onAddTask,
+  onUpdateMember,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SettingsTab>('schedule');
 
@@ -164,6 +167,15 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   const [recEndType, setRecEndType] = useState<RecurrenceEndType>('never');
   const [recEndDate, setRecEndDate] = useState('');
   const [recToast, setRecToast] = useState<string | null>(null);
+
+  // 8. Phân quyền (Admin only)
+  const [permToast, setPermToast] = useState<string | null>(null);
+  const handleChangeMemberRole = (member: MemberItem, newRole: UserRole) => {
+    if (!onUpdateMember) return;
+    onUpdateMember({ ...member, role: newRole });
+    setPermToast(`Đã cập nhật quyền của ${member.name} thành ${getRoleDisplayInfo(newRole).shortLabel}`);
+    setTimeout(() => setPermToast(null), 2500);
+  };
 
   const handleOpenAddRecurring = () => {
     setEditingRecurringRule(null);
@@ -663,6 +675,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                   <CheckSquare className="w-4 h-4" />
                 ) : activeSubTab === 'recurring' ? (
                   <RotateCw className="w-4 h-4" />
+                ) : activeSubTab === 'permissions' ? (
+                  <ShieldCheck className="w-4 h-4" />
                 ) : (
                   <Clock className="w-4 h-4" />
                 )}
@@ -672,6 +686,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                   ? 'Quản trị Checklist'
                   : activeSubTab === 'recurring'
                   ? 'Việc chu kỳ'
+                  : activeSubTab === 'permissions'
+                  ? 'Phân quyền'
                   : 'Thời gian làm việc'}
               </h1>
               <span className="bg-[#ede9fe] text-[#6d28d9] border border-[#ddd6fe] text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px]">
@@ -683,6 +699,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                 ? 'Cấu hình danh mục tiêu chuẩn Product Management (thêm, sửa, xoá, sắp xếp vị trí các tiêu chuẩn theo từng giai đoạn).'
                 : activeSubTab === 'recurring'
                 ? 'Quản lý các công việc lặp lại tự động tạo lúc 08:00 AM theo chu kỳ Hàng tuần, 2 Tuần hoặc Hàng tháng.'
+                : activeSubTab === 'permissions'
+                ? 'Gán nhóm quyền Admin / Manager / Executive cho từng tài khoản Ban Sản phẩm - Công nghệ.'
                 : 'Lịch làm việc, ngày lễ, làm bù và nghỉ phép dùng tính ngày công nhân sự.'}
             </p>
           </div>
@@ -693,97 +711,116 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
             </span>
           </div>
         </div>
+      </div>
 
-        {/* Navigation Tabs - Biên tập ngắn gọn theo EDITOR.md */}
-        <div className="flex items-center gap-1 border-b border-[#f0f0f0] pt-2 overflow-x-auto scrollbar-none">
+      <div className="flex flex-col md:flex-row gap-5 items-start">
+        {/* Menu dọc - thay thế menu ngang cũ để tránh tràn ngang khi có nhiều tab */}
+        <aside className="w-full md:w-56 md:shrink-0 bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs p-2 space-y-1 md:sticky md:top-4">
           <button
             onClick={() => setActiveSubTab('schedule')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'schedule'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3.5 h-3.5 shrink-0" />
             <span>Lịch làm việc</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('holidays')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'holidays'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
             <span>Ngày lễ ({holidays.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('compensatory')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'compensatory'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <Briefcase className="w-3.5 h-3.5 text-[#b26b00]" />
+            <Briefcase className="w-3.5 h-3.5 shrink-0 text-[#b26b00]" />
             <span>Làm bù ({compensatoryList.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('leaves')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'leaves'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <UserCheck className="w-3.5 h-3.5" />
+            <UserCheck className="w-3.5 h-3.5 shrink-0" />
             <span>Nghỉ phép ({leaves.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('calculator')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'calculator'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <Calculator className="w-3.5 h-3.5" />
+            <Calculator className="w-3.5 h-3.5 shrink-0" />
             <span>Tra cứu ngày công</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('checklist')}
-            className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               activeSubTab === 'checklist'
-                ? 'border-[#963861] text-[#963861]'
-                : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
           >
-            <CheckSquare className="w-3.5 h-3.5" />
+            <CheckSquare className="w-3.5 h-3.5 shrink-0" />
             <span>Checklist ({checklistTemplate.length})</span>
           </button>
 
           {isAdmin && (
             <button
               onClick={() => setActiveSubTab('recurring')}
-              className={`px-4 py-2.5 text-xs font-ui font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
                 activeSubTab === 'recurring'
-                  ? 'border-[#963861] text-[#963861]'
-                  : 'border-transparent text-[#71717a] hover:text-[#202020]'
+                  ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                  : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
               }`}
             >
-              <RotateCw className="w-3.5 h-3.5" />
+              <RotateCw className="w-3.5 h-3.5 shrink-0" />
               <span>Việc chu kỳ ({recurringRules.length})</span>
             </button>
           )}
-        </div>
-      </div>
 
+          {isAdmin && (
+            <>
+              <div className="h-px bg-[#f0f0f0] my-1" />
+              <button
+                onClick={() => setActiveSubTab('permissions')}
+                className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+                  activeSubTab === 'permissions'
+                    ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                    : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>Phân quyền</span>
+              </button>
+            </>
+          )}
+        </aside>
+
+        <div className="flex-1 min-w-0 space-y-6">
       {/* ========================================================================= */}
       {/* TAB 1: LỊCH LÀM VIỆC */}
       {/* ========================================================================= */}
@@ -1693,6 +1730,70 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
           )}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8: PHÂN QUYỀN (ADMIN ONLY) */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'permissions' && isAdmin && (
+        <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden">
+          <div className="p-4 border-b border-[#f0f0f0] bg-[#fafafa]">
+            <h2 className="font-ui font-bold text-sm text-[#202020]">
+              Phân quyền tài khoản Ban Sản phẩm - Công nghệ ({productMembers.length})
+            </h2>
+            <p className="text-[11px] font-ui text-[#71717a] mt-1">
+              Admin: toàn quyền hệ thống · Manager: quản lý dự án/nhân sự mình phụ trách · Executive: chỉ sửa/xoá việc do mình tạo hoặc được giao.
+            </p>
+          </div>
+
+          <div className="divide-y divide-[#f0f0f0]">
+            {productMembers.map((member) => {
+              const currentRole = getUserRole(member);
+              const roleInfo = getRoleDisplayInfo(currentRole);
+              return (
+                <div
+                  key={member.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-[#f4f4f5] border border-[#e4e4e7] flex items-center justify-center text-xs font-ui font-bold text-[#52525b] shrink-0">
+                      {(member.name || '?').trim().charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-ui font-bold text-[#202020] truncate">{member.name}</p>
+                      <p className="text-[11px] font-ui text-[#71717a] truncate">
+                        {member.username ? `@${member.username}` : member.email} · {member.title}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-[10px] font-ui font-bold px-2 py-0.5 rounded border ${roleInfo.badgeClass}`}>
+                      {roleInfo.shortLabel}
+                    </span>
+                    <select
+                      value={currentRole}
+                      onChange={(e) => handleChangeMemberRole(member, e.target.value as UserRole)}
+                      className="text-xs font-ui border border-[#e4e4e7] rounded-[6px] px-2 py-1.5 text-[#202020] focus:outline-none focus:ring-2 focus:ring-[#963861]/30 cursor-pointer"
+                    >
+                      <option value="Admin">Admin (Quản trị)</option>
+                      <option value="Manager">Manager (Quản lý)</option>
+                      <option value="Executive">Executive (Chuyên viên)</option>
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {permToast && (
+            <div className="p-3 bg-[#f0fdf4] border-t border-[#bbf7d0] text-xs font-ui text-[#15803d] font-bold">
+              {permToast}
+            </div>
+          )}
+        </div>
+      )}
+        </div>
+      </div>
 
       {/* MODAL: THÊM / SỬA NGÀY LỄ */}
       {isHolidayModalOpen && (

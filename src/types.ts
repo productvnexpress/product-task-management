@@ -122,6 +122,7 @@ export interface MemberItem {
   region?: string;
   department?: string;
   group?: MemberGroup;
+  role?: 'Admin' | 'Manager' | 'Executive'; // Phân quyền do Admin gán trong Thiết lập > Phân quyền
   team: TeamType;
   title: string;
   ipPhone?: string;
