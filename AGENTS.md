@@ -924,34 +924,27 @@ Tại danh sách dự án thuộc Left Sidebar:
    - **Deadline mục tiêu dự án (`project.targetDate`)**:
      - Áp dụng cho dự án có ngày mục tiêu `targetDate` hợp lệ và trạng thái chưa hoàn thành (`isProjectCompleted(project.status)` trả về `false`).
      - Thời hạn rơi vào khoảng: Còn 1 đến 3 ngày, Đến hạn hôm nay hoặc Đã quá hạn.
-3. **Phân quyền Đối tượng Nhận Cảnh báo (RBAC Scoped)**:
+3. **Phân quyền Đối tượng & Lọc Cảnh báo theo Tài khoản (Account-scoped)**:
    - **PM phụ trách dự án (`pmNames`)**:
      - Ưu tiên 1: `proj.roles.pm` được gán chính thức trong dự án.
      - Ưu tiên 2: `proj.leadName` (chỉ khi `roles.pm` chưa có hoặc nhân sự được chỉ định rõ thuộc PM).
-     - Fallback: `proj.createdBy` chỉ dùng khi dự án hoàn toàn chưa có PM được gán. Tuyệt đối không thêm người tạo dự án vào danh sách PM nếu dự án đã có PM phụ trách riêng biệt.
-   - **Nhân sự tham gia dự án (`allMemberNames`)**: Các chuyên viên được khai báo trong `roles.designer`, `roles.seo`, `roles.data`, `leadName`, `productOwner` và toàn bộ nhân sự đang nhận công việc (`TaskItem`) thuộc dự án đó.
-   - **Phân quyền hiển thị (UI Filter)**:
-     - **Admin**: Nhìn thấy toàn bộ cảnh báo của tất cả dự án trong bộ phận để điều hành vĩ mô.
-     - **PM & Chuyên viên**: Chỉ nhìn thấy cảnh báo thuộc các dự án mà mình trực tiếp phụ trách hoặc tham gia.
-4. **Hai Kênh Triển khai Cảnh báo**:
-   - **Kênh 1: Khối Cảnh báo Giao diện (`ProjectDeadlineAlertBanner`)**:
-     - Tích hợp nổi bật tại trang **Công việc (`/tasks`)** và trang **Dự án (`/projects`)**.
-     - Phân cấp màu sắc trực quan:
-       - 🚨 **Đỏ (`#dc2626`)**: Quá hạn (`diffDays < 0`).
-       - ⏰ **Cam (`#d97706`)**: Đến hạn hôm nay (`diffDays === 0`).
-       - ⚠️ **Vàng hổ phách (`#ca8a04`)**: Sắp đến hạn trong 1–3 ngày (`1 <= diffDays <= 3`).
-     - Cung cấp nút 1-click **"Chi tiết dự án →"** mở ngay Right Sidebar Drawer của dự án và nút **"Xem việc"** để lọc nhanh các công việc liên quan.
-     - Tự động ẩn hoàn toàn khi không có mốc nào đến hạn trong 3 ngày tới để giữ giao diện sạch đẹp.
-   - **Kênh 2: Thông báo Hệ thống (Notification Drawer + Web Push)**:
-     - Tự động quét khi khởi động ứng dụng và định kỳ mỗi 10 phút.
-     - Gửi thông báo đến đúng người nhận liên quan với loại thông báo `phase_due_soon` hoặc `project_due_soon`.
-     - **Cơ chế chống spam**: Mỗi mốc hạn chót chỉ gửi tối đa 1 thông báo/ngày cho cùng 1 nhân sự (lưu vết qua `localStorage` và kiểm tra trùng lặp trong danh sách thông báo ngày hôm nay).
-     - Bấm vào thông báo sẽ tự động mở Right Sidebar Drawer chi tiết của dự án tương ứng.
-5. **Tiêu chuẩn Biên tập Ngôn ngữ (`EDITOR.md`)**:
-   - Tiêu đề thông báo ngắn gọn, trực diện, đưa facts quan trọng lên đầu:
-     - Giai đoạn: `Giai đoạn "[Tên giai đoạn]" đến hạn trong X ngày (Sun, 20 Sep 2026)`
-     - Dự án: `Deadline dự án "[Tên dự án]" đến hạn ngày mai (Sat, 19 Sep 2026)`
-   - Cắt bỏ hoàn toàn từ đệm thừa, hiển thị đầy đủ tên thứ và ngày tháng theo định dạng `formatDateWithEnDay`.
+     - Tuyệt đối không tự động gán người tạo dự án (`createdBy`) vào danh sách PM nếu dự án đã có PM phụ trách riêng.
+   - **Nhân sự thuộc dự án (`allMemberNames`)**: Gồm PM, chuyên viên khai báo trong `roles.designer`, `roles.seo`, `roles.data`, `leadName` và nhân sự đang có công việc (`TaskItem`) trong dự án đó.
+   - **Quy tắc lọc theo tài khoản (Account Scoping)**: Khối cảnh báo lọc trực tiếp theo tài khoản đang đăng nhập/làm việc (`effectiveMember`). Chỉ hiển thị các mốc thuộc dự án mà nhân sự đó trực tiếp phụ trách hoặc tham gia, ngăn ngừa hiển thị tràn lan các dự án không liên quan.
+4. **Quy chuẩn Giao diện Khối Cảnh báo (`ProjectDeadlineAlertBanner`)**:
+   - Tích hợp tại trang **Công việc (`/tasks`)** và trang **Dự án (`/projects`)**.
+   - **Tiêu đề súc tích theo `EDITOR.md`**: `Cảnh báo tiến độ: {count} mốc dự án` kèm các chip đếm ngắn gọn `{x} quá hạn`, `{y} hôm nay`, `{z} sắp đến hạn`. Không dùng phụ đề rườm rà.
+   - **Bố cục 2 tầng phẳng chuẩn `TaskItemRow` (Zero Layout Distortion)**:
+     - **Tầng 1 (Hàng trên)**:
+       - *Bên trái*: Badge tình trạng (🚨 Quá hạn X ngày / ⏰ Đến hạn hôm nay / ⚠️ Còn X ngày) + Tiêu đề mốc ngắn gọn (cắt bỏ tiền tố thừa "Giai đoạn:") + Mã dự án `[CODE]`.
+       - *Bên phải (`shrink-0`)*: Cụm nút tác vụ cố định gồm **"Xem việc"** (lọc công việc dự án) và **"Chi tiết"** (mở drawer dự án). Tuyệt đối không để nút bị tràn hàng hay thụt lề sai lệch.
+     - **Tầng 2 (Hàng dưới - Metadata thụt lề `pl-8` thẳng hàng với tiêu đề)**:
+       - Dải thông tin dàn ngang phân tách bằng dấu chấm `•`: Tên dự án (icon `Folder`) • Phân loại mốc (`Giai đoạn` / `Deadline dự án`) • Hạn chót (dùng `formatTaskDueDisplay`: Hôm nay, Hôm qua, Ngày mai hoặc ngày chuẩn) • PM phụ trách.
+   - **Tự động ẩn**: Khối cảnh báo tự động ẩn hoàn toàn khi không có mốc nào đến hạn trong phạm vi theo dõi.
+5. **Kênh Thông báo Hệ thống (Notification Drawer & Web Push)**:
+   - Tự động quét khi mở ứng dụng và định kỳ mỗi 10 phút.
+   - Gửi thông báo đến đúng các nhân sự thuộc dự án với loại `phase_due_soon` hoặc `project_due_soon`.
+   - **Chống spam**: Mỗi mốc hạn chót chỉ gửi tối đa 1 thông báo/ngày cho cùng 1 nhân sự. Bấm vào thông báo sẽ mở ngay drawer chi tiết của dự án.
 
 ---
 

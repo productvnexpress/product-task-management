@@ -25,8 +25,8 @@ export interface ProjectDeadlineAlertItem {
 }
 
 /**
- * Lấy danh sách họ tên tất cả nhân sự liên quan trong dự án
- * (Gồm PM, Designer, SEO, Data, Lead, PO, Creator và nhân sự có task trong dự án)
+ * Lấy danh sách họ tên tất cả nhân sự thuộc dự án
+ * (Gồm PM, Designer, SEO, Data, Lead/PO chính thức và nhân sự đang có task trong dự án)
  */
 export function getProjectAllMembers(
   proj: ProjectItem | undefined | null,
@@ -36,22 +36,20 @@ export function getProjectAllMembers(
   if (!proj) return [];
   const memberSet = new Set<string>();
 
-  // 1. PMs
+  // 1. PMs chính thức
   getProjectPMs(proj, allMembers).forEach((name) => {
     if (name && name.trim()) memberSet.add(name.trim());
   });
 
-  // 2. Roles: Designer, SEO, Data
+  // 2. Roles chuyên môn: Designer, SEO, Data
   proj.roles?.designer?.forEach((name) => name && name.trim() && memberSet.add(name.trim()));
   proj.roles?.seo?.forEach((name) => name && name.trim() && memberSet.add(name.trim()));
   proj.roles?.data?.forEach((name) => name && name.trim() && memberSet.add(name.trim()));
 
-  // 3. Product Owner & Lead
-  if (proj.productOwner?.trim()) memberSet.add(proj.productOwner.trim());
+  // 3. Lead phụ trách dự án
   if (proj.leadName?.trim()) {
     proj.leadName.split(/[,&]/).forEach((n) => n && n.trim() && memberSet.add(n.trim()));
   }
-  if (proj.createdBy?.trim()) memberSet.add(proj.createdBy.trim());
 
   // 4. Nhân sự đang có công việc trong dự án
   tasks.forEach((t) => {
@@ -162,10 +160,11 @@ export function getProjectDeadlineAlerts(
     }
   });
 
-  // Phân quyền hiển thị: Admin thấy tất cả; PM và thành viên chỉ thấy dự án mình tham gia
+  // Phân quyền hiển thị theo tài khoản (Account-scoped):
+  // - Nếu có tài khoản cụ thể (currentMember): Luôn lọc các dự án mà nhân sự đó trực tiếp phụ trách hoặc tham gia
+  // - Nếu không có currentMember và là Admin (hoặc Admin muốn xem toàn cảnh khi currentMember = null): hiển thị toàn bộ
   const filteredAlerts = alerts.filter((item) => {
-    if (isAdmin) return true;
-    if (!currentMember) return false;
+    if (!currentMember) return isAdmin;
     return item.allMemberNames.some((mName) => isSamePersonName(mName, currentMember.name));
   });
 
