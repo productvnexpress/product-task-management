@@ -1,16 +1,12 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React from 'react';
-import { Filter, X, RotateCcw } from 'lucide-react';
-import { FilterState, ProjectItem, MemberItem } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Filter, X, RotateCcw, Plus, ChevronRight, Check } from 'lucide-react';
+import { FilterState, ProjectItem, MemberItem, TaskStatus, TeamType, DueFilterType } from '../types';
 import { TaskPersonalScope } from './PersonalizationBanner';
 
 interface ActiveFiltersBarProps {
   filterState: FilterState;
   projects: ProjectItem[];
+  members?: MemberItem[];
   taskPersonalScope?: TaskPersonalScope;
   activeProductMember?: MemberItem | null;
   onClearProject: () => void;
@@ -21,11 +17,17 @@ interface ActiveFiltersBarProps {
   onClearSearch: () => void;
   onClearPersonalScope?: () => void;
   onClearAll: () => void;
+  onSelectProject?: (projId: string) => void;
+  onSelectAssignee?: (assignee: string) => void;
+  onSelectStatus?: (status: TaskStatus) => void;
+  onSelectDue?: (due: DueFilterType) => void;
+  onSelectTeam?: (team: TeamType) => void;
 }
 
 export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   filterState,
   projects,
+  members = [],
   taskPersonalScope,
   activeProductMember,
   onClearProject,
@@ -36,7 +38,29 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   onClearSearch,
   onClearPersonalScope,
   onClearAll,
+  onSelectProject,
+  onSelectAssignee,
+  onSelectStatus,
+  onSelectDue,
+  onSelectTeam,
 }) => {
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<'project' | 'status' | 'due' | 'team' | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsAddMenuOpen(false);
+        setActiveCategory(null);
+      }
+    };
+    if (isAddMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isAddMenuOpen]);
+
   const activeProject =
     filterState.projectId && filterState.projectId !== 'all'
       ? projects.find((p) => p.id === filterState.projectId)?.name || filterState.projectId
@@ -78,8 +102,16 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
     return null;
   }
 
+  const statuses: TaskStatus[] = ['Chưa làm', 'Đang làm', 'Bị nghẽn', 'Hoàn thành'];
+  const dueOptions: { key: DueFilterType; label: string }[] = [
+    { key: 'today', label: 'Hôm nay' },
+    { key: 'overdue', label: 'Quá hạn' },
+    { key: 'soon', label: 'Sắp đến hạn' },
+  ];
+  const teams: TeamType[] = ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'];
+
   return (
-    <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all sticky top-[83px] z-10 shadow-2xs">
+    <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all sticky top-[83px] z-10 shadow-2xs select-none">
       <div className="max-w-[1040px] w-full mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-ui font-semibold text-[#64748b] flex items-center gap-1 shrink-0 mr-1">
@@ -95,7 +127,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearProject}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo dự án này"
               >
                 <X className="w-3 h-3" />
@@ -111,7 +143,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearAssignee}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo nhân sự này"
               >
                 <X className="w-3 h-3" />
@@ -127,7 +159,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearTeam}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo nhóm này"
               >
                 <X className="w-3 h-3" />
@@ -143,7 +175,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearStatus}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo trạng thái này"
               >
                 <X className="w-3 h-3" />
@@ -159,7 +191,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearDue}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo thời hạn này"
               >
                 <X className="w-3 h-3" />
@@ -175,7 +207,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearSearch}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc tìm kiếm này"
               >
                 <X className="w-3 h-3" />
@@ -190,12 +222,176 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               <button
                 type="button"
                 onClick={onClearPersonalScope}
-                className="text-[#94a3b8] hover:text-[#dc2626] ml-0.5 cursor-pointer"
+                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
                 title="Quay về tất cả công việc"
               >
                 <X className="w-3 h-3" />
               </button>
             </span>
+          )}
+
+          {/* Nút Thêm lọc nhanh */}
+          {(onSelectProject || onSelectStatus || onSelectDue || onSelectTeam) && (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddMenuOpen(!isAddMenuOpen);
+                  setActiveCategory(null);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#64748b] hover:text-[#1e293b] hover:border-[#94a3b8] border border-dashed border-[#cbd5e1] cursor-pointer transition-colors shadow-2xs"
+                title="Thêm điều kiện lọc"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Thêm lọc</span>
+              </button>
+
+              {/* Popover Menu Thêm lọc */}
+              {isAddMenuOpen && (
+                <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-lg py-1 z-50 animate-fade-in font-ui text-xs">
+                  {!activeCategory ? (
+                    <div className="space-y-0.5">
+                      {onSelectProject && !activeProject && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveCategory('project')}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Dự án</span>
+                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        </button>
+                      )}
+                      {onSelectStatus && !activeStatus && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveCategory('status')}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Trạng thái</span>
+                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        </button>
+                      )}
+                      {onSelectDue && !activeDueLabel && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveCategory('due')}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Thời hạn</span>
+                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        </button>
+                      )}
+                      {onSelectTeam && !activeTeam && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveCategory('team')}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
+                        >
+                          <span>Nhóm</span>
+                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        </button>
+                      )}
+                    </div>
+                  ) : activeCategory === 'project' ? (
+                    <div className="max-h-60 overflow-y-auto space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveCategory(null)}
+                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                      >
+                        ← Quay lại
+                      </button>
+                      {projects.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectProject?.(p.id);
+                            setIsAddMenuOpen(false);
+                            setActiveCategory(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] truncate cursor-pointer block"
+                        >
+                          {p.name.replace('Dự án ', '')}
+                        </button>
+                      ))}
+                    </div>
+                  ) : activeCategory === 'status' ? (
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveCategory(null)}
+                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                      >
+                        ← Quay lại
+                      </button>
+                      {statuses.map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => {
+                            onSelectStatus?.(st);
+                            setIsAddMenuOpen(false);
+                            setActiveCategory(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
+                  ) : activeCategory === 'due' ? (
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveCategory(null)}
+                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                      >
+                        ← Quay lại
+                      </button>
+                      {dueOptions.map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            onSelectDue?.(opt.key);
+                            setIsAddMenuOpen(false);
+                            setActiveCategory(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : activeCategory === 'team' ? (
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveCategory(null)}
+                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                      >
+                        ← Quay lại
+                      </button>
+                      {teams.map((tm) => (
+                        <button
+                          key={tm}
+                          type="button"
+                          onClick={() => {
+                            onSelectTeam?.(tm);
+                            setIsAddMenuOpen(false);
+                            setActiveCategory(null);
+                          }}
+                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+                        >
+                          {tm}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -203,7 +399,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
         <button
           type="button"
           onClick={onClearAll}
-          className="text-[11px] font-ui font-medium text-[#64748b] hover:text-[#dc2626] transition-colors cursor-pointer flex items-center gap-1 shrink-0 hover:underline"
+          className="text-[11px] font-ui font-medium text-[#64748b] hover:text-[#dc2626] hover:bg-[#fee2e2]/60 px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer flex items-center gap-1 shrink-0"
           title="Đặt lại toàn bộ các điều kiện lọc về mặc định"
         >
           <RotateCcw className="w-3 h-3" />
@@ -213,3 +409,4 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
     </div>
   );
 };
+

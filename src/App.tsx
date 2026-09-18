@@ -1733,65 +1733,74 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Header Bar */}
-        <Header
-          currentDate={currentDate}
-          onOpenStandup={() => setIsStandupOpen(true)}
-          onOpenQuickAdd={() => {
-            setActiveTab('tasks');
-            setTimeout(() => {
-              document.getElementById('quick-add-input')?.focus();
-            }, 100);
-          }}
-          onOpenAddProject={handleOpenAddProject}
-          onOpenAddMember={handleOpenAddMember}
-          taskStats={taskStats}
-          activeTabTitle={activeTabTitles[activeTab]}
-          activeTab={activeTab}
-          members={members}
-          activeProductMember={activeProductMember}
-          onSelectProductMember={handleSelectProductMember}
-          tasks={tasks}
-          projects={projects}
-          currentAuthUser={currentAuthUser}
-          onOpenProfile={handleOpenProfile}
-          onLogout={handleLogout}
-          isDbConnected={isDbConnected}
-          unreadNotificationsCount={unreadNotificationsCount}
-          onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
-          personalScope={taskPersonalScope}
-          onChangeScope={handlePerspectiveChange}
-        />
+        {/* Sticky Header & Active Filters Bar Container (Luôn được ghim ở đầu trang khi cuộn) */}
+        <div className="sticky top-0 z-20 bg-white shadow-2xs">
+          {/* Header Bar */}
+          <Header
+            currentDate={currentDate}
+            onOpenStandup={() => setIsStandupOpen(true)}
+            onOpenQuickAdd={() => {
+              setActiveTab('tasks');
+              setTimeout(() => {
+                document.getElementById('quick-add-input')?.focus();
+              }, 100);
+            }}
+            onOpenAddProject={handleOpenAddProject}
+            onOpenAddMember={handleOpenAddMember}
+            taskStats={taskStats}
+            activeTabTitle={activeTabTitles[activeTab]}
+            activeTab={activeTab}
+            members={members}
+            activeProductMember={activeProductMember}
+            onSelectProductMember={handleSelectProductMember}
+            tasks={tasks}
+            projects={projects}
+            currentAuthUser={currentAuthUser}
+            onOpenProfile={handleOpenProfile}
+            onLogout={handleLogout}
+            isDbConnected={isDbConnected}
+            unreadNotificationsCount={unreadNotificationsCount}
+            onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
+            personalScope={taskPersonalScope}
+            onChangeScope={handlePerspectiveChange}
+          />
 
-        {/* Active Filters Bar (Pinned right beside Left Sidebar) */}
-        <ActiveFiltersBar
-          filterState={filterState}
-          projects={projects}
-          taskPersonalScope={taskPersonalScope}
-          activeProductMember={activeProductMember}
-          onClearProject={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
-          onClearAssignee={() => {
-            setFilterState((f) => ({ ...f, assignee: 'Tất cả' }));
-            if (activeProductMember) setActiveProductMember(null);
-          }}
-          onClearTeam={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
-          onClearStatus={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
-          onClearDue={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
-          onClearSearch={() => setFilterState((f) => ({ ...f, searchQuery: '' }))}
-          onClearPersonalScope={() => setTaskPersonalScope('all')}
-          onClearAll={() => {
-            setFilterState({
-              projectId: 'all',
-              team: 'Tất cả',
-              status: 'Tất cả',
-              assignee: 'Tất cả',
-              dueFilter: 'all',
-              searchQuery: '',
-            });
-            setActiveProductMember(null);
-            setTaskPersonalScope('all');
-          }}
-        />
+          {/* Active Filters Bar (Pinned right beside Left Sidebar) */}
+          <ActiveFiltersBar
+            filterState={filterState}
+            projects={projects}
+            members={members}
+            taskPersonalScope={taskPersonalScope}
+            activeProductMember={activeProductMember}
+            onClearProject={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
+            onClearAssignee={() => {
+              setFilterState((f) => ({ ...f, assignee: 'Tất cả' }));
+              if (activeProductMember) setActiveProductMember(null);
+            }}
+            onClearTeam={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
+            onClearStatus={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
+            onClearDue={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
+            onClearSearch={() => setFilterState((f) => ({ ...f, searchQuery: '' }))}
+            onClearPersonalScope={() => setTaskPersonalScope('all')}
+            onClearAll={() => {
+              setFilterState({
+                projectId: 'all',
+                team: 'Tất cả',
+                status: 'Tất cả',
+                assignee: 'Tất cả',
+                dueFilter: 'all',
+                searchQuery: '',
+              });
+              setActiveProductMember(null);
+              setTaskPersonalScope('all');
+            }}
+            onSelectProject={(projId) => setFilterState((f) => ({ ...f, projectId: projId }))}
+            onSelectStatus={(status) => setFilterState((f) => ({ ...f, status }))}
+            onSelectDue={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
+            onSelectTeam={(team) => setFilterState((f) => ({ ...f, team }))}
+            onSelectAssignee={(assignee) => setFilterState((f) => ({ ...f, assignee }))}
+          />
+        </div>
 
         {/* Main Body */}
         <main className="flex-1 px-4 md:px-6 py-6 md:py-8 w-full max-w-[1040px] mx-auto">
@@ -2140,7 +2149,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                             >
                               <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                                 {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                                <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                                <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                                   <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
                                     {/* Vùng 1: Bấm vào tên dự án sẽ lọc công việc theo dự án */}
                                     <button
@@ -2236,7 +2245,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         return (
                           <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                             {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                            <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                            <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                               {curProj ? (
                                 <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
                                   {/* Vùng 1: Bấm vào tên dự án sẽ bỏ lọc dự án (xem tất cả) */}
@@ -2329,7 +2338,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     <div className="border-t border-[#e5e7eb] pt-6 md:pt-8">
                       <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                         {/* Left Column: Anchor (Pinned) */}
-                        <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-24 self-start pt-1">
+                        <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                           <div className="p-2 -ml-2 space-y-1">
                             <div className="flex items-center gap-2 text-[#24a148]">
                               <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />

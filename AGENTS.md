@@ -722,12 +722,17 @@ Hệ thống tự động kích hoạt phạm vi công việc mặc định ngay
 ---
 
 ### 4.11. Quy chuẩn Thanh Điều kiện Lọc Được Ghim (ActiveFiltersBar)
-1. **Vị trí**: Ghim (pinned) cố định bên phải khu vực Left Sidebar (ngay đầu vùng nội dung chính).
-2. **Mục đích**: Giúp người dùng tức thì nhận biết toàn bộ các tiêu chí lọc đang được kích hoạt (Dự án, Nhân sự, Trạng thái, Ưu tiên, Tag...) mà không cần mở các dropdown.
-3. **Phong cách thiết kế**:
-   - Thiết kế tinh gọn, trang nhã, không sử dụng màu sắc quá rực rỡ để tránh gây xao nhãng.
-   - Mỗi tiêu chí hiển thị dưới dạng badge nhỏ gọn kèm icon `x` xóa nhanh.
-   - Nút **"Xóa tất cả"** xuất hiện khi có từ 2 điều kiện lọc trở lên để đặt lại toàn bộ bộ lọc về trạng thái ban đầu chỉ với 1 click.
+1. **Vị trí & Ghim cố định (Pinned / Sticky)**:
+   - Ghim cố định (`sticky top-0 z-20`) liền mạch ngay dưới Header của vùng nội dung chính.
+   - Khi cuộn màn hình qua danh sách công việc dài, thanh điều kiện lọc và Header luôn được giữ cố định ở đầu trang, đảm bảo người dùng luôn nắm bắt được ngữ cảnh lọc hiện tại.
+2. **Mục đích & Tương tác thuận tiện**:
+   - Giúp người dùng tức thì nhận biết toàn bộ các tiêu chí lọc đang được kích hoạt (Dự án, Nhân sự, Trạng thái, Thời hạn, Nhóm, Từ khóa, Phạm vi cá nhân).
+   - Mỗi tiêu chí hiển thị dưới dạng badge phẳng nhỏ gọn kèm nút `x` xóa nhanh (hỗ trợ hover đổi màu đỏ và vùng bấm thoải mái).
+   - Nút **`+ Thêm lọc`**: Cho phép bổ sung nhanh các tiêu chí lọc (Dự án, Trạng thái, Thời hạn, Nhóm) qua popover trực tiếp ngay trên thanh ghim mà không cần cuộn trang lên trên.
+   - Nút **`Xóa bộ lọc`** (icon `RotateCcw`): Đặt lại toàn bộ các điều kiện lọc về mặc định chỉ với 1 click từ bất kỳ vị trí cuộn nào.
+3. **Phong cách thiết kế (EDITOR.md & Design System)**:
+   - Thiết kế tinh gọn, trang nhã: nền `#fafafa`, viền dưới `#e5e7eb`, bóng mờ `shadow-2xs` tách biệt rõ nét với danh sách trượt bên dưới.
+   - Font chữ chuẩn `Merriweather Sans` (`font-ui`), text súc tích, trực diện. Tự động ẩn khi không có bất kỳ điều kiện lọc nào kích hoạt để giữ không gian thoáng đãng.
 
 ---
 
