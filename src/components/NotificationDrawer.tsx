@@ -19,6 +19,8 @@ import {
   ExternalLink,
   Trash2,
   Send,
+  Calendar,
+  Flag,
 } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { NotificationItem, NotificationType, MemberItem } from '../types';
@@ -138,6 +140,18 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         return (
           <div className="w-8 h-8 rounded-full bg-[#e2f6e9] text-[#24a148] border border-[#b8e8c4] flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-4 h-4" />
+          </div>
+        );
+      case 'phase_due_soon':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#fffbeb] text-[#d97706] border border-[#fde68a] flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4" />
+          </div>
+        );
+      case 'project_due_soon':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#fef2f2] text-[#e11d48] border border-[#fecdd3] flex items-center justify-center shrink-0 animate-pulse">
+            <Flag className="w-4 h-4" />
           </div>
         );
       case 'task_updated':

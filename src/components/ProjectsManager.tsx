@@ -55,6 +55,7 @@ import {
 import { formatDateShort, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone } from '../utils/formatters';
 import { calculateProjectForecast } from '../utils/projectForecastUtils';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
+import { ProjectDeadlineAlertBanner } from './ProjectDeadlineAlertBanner';
 
 interface ProjectsManagerProps {
   projects: ProjectItem[];
@@ -353,6 +354,17 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
 
   return (
     <div className={`space-y-4 animate-fade-in w-full ${viewLayout === 'calendar' ? 'max-w-full' : 'max-w-[800px]'} mx-auto`}>
+      {/* Cảnh báo Giai đoạn & Deadline Dự án sắp đến hạn trước 3 ngày */}
+      <ProjectDeadlineAlertBanner
+        projects={projects}
+        tasks={tasks}
+        members={members}
+        currentAuthUser={currentAuthUser || null}
+        activeProductMember={activeProductMember}
+        onOpenProjectDetail={(projId) => onOpenProjectDetail && onOpenProjectDetail(projId)}
+        onFilterProjectTasks={(projId) => onSelectProjectFilter(projId)}
+      />
+
       {/* PERSPECTIVE CONTROL BAR FOR PROJECTS */}
       <div className="bg-white border border-[#e2e8f0] rounded-[10px] p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">

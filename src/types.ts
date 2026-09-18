@@ -241,7 +241,9 @@ export type NotificationType =
   | 'task_created'
   | 'task_completed'
   | 'task_blocked'
-  | 'task_updated';
+  | 'task_updated'
+  | 'phase_due_soon'
+  | 'project_due_soon';
 
 export interface NotificationItem {
   id: string;
@@ -250,6 +252,8 @@ export interface NotificationItem {
   actorName: string;          // Tên người thực hiện hành động
   projectId?: string;
   projectName: string;
+  phaseId?: string;
+  phaseName?: string;
   taskId?: string;
   taskTitle?: string;
   type: NotificationType;

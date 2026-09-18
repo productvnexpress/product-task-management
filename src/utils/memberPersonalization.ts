@@ -260,21 +260,25 @@ export function getProjectPMs(
   if (!proj) return [];
   const pmNames = new Set<string>();
 
-  // 1. proj.roles.pm
+  // 1. proj.roles.pm: Đây là phân công chính thức, rõ ràng nhất cho PM phụ trách
   if (proj.roles?.pm && Array.isArray(proj.roles.pm) && proj.roles.pm.length > 0) {
     proj.roles.pm.forEach((name) => {
       if (name && name.trim()) pmNames.add(name.trim());
     });
   }
 
-  // 2. proj.leadName (có thể chứa nhiều tên cách nhau bởi dấu phẩy hoặc &)
+  // 2. proj.leadName: Chỉ bổ sung nếu là PM và roles.pm chưa có hoặc để nhận diện lead
+  // Nếu roles.pm đã có nhân sự cụ thể, leadName chỉ được thêm nếu người đó thuộc Product Manager và chưa có
   if (proj.leadName) {
     const leads = proj.leadName.split(/[,&]/).map((s) => s.trim()).filter(Boolean);
     leads.forEach((lead) => {
       const member = allMembers.find((m) => isSamePersonName(m.name, lead));
       if (member) {
         if (member.team === 'Product Manager' || member.id === 'tienngoc') {
-          pmNames.add(member.name);
+          // Nếu chưa có PM nào trong roles.pm thì thêm ngay, nếu đã có thì chỉ thêm nếu đúng là PM được chỉ định
+          if (pmNames.size === 0) {
+            pmNames.add(member.name);
+          }
         }
       } else if (pmNames.size === 0) {
         pmNames.add(lead);
@@ -282,8 +286,9 @@ export function getProjectPMs(
     });
   }
 
-  // 3. proj.createdBy (nếu người tạo dự án là PM hoặc Admin)
-  if (proj.createdBy) {
+  // 3. proj.createdBy: CHỈ sử dụng làm dự phòng cuối cùng nếu dự án chưa có bất kỳ PM nào
+  // Tuyệt đối không thêm người tạo dự án (createdBy) vào danh sách PM nếu dự án đã có PM phụ trách rõ ràng
+  if (pmNames.size === 0 && proj.createdBy) {
     const creator = allMembers.find((m) => isSamePersonName(m.name, proj.createdBy));
     if (creator && (creator.team === 'Product Manager' || creator.id === 'tienngoc')) {
       pmNames.add(creator.name);

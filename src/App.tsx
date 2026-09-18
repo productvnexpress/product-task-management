@@ -49,6 +49,8 @@ import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
 import { recurringTaskService } from './services/recurringTaskService';
 import { fetchMasterChecklistTemplateFromSupabase } from './data/defaultProjectChecklist';
+import { ProjectDeadlineAlertBanner } from './components/ProjectDeadlineAlertBanner';
+import { checkAndDispatchProjectDeadlineNotifications } from './utils/projectDeadlineAlerts';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
@@ -904,6 +906,52 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
     return () => clearInterval(ticker);
   }, []);
+
+  // Automated Project & Phase Deadline Alerts Engine (Before 3 Days)
+  // Tự động kiểm tra và gửi thông báo cho PM và nhân sự dự án khi giai đoạn hoặc deadline dự án còn <= 3 ngày hoặc quá hạn
+  useEffect(() => {
+    if (projects.length === 0) return;
+
+    const runDeadlineCheck = () => {
+      checkAndDispatchProjectDeadlineNotifications(
+        projects,
+        tasks,
+        members,
+        notifications,
+        (newNotif) => {
+          console.log(
+            `%c[DeadlineEngine] ⏰ Cảnh báo hạn chót: "${newNotif.title}" cho ${newNotif.recipientName}`,
+            'color: #d97706; font-weight: bold;'
+          );
+          setNotifications((prev) => [newNotif, ...prev]);
+          wmsDataService
+            .saveNotification(newNotif)
+            .catch((e) => console.error('Supabase deadline notification save error:', e));
+
+          const isTargetUser =
+            (currentUserName && isSamePersonName(newNotif.recipientName, currentUserName)) ||
+            (activeProductMember && isSamePersonName(newNotif.recipientName, activeProductMember.name));
+
+          if (isTargetUser) {
+            dispatchNotificationWebPush(newNotif, () => {
+              if (newNotif.projectId) handleOpenProjectDetail(newNotif.projectId);
+            });
+          }
+        }
+      );
+    };
+
+    // 1. Quét sau 2.5s khi dữ liệu khởi động ổn định
+    const initialTimer = setTimeout(runDeadlineCheck, 2500);
+
+    // 2. Chạy ticker định kỳ mỗi 10 phút
+    const deadlineTicker = setInterval(runDeadlineCheck, 600000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(deadlineTicker);
+    };
+  }, [projects, tasks, members, currentUserName, activeProductMember]);
 
   const handleSelectNotification = (item: NotificationItem) => {
     // 1. Đánh dấu đã đọc
@@ -1773,6 +1821,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
                       {/* Thông báo Kỳ nghỉ lễ sắp tới (trong vòng 5 ngày) - Tách riêng 1 dòng nổi bật, nhiều màu sắc */}
                       <UpcomingHolidayBanner customDays={5} />
+
+                      {/* Cảnh báo Giai đoạn & Deadline Dự án sắp đến hạn trước 3 ngày */}
+                      <ProjectDeadlineAlertBanner
+                        projects={projects}
+                        tasks={tasks}
+                        members={members}
+                        currentAuthUser={currentAuthUser}
+                        activeProductMember={activeProductMember}
+                        onOpenProjectDetail={handleOpenProjectDetail}
+                        onFilterProjectTasks={(projId) => {
+                          setFilterState((f) => ({ ...f, projectId: projId }));
+                          window.scrollTo({ top: 350, behavior: 'smooth' });
+                        }}
+                      />
 
                       {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Căn chỉnh cân đối tỷ lệ ngang và đồng bộ chiều cao items-stretch */}
                       {productLeavesData.hasAnyLeave ? (
