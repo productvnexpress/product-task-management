@@ -369,7 +369,20 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               </div>
             )}
 
-            {/* 1. Trạng thái */}
+            {/* 1. Công việc (sử dụng font Merriweather Sans) */}
+            <div className="space-y-1.5">
+              <label className="font-ui text-xs font-bold text-[#5f5f5f]">
+                Công việc:
+              </label>
+              <textarea
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                rows={2}
+                className="w-full font-title font-bold text-base p-3 border border-[#d6d6d6] focus:border-[#b13460] rounded-[8px] text-[#202020] leading-snug"
+              />
+            </div>
+
+            {/* 2. Trạng thái */}
             <div className="space-y-1.5">
               <label className="font-ui text-xs font-bold text-[#5f5f5f] block">
                 Trạng thái:
@@ -406,7 +419,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               </div>
             )}
 
-            {/* 2. Link làm việc (Figma, Google, Notion,...) */}
+            {/* 3. Link làm việc (Figma, Google, Notion,...) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
@@ -434,7 +447,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               />
             </div>
 
-            {/* 3. Link kết quả (Figma, Beta, Production...) */}
+            {/* 4. Link kết quả (Figma, Beta, Production...) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
@@ -502,19 +515,6 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   }`}
                 />
               )}
-            </div>
-
-            {/* 4. Công việc (sử dụng font Merriweather Sans) */}
-            <div className="space-y-1.5">
-              <label className="font-ui text-xs font-bold text-[#5f5f5f]">
-                Công việc:
-              </label>
-              <textarea
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                rows={2}
-                className="w-full font-title font-bold text-base p-3 border border-[#d6d6d6] focus:border-[#b13460] rounded-[8px] text-[#202020] leading-snug"
-              />
             </div>
 
             {/* Grid for Dự án, Giai đoạn, Phụ trách, Hạn hoàn thành */}

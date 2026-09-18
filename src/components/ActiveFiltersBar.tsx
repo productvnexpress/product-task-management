@@ -45,14 +45,14 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   onSelectTeam,
 }) => {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<'project' | 'status' | 'due' | 'team' | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<'project' | 'status' | 'due' | 'team' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsAddMenuOpen(false);
-        setActiveCategory(null);
+        setHoveredCategory(null);
       }
     };
     if (isAddMenuOpen) {
@@ -230,14 +230,14 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
             </span>
           )}
 
-          {/* Nút Thêm lọc nhanh */}
+          {/* Nút Thêm lọc nhanh với Submenu cấp 2 mở sang phải khi hover */}
           {(onSelectProject || onSelectStatus || onSelectDue || onSelectTeam) && (
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
                 onClick={() => {
                   setIsAddMenuOpen(!isAddMenuOpen);
-                  setActiveCategory(null);
+                  setHoveredCategory(null);
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#64748b] hover:text-[#1e293b] hover:border-[#94a3b8] border border-dashed border-[#cbd5e1] cursor-pointer transition-colors shadow-2xs"
                 title="Thêm điều kiện lọc"
@@ -248,147 +248,221 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
               {/* Popover Menu Thêm lọc */}
               {isAddMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-lg py-1 z-50 animate-fade-in font-ui text-xs">
-                  {!activeCategory ? (
-                    <div className="space-y-0.5">
-                      {onSelectProject && !activeProject && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveCategory('project')}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Dự án</span>
-                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
-                        </button>
-                      )}
-                      {onSelectStatus && !activeStatus && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveCategory('status')}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Trạng thái</span>
-                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
-                        </button>
-                      )}
-                      {onSelectDue && !activeDueLabel && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveCategory('due')}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Thời hạn</span>
-                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
-                        </button>
-                      )}
-                      {onSelectTeam && !activeTeam && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveCategory('team')}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Nhóm</span>
-                          <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
-                        </button>
-                      )}
-                    </div>
-                  ) : activeCategory === 'project' ? (
-                    <div className="max-h-60 overflow-y-auto space-y-0.5">
+                <div
+                  className="absolute left-0 top-full mt-1 w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-lg py-1 z-50 animate-fade-in font-ui text-xs"
+                  onMouseLeave={() => setHoveredCategory(null)}
+                >
+                  {/* 1. Dự án */}
+                  {onSelectProject && (
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setHoveredCategory('project')}
+                    >
                       <button
                         type="button"
-                        onClick={() => setActiveCategory(null)}
-                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                        className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                          hoveredCategory === 'project'
+                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
+                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                        }`}
                       >
-                        ← Quay lại
+                        <span>Dự án</span>
+                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
                       </button>
-                      {projects.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            onSelectProject?.(p.id);
-                            setIsAddMenuOpen(false);
-                            setActiveCategory(null);
-                          }}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] truncate cursor-pointer block"
+
+                      {/* Submenu cấp 2 bên phải cho Dự án */}
+                      {hoveredCategory === 'project' && (
+                        <div
+                          className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
+                          onMouseEnter={() => setHoveredCategory('project')}
                         >
-                          {p.name.replace('Dự án ', '')}
-                        </button>
-                      ))}
+                          <div className="w-60 max-h-72 overflow-y-auto bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                            {projects.map((p) => {
+                              const isSelected = filterState.projectId === p.id;
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectProject?.(p.id);
+                                    setIsAddMenuOpen(false);
+                                    setHoveredCategory(null);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-left text-xs truncate cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
+                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                  }`}
+                                >
+                                  <span className="truncate">{p.name.replace('Dự án ', '')}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0 ml-1" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : activeCategory === 'status' ? (
-                    <div className="space-y-0.5">
+                  )}
+
+                  {/* 2. Trạng thái */}
+                  {onSelectStatus && (
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setHoveredCategory('status')}
+                    >
                       <button
                         type="button"
-                        onClick={() => setActiveCategory(null)}
-                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                        className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                          hoveredCategory === 'status'
+                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
+                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                        }`}
                       >
-                        ← Quay lại
+                        <span>Trạng thái</span>
+                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
                       </button>
-                      {statuses.map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => {
-                            onSelectStatus?.(st);
-                            setIsAddMenuOpen(false);
-                            setActiveCategory(null);
-                          }}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+
+                      {/* Submenu cấp 2 bên phải cho Trạng thái */}
+                      {hoveredCategory === 'status' && (
+                        <div
+                          className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
+                          onMouseEnter={() => setHoveredCategory('status')}
                         >
-                          {st}
-                        </button>
-                      ))}
+                          <div className="w-48 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                            {statuses.map((st) => {
+                              const isSelected = filterState.status === st;
+                              return (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectStatus?.(st);
+                                    setIsAddMenuOpen(false);
+                                    setHoveredCategory(null);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
+                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                  }`}
+                                >
+                                  <span>{st}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : activeCategory === 'due' ? (
-                    <div className="space-y-0.5">
+                  )}
+
+                  {/* 3. Thời hạn */}
+                  {onSelectDue && (
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setHoveredCategory('due')}
+                    >
                       <button
                         type="button"
-                        onClick={() => setActiveCategory(null)}
-                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                        className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                          hoveredCategory === 'due'
+                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
+                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                        }`}
                       >
-                        ← Quay lại
+                        <span>Thời hạn</span>
+                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
                       </button>
-                      {dueOptions.map((opt) => (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          onClick={() => {
-                            onSelectDue?.(opt.key);
-                            setIsAddMenuOpen(false);
-                            setActiveCategory(null);
-                          }}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+
+                      {/* Submenu cấp 2 bên phải cho Thời hạn */}
+                      {hoveredCategory === 'due' && (
+                        <div
+                          className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
+                          onMouseEnter={() => setHoveredCategory('due')}
                         >
-                          {opt.label}
-                        </button>
-                      ))}
+                          <div className="w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                            {dueOptions.map((opt) => {
+                              const isSelected = filterState.dueFilter === opt.key;
+                              return (
+                                <button
+                                  key={opt.key}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectDue?.(opt.key);
+                                    setIsAddMenuOpen(false);
+                                    setHoveredCategory(null);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
+                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                  }`}
+                                >
+                                  <span>{opt.label}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : activeCategory === 'team' ? (
-                    <div className="space-y-0.5">
+                  )}
+
+                  {/* 4. Nhóm */}
+                  {onSelectTeam && (
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setHoveredCategory('team')}
+                    >
                       <button
                         type="button"
-                        onClick={() => setActiveCategory(null)}
-                        className="w-full px-3 py-1 text-left text-[10px] text-[#64748b] hover:text-[#1e293b] font-semibold border-b border-[#f1f5f9] cursor-pointer"
+                        className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                          hoveredCategory === 'team'
+                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
+                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                        }`}
                       >
-                        ← Quay lại
+                        <span>Nhóm</span>
+                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
                       </button>
-                      {teams.map((tm) => (
-                        <button
-                          key={tm}
-                          type="button"
-                          onClick={() => {
-                            onSelectTeam?.(tm);
-                            setIsAddMenuOpen(false);
-                            setActiveCategory(null);
-                          }}
-                          className="w-full px-3 py-1.5 text-left text-[#334155] hover:bg-[#f1f5f9] cursor-pointer block"
+
+                      {/* Submenu cấp 2 bên phải cho Nhóm */}
+                      {hoveredCategory === 'team' && (
+                        <div
+                          className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
+                          onMouseEnter={() => setHoveredCategory('team')}
                         >
-                          {tm}
-                        </button>
-                      ))}
+                          <div className="w-48 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                            {teams.map((tm) => {
+                              const isSelected = filterState.team === tm;
+                              return (
+                                <button
+                                  key={tm}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectTeam?.(tm);
+                                    setIsAddMenuOpen(false);
+                                    setHoveredCategory(null);
+                                  }}
+                                  className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
+                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                  }`}
+                                >
+                                  <span>{tm}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>

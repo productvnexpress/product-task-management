@@ -72,10 +72,10 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 - Giao diện dạng **Right Sidebar Drawer** trượt từ bên phải sang (chiều rộng tối ưu ~500-550px).
 - Hỗ trợ 2 Tabs điều hướng chính:
   1. **Tab `Thông tin`**: Hiển thị và chỉnh sửa các trường thông tin tác nghiệp chuẩn hóa:
+     - **Công việc**: Textarea tiêu đề công việc đưa lên đầu tiên, **bắt buộc sử dụng font `Merriweather Sans` (`font-title`)**.
      - **Trạng thái**: Dropdown chọn 4 trạng thái chuẩn (`Chưa làm`, `Đang làm`, `Bị nghẽn`, `Hoàn thành`). Kèm ô nhập lý do nếu chọn `Bị nghẽn`. Không bắt buộc nhập Link làm việc khi chọn `Đang làm`.
      - **Link làm việc (Figma, Google, Notion,...)**: Ô nhập đường dẫn làm việc (luôn được nhập trước), hỗ trợ nút mở link nhanh.
      - **Link kết quả (Figma, Beta, Production...)**: Ô nhập đường dẫn kết quả sản phẩm. Hỗ trợ tùy chọn **"Link kết quả và Link làm việc là một"** (Checkbox đồng bộ tự động giá trị từ Link làm việc để tránh phải nhập 2 lần, tự động khóa ô nhập và mở link tương ứng).
-     - **Công việc**: Textarea tiêu đề công việc, **bắt buộc sử dụng font `Merriweather Sans` (`font-title`)**.
      - **Dự án**: Dropdown chọn dự án thuộc hệ thống.
      - **Giai đoạn**: Dropdown chọn giai đoạn dự án tương ứng.
      - **Phụ trách**: Dropdown chọn người phụ trách (chỉ hiển thị họ tên, không kèm IP Phone).
