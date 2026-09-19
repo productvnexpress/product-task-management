@@ -154,6 +154,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             <Flag className="w-4 h-4" />
           </div>
         );
+      case 'daily_close_reminder':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] flex items-center justify-center shrink-0">
+            <Clock className="w-4 h-4" />
+          </div>
+        );
       case 'task_updated':
       default:
         return (

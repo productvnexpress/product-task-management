@@ -52,6 +52,7 @@ import { recurringTaskService } from './services/recurringTaskService';
 import { fetchMasterChecklistTemplateFromSupabase } from './data/defaultProjectChecklist';
 import { ProjectDeadlineAlertBanner } from './components/ProjectDeadlineAlertBanner';
 import { checkAndDispatchProjectDeadlineNotifications } from './utils/projectDeadlineAlerts';
+import { checkAndDispatchDailyCloseTaskNotifications } from './utils/dailyCloseTaskAlerts';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
@@ -151,6 +152,13 @@ export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
     return parseCurrentRoute().tab;
   });
+
+  // Khi chuyển tab (trang A sang trang B), tự động cuộn lên đầu trang
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  }, [activeTab]);
 
   // Pending deep link route waiting for data (tasks / projects) to load
   const [pendingRoute, setPendingRoute] = useState<ParsedRoute | null>(() => parseCurrentRoute());
@@ -954,6 +962,50 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     };
   }, [projects, tasks, members, currentUserName, activeProductMember]);
 
+  // Automated 16:30 Daily Close Task Notifications Engine
+  // Tự động kiểm tra và gửi thông báo nhắc đóng task lúc 16:30 các ngày làm việc cho từng account
+  useEffect(() => {
+    if (members.length === 0) return;
+
+    const runCloseTaskCheck = () => {
+      checkAndDispatchDailyCloseTaskNotifications(
+        tasks,
+        members,
+        (newNotif) => {
+          console.log(
+            `%c[CloseTaskEngine] ⏰ Nhắc đóng task 16:30: "${newNotif.title}" cho ${newNotif.recipientName}`,
+            'color: #963861; font-weight: bold;'
+          );
+          setNotifications((prev) => [newNotif, ...prev]);
+          wmsDataService
+            .saveNotification(newNotif)
+            .catch((e) => console.error('Supabase close task notification save error:', e));
+
+          const isTargetUser =
+            (currentUserName && isSamePersonName(newNotif.recipientName, currentUserName)) ||
+            (activeProductMember && isSamePersonName(newNotif.recipientName, activeProductMember.name));
+
+          if (isTargetUser) {
+            dispatchNotificationWebPush(newNotif, () => {
+              setActiveTab('tasks');
+            });
+          }
+        }
+      );
+    };
+
+    // 1. Quét sau 3s khi dữ liệu khởi động ổn định
+    const initialTimer = setTimeout(runCloseTaskCheck, 3000);
+
+    // 2. Chạy ticker định kỳ mỗi 60 giây
+    const closeTaskTicker = setInterval(runCloseTaskCheck, 60000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(closeTaskTicker);
+    };
+  }, [tasks, members, currentUserName, activeProductMember]);
+
   const handleSelectNotification = (item: NotificationItem) => {
     // 1. Đánh dấu đã đọc
     setNotifications((prev) =>
@@ -980,7 +1032,16 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       if (foundProj) {
         handleOpenProjectDetail(foundProj.id);
         setIsNotificationDrawerOpen(false);
+        return;
       }
+    }
+
+    // 4. Nếu là thông báo nhắc đóng task 16:30, chuyển ngay sang tab Công việc
+    if (item.type === 'daily_close_reminder') {
+      setActiveTab('tasks');
+      setFilterState((f) => ({ ...f, dueFilter: 'today', assignee: item.recipientName }));
+      setIsNotificationDrawerOpen(false);
+      return;
     }
   };
 

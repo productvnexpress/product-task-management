@@ -243,7 +243,8 @@ export type NotificationType =
   | 'task_blocked'
   | 'task_updated'
   | 'phase_due_soon'
-  | 'project_due_soon';
+  | 'project_due_soon'
+  | 'daily_close_reminder';
 
 export interface NotificationItem {
   id: string;

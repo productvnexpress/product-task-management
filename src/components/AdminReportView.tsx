@@ -104,6 +104,22 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
     if (selectedDisciplineFilter === 'all') {
       return summary.tasksAnalyzed;
     }
+    if (selectedDisciplineFilter === 'on_time') {
+      return summary.tasksAnalyzed.filter((r) => r.isCompleted && r.isOnTime);
+    }
+    if (selectedDisciplineFilter === 'late') {
+      return summary.tasksAnalyzed.filter((r) => r.isCompleted && !r.isOnTime);
+    }
+    if (selectedDisciplineFilter === 'currently_overdue') {
+      return summary.tasksAnalyzed.filter(
+        (r) => !r.isCompleted && r.discipline === 'currently_overdue'
+      );
+    }
+    if (selectedDisciplineFilter === 'in_progress') {
+      return summary.tasksAnalyzed.filter(
+        (r) => !r.isCompleted && r.discipline !== 'currently_overdue'
+      );
+    }
     return summary.tasksAnalyzed.filter(
       (r) => r.discipline === selectedDisciplineFilter
     );
@@ -399,14 +415,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           </p>
           <div className="flex items-baseline gap-2 mt-1.5">
             <span className="text-2xl font-title font-bold text-[#1d4ed8]">
-              {summary.lateConfirmationCount}
+              {summary.completedLateCount}
             </span>
             <span className="text-xs font-ui text-[#1d4ed8]">
-              việc ({summary.overallLateConfirmationRate}%)
+              việc ({summary.completedCount > 0 ? Math.round((summary.completedLateCount / summary.completedCount) * 100) : 0}%)
             </span>
           </div>
-          <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
-            Bấm xong sau ngày hạn
+          <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate" title={`${summary.lateConfirmationCount} việc sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} việc trễ ≥ 2 ngày`}>
+            {summary.lateConfirmationCount} sau 1 ngày • {summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày
           </p>
         </div>
 
@@ -475,31 +491,20 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                     width: `${(summary.completedOnTimeCount / summary.totalTasks) * 100}%`,
                   }}
                   className="bg-[#22c55e] h-full transition-all"
-                  title={`Đúng hạn: ${summary.completedOnTimeCount} việc`}
+                  title={`Đúng hạn: ${summary.completedOnTimeCount} việc (${Math.round(
+                    (summary.completedOnTimeCount / summary.totalTasks) * 100
+                  )}%)`}
                 />
               )}
-              {summary.lateConfirmationCount > 0 && (
+              {summary.completedLateCount > 0 && (
                 <div
                   style={{
-                    width: `${(summary.lateConfirmationCount / summary.totalTasks) * 100}%`,
+                    width: `${(summary.completedLateCount / summary.totalTasks) * 100}%`,
                   }}
                   className="bg-[#3b82f6] h-full transition-all"
-                  title={`Hoàn thành sau hạn: ${summary.lateConfirmationCount} việc`}
-                />
-              )}
-              {summary.completedLateCount - summary.lateConfirmationCount > 0 && (
-                <div
-                  style={{
-                    width: `${
-                      ((summary.completedLateCount - summary.lateConfirmationCount) /
-                        summary.totalTasks) *
-                      100
-                    }%`,
-                  }}
-                  className="bg-[#f43f5e] h-full transition-all"
-                  title={`Trễ hạn ≥2 ngày: ${
-                    summary.completedLateCount - summary.lateConfirmationCount
-                  } việc`}
+                  title={`Hoàn thành sau hạn: ${summary.completedLateCount} việc (${Math.round(
+                    (summary.completedLateCount / summary.totalTasks) * 100
+                  )}%)`}
                 />
               )}
               {summary.currentlyOverdueCount > 0 && (
@@ -508,7 +513,9 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                     width: `${(summary.currentlyOverdueCount / summary.totalTasks) * 100}%`,
                   }}
                   className="bg-[#b91c1c] h-full transition-all"
-                  title={`Đang quá hạn: ${summary.currentlyOverdueCount} việc`}
+                  title={`Đang quá hạn: ${summary.currentlyOverdueCount} việc (${Math.round(
+                    (summary.currentlyOverdueCount / summary.totalTasks) * 100
+                  )}%)`}
                 />
               )}
               {summary.inProgressCount + summary.blockedCount > 0 && (
@@ -523,7 +530,9 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                   className="bg-[#94a3b8] h-full transition-all"
                   title={`Đang thực hiện: ${
                     summary.inProgressCount + summary.blockedCount
-                  } việc`}
+                  } việc (${Math.round(
+                    ((summary.inProgressCount + summary.blockedCount) / summary.totalTasks) * 100
+                  )}%)`}
                 />
               )}
             </>
@@ -535,13 +544,14 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
         {/* Legend buttons to filter drill-down */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 pt-1 text-xs font-ui">
           <button
+            type="button"
             onClick={() => {
-              setSelectedDisciplineFilter('on_time_same_day');
+              setSelectedDisciplineFilter('on_time');
               setSubTab('task_details');
             }}
-            className={`p-2 rounded-[6px] border text-left transition-all cursor-pointer ${
-              selectedDisciplineFilter === 'on_time_same_day'
-                ? 'bg-[#f0fdf4] border-[#86efac]'
+            className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+              selectedDisciplineFilter === 'on_time'
+                ? 'bg-[#f0fdf4] border-[#86efac] shadow-2xs'
                 : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
             }`}
           >
@@ -552,16 +562,20 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             <p className="text-sm font-bold text-[#202020] mt-1">
               {summary.completedOnTimeCount} việc
             </p>
+            <p className="text-[10px] text-[#52796f] mt-0.5 truncate">
+              {summary.totalTasks > 0 ? Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100) : 0}% tổng việc
+            </p>
           </button>
 
           <button
+            type="button"
             onClick={() => {
-              setSelectedDisciplineFilter('late_next_day');
+              setSelectedDisciplineFilter('late');
               setSubTab('task_details');
             }}
-            className={`p-2 rounded-[6px] border text-left transition-all cursor-pointer ${
-              selectedDisciplineFilter === 'late_next_day'
-                ? 'bg-[#eff6ff] border-[#93c5fd]'
+            className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+              selectedDisciplineFilter === 'late'
+                ? 'bg-[#eff6ff] border-[#93c5fd] shadow-2xs'
                 : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
             }`}
           >
@@ -570,38 +584,22 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
               <span className="font-bold text-[#1d4ed8]">Hoàn thành sau hạn</span>
             </div>
             <p className="text-sm font-bold text-[#202020] mt-1">
-              {summary.lateConfirmationCount} việc
+              {summary.completedLateCount} việc
+            </p>
+            <p className="text-[10px] text-[#4b6b94] mt-0.5 truncate" title={`${summary.lateConfirmationCount} sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày`}>
+              {summary.lateConfirmationCount} sau 1 ngày • {summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày
             </p>
           </button>
 
           <button
-            onClick={() => {
-              setSelectedDisciplineFilter('late_after_days');
-              setSubTab('task_details');
-            }}
-            className={`p-2 rounded-[6px] border text-left transition-all cursor-pointer ${
-              selectedDisciplineFilter === 'late_after_days'
-                ? 'bg-[#fff1f2] border-[#fda4af]'
-                : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f43f5e]" />
-              <span className="font-bold text-[#be123c]">Trễ hạn ≥ 2 ngày</span>
-            </div>
-            <p className="text-sm font-bold text-[#202020] mt-1">
-              {summary.completedLateCount - summary.lateConfirmationCount} việc
-            </p>
-          </button>
-
-          <button
+            type="button"
             onClick={() => {
               setSelectedDisciplineFilter('currently_overdue');
               setSubTab('task_details');
             }}
-            className={`p-2 rounded-[6px] border text-left transition-all cursor-pointer ${
+            className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
               selectedDisciplineFilter === 'currently_overdue'
-                ? 'bg-[#fef2f2] border-[#fca5a5]'
+                ? 'bg-[#fef2f2] border-[#fca5a5] shadow-2xs'
                 : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
             }`}
           >
@@ -612,25 +610,56 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             <p className="text-sm font-bold text-[#202020] mt-1">
               {summary.currentlyOverdueCount} việc
             </p>
+            <p className="text-[10px] text-[#991b1b] mt-0.5 truncate">
+              Chưa xong và quá hạn
+            </p>
           </button>
 
           <button
+            type="button"
             onClick={() => {
-              setSelectedDisciplineFilter('all');
+              setSelectedDisciplineFilter('in_progress');
               setSubTab('task_details');
             }}
-            className={`p-2 rounded-[6px] border text-left transition-all cursor-pointer ${
-              selectedDisciplineFilter === 'all'
-                ? 'bg-[#f1f5f9] border-[#cbd5e1]'
+            className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+              selectedDisciplineFilter === 'in_progress'
+                ? 'bg-[#f1f5f9] border-[#94a3b8] shadow-2xs'
                 : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
             }`}
           >
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-[#64748b]" />
-              <span className="font-bold text-[#334155]">Tất cả việc</span>
+              <span className="font-bold text-[#475569]">Đang thực hiện</span>
+            </div>
+            <p className="text-sm font-bold text-[#202020] mt-1">
+              {summary.inProgressCount + summary.blockedCount} việc
+            </p>
+            <p className="text-[10px] text-[#64748b] mt-0.5 truncate" title={`${summary.inProgressCount} đang làm • ${summary.blockedCount} bị nghẽn`}>
+              {summary.inProgressCount} đang làm • {summary.blockedCount} nghẽn
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDisciplineFilter('all');
+              setSubTab('task_details');
+            }}
+            className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
+              selectedDisciplineFilter === 'all'
+                ? 'bg-[#f8fafc] border-[#cbd5e1] shadow-2xs'
+                : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#1e293b]" />
+              <span className="font-bold text-[#1e293b]">Tất cả việc</span>
             </div>
             <p className="text-sm font-bold text-[#202020] mt-1">
               {summary.totalTasks} việc
+            </p>
+            <p className="text-[10px] text-[#64748b] mt-0.5 truncate">
+              Tổng 4 nhóm = {summary.completedOnTimeCount + summary.completedLateCount + summary.currentlyOverdueCount + (summary.inProgressCount + summary.blockedCount)}
             </p>
           </button>
         </div>
@@ -766,7 +795,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                       {p.onTimeTasks}
                     </td>
                     <td className="py-3 px-3 text-center text-[#1d4ed8]">
-                      {p.lateConfirmationTasks}
+                      {p.lateTasks}
                     </td>
                     <td className="py-3 px-3 text-center">
                       {p.overdueTasks > 0 ? (
@@ -1017,9 +1046,9 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                       {ex.completedOnTime}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      {ex.lateConfirmationCount > 0 ? (
+                      {ex.completedLate > 0 ? (
                         <span className="text-[#1d4ed8] font-bold bg-[#eff6ff] px-2 py-0.5 rounded-full">
-                          {ex.lateConfirmationCount}
+                          {ex.completedLate}
                         </span>
                       ) : (
                         <span className="text-[#9f9f9f]">0</span>
@@ -1102,6 +1131,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-ui text-[#7f7f7f]">Lọc:</span>
               <button
+                type="button"
                 onClick={() => setSelectedDisciplineFilter('all')}
                 className={`px-2 py-0.5 rounded text-[11px] font-ui cursor-pointer ${
                   selectedDisciplineFilter === 'all'
@@ -1112,9 +1142,10 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 Tất cả ({summary.totalTasks})
               </button>
               <button
-                onClick={() => setSelectedDisciplineFilter('on_time_same_day')}
+                type="button"
+                onClick={() => setSelectedDisciplineFilter('on_time')}
                 className={`px-2 py-0.5 rounded text-[11px] font-ui cursor-pointer ${
-                  selectedDisciplineFilter === 'on_time_same_day'
+                  selectedDisciplineFilter === 'on_time'
                     ? 'bg-[#166534] text-white font-bold'
                     : 'bg-[#f0fdf4] text-[#166534]'
                 }`}
@@ -1122,16 +1153,18 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 Đúng hạn ({summary.completedOnTimeCount})
               </button>
               <button
-                onClick={() => setSelectedDisciplineFilter('late_next_day')}
+                type="button"
+                onClick={() => setSelectedDisciplineFilter('late')}
                 className={`px-2 py-0.5 rounded text-[11px] font-ui cursor-pointer ${
-                  selectedDisciplineFilter === 'late_next_day'
+                  selectedDisciplineFilter === 'late'
                     ? 'bg-[#1d4ed8] text-white font-bold'
                     : 'bg-[#eff6ff] text-[#1d4ed8]'
                 }`}
               >
-                Hoàn thành sau hạn ({summary.lateConfirmationCount})
+                Hoàn thành sau hạn ({summary.completedLateCount})
               </button>
               <button
+                type="button"
                 onClick={() => setSelectedDisciplineFilter('currently_overdue')}
                 className={`px-2 py-0.5 rounded text-[11px] font-ui cursor-pointer ${
                   selectedDisciplineFilter === 'currently_overdue'
@@ -1140,6 +1173,17 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 }`}
               >
                 Quá hạn ({summary.currentlyOverdueCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDisciplineFilter('in_progress')}
+                className={`px-2 py-0.5 rounded text-[11px] font-ui cursor-pointer ${
+                  selectedDisciplineFilter === 'in_progress'
+                    ? 'bg-[#475569] text-white font-bold'
+                    : 'bg-[#f1f5f9] text-[#475569]'
+                }`}
+              >
+                Đang thực hiện ({summary.inProgressCount + summary.blockedCount})
               </button>
             </div>
           </div>
