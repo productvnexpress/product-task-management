@@ -417,9 +417,8 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
 
         {/* KPI 3: Đúng hạn = Đúng hạn / Tổng công việc */}
         <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
-          <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f] flex items-center justify-between">
-            <span>Đúng hạn</span>
-            <span className="text-[10px] text-[#7f7f7f]">Mục tiêu ≥85%</span>
+          <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+            Đúng hạn
           </p>
           <div className="flex items-baseline gap-2 mt-1.5">
             <span
