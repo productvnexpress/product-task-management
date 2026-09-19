@@ -133,8 +133,9 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Sử dụng các khung chứa trung tính, phớt xám nhẹ (`bg-[#ffffff]`, `bg-[#f9f9f9]`, `border-[#e0e0e0]`).
 
 ### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Task Đến hạn Trong Ngày (Daily Due Tasks Accountability Specification)
-1. **Quy tắc Nghiệp vụ**: Kiểm tra và cảnh báo đối với các nhân sự **chưa có công việc nào đến hạn ngày hôm nay (`dueDate === today`)**, nhằm bảo đảm mọi thành viên đều có kế hoạch hành động cụ thể trong ngày làm việc.
-   - **Quy tắc miễn trừ khi Nghỉ phép**: Nhân sự có lịch nghỉ phép đã được duyệt bao trùm ngày hôm nay (`startDate <= today && today <= endDate`) sẽ **tự động được miễn trừ** khỏi danh sách cảnh báo cần nhập task hôm nay (`missingMembers`).
+   - **Quy tắc miễn trừ khi Nghỉ phép & Ngày nghỉ/Ngày lễ**:
+     - Nhân sự có lịch nghỉ phép đã được duyệt bao trùm ngày hôm nay (`startDate <= today && today <= endDate`) sẽ **tự động được miễn trừ** khỏi danh sách cảnh báo cần nhập task hôm nay (`missingMembers`).
+     - **Miễn trừ vào ngày nghỉ & ngày lễ**: Vào các ngày nghỉ (Thứ Bảy, Chủ Nhật không làm bù) hoặc các ngày nghỉ lễ theo `workingTimeService`, hệ thống **tự động ẩn hoàn toàn khối cảnh báo `DailyCompletionAlert`**.
 2. **Phân quyền Hiển thị Cảnh báo theo Cấp bậc (RBAC Scoped Alert)**:
    - **Admin (Quản trị viên)**: Hiển thị cảnh báo **tổng thể toàn bộ phận Sản phẩm** (PM, Designer, SEO, Data). Giúp Trưởng ban bao quát toàn diện tình trạng lên kế hoạch ngày của cả bộ phận.
    - **Manager (Quản lý sản phẩm PM)**: Hiển thị cảnh báo **toàn bộ nhân sự được khai báo chính thức trong các dự án phụ trách** (`roles.pm`, `roles.designer`, `roles.seo`, `roles.data`, `leadName`).
@@ -187,6 +188,23 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      `Nghỉ lễ sắp tới: {Thời gian} ({Tên ngày lễ}) - {Số ngày nghỉ} ngày`
      - Ví dụ: `Nghỉ lễ sắp tới: Thu, 24 Sep 2026 (Văn hoá Việt Nam) - 1 ngày`
      - Ví dụ nhiều ngày: `Nghỉ lễ sắp tới: Thu, 30 Apr 2026 - Sun, 03 May 2026 (Ngày Chiến Thắng 30/4 & 1/5) - 4 ngày`
+
+### 1.10. Box Thống kê Kết quả Công việc Tuần trước vào Sáng thứ Hai (MondayWeeklySummary Specification)
+1. **Quy tắc Nghiệp vụ**:
+   - **Thời điểm hiển thị**: Tự động hiển thị và mở rộng vào **sáng thứ Hai** hàng tuần (`new Date().getDay() === 1`) ở đầu trang Công việc (`activeTab === 'tasks'`).
+   - **Khả năng mở xem lại**: Trên các ngày khác trong tuần hoặc sau khi đã đóng, cung cấp nút bấm tinh gọn `[📊 Kết quả tuần trước]` để mở lại nhanh bất kỳ lúc nào.
+   - **Lưu trạng thái đóng**: Nếu người dùng bấm đóng (`X`), hệ thống lưu vết theo tuần (`vne_monday_summary_dismissed_YYYY-Www`) để tránh làm phiền trong suốt tuần làm việc đó.
+2. **Cấu trúc 5 Thẻ KPI Chuẩn hóa (Image 2 Specification)**:
+   - **KPI 1: TỔNG CÔNG VIỆC**: Số lượng tổng công việc trong kỳ kèm phân tích chân trang `Xong: X | Đang làm: Y | Nghẽn: Z`.
+   - **KPI 2: ĐÚNG HẠN (Mục tiêu ≥85%)**: Tỷ lệ % hoàn thành đúng hạn kèm số lượng `(Đúng hạn/Tổng xong)` và thanh tiến trình màu sắc tương ứng (Xanh ≥85%, Cam ≥70%, Đỏ <70%).
+   - **KPI 3: HOÀN THÀNH SAU HẠN**: Số lượng và tỷ lệ % việc hoàn thành sau ngày hạn, chú thích rõ "Bấm xong sau ngày hạn".
+   - **KPI 4: ĐANG QUÁ HẠN**: Số việc quá hạn chưa hoàn thành kèm chấm đỏ nhấp nháy khi > 0.
+   - **KPI 5: ĐIỂM NGHẼN**: Số việc bị nghẽn trong tuần.
+3. **Phân quyền & Chuyển đổi Phạm vi**:
+   - **Chuyên viên (Executive)**: Hiển thị kết quả cá nhân của chính mình.
+   - **Quản lý (Manager) & Admin**: Mặc định hiển thị kết quả cá nhân ("Việc của tôi"), kèm nút chuyển đổi nhanh sang "Toàn bộ phận".
+   - **Tương tác Drill-down**: Bấm vào bất kỳ thẻ KPI nào để xem ngay danh sách công việc chi tiết tương ứng bên dưới.
+
 
 ---
 
