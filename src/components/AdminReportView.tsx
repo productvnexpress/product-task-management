@@ -372,7 +372,50 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 2: Tỷ lệ hoàn thành đúng hạn */}
+        {/* KPI 2: Hoàn thành = (Đúng hạn + Hoàn thành sau hạn) / Tổng công việc */}
+        <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
+          <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+            Hoàn thành
+          </p>
+          <div className="flex items-baseline gap-2 mt-1.5">
+            <span
+              className={`text-2xl font-title font-bold ${
+                (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
+                  ? 'text-[#166534]'
+                  : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
+                  ? 'text-[#ea580c]'
+                  : 'text-[#dc2626]'
+              }`}
+            >
+              {summary.totalTasks > 0
+                ? Math.round((summary.completedCount / summary.totalTasks) * 100)
+                : 0}%
+            </span>
+            <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+              ({summary.completedCount})
+            </span>
+          </div>
+          <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${
+                (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
+                  ? 'bg-[#166534]'
+                  : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
+                  ? 'bg-[#ea580c]'
+                  : 'bg-[#dc2626]'
+              }`}
+              style={{
+                width: `${
+                  summary.totalTasks > 0
+                    ? Math.min(100, Math.round((summary.completedCount / summary.totalTasks) * 100))
+                    : 0
+                }%`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* KPI 3: Đúng hạn = Đúng hạn / Tổng công việc */}
         <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
           <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f] flex items-center justify-between">
             <span>Đúng hạn</span>
@@ -381,52 +424,62 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           <div className="flex items-baseline gap-2 mt-1.5">
             <span
               className={`text-2xl font-title font-bold ${
-                summary.overallOnTimeRate >= 85
+                (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
                   ? 'text-[#166534]'
-                  : summary.overallOnTimeRate >= 70
+                  : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
                   ? 'text-[#ea580c]'
                   : 'text-[#dc2626]'
               }`}
             >
-              {summary.overallOnTimeRate}%
+              {summary.totalTasks > 0
+                ? Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100)
+                : 0}%
             </span>
-            <span className="text-xs font-ui text-[#5f5f5f]">
-              ({summary.completedOnTimeCount}/{summary.completedCount})
+            <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+              ({summary.completedOnTimeCount})
             </span>
           </div>
           <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
             <div
               className={`h-full ${
-                summary.overallOnTimeRate >= 85
+                (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
                   ? 'bg-[#166534]'
-                  : summary.overallOnTimeRate >= 70
+                  : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
                   ? 'bg-[#ea580c]'
                   : 'bg-[#dc2626]'
               }`}
-              style={{ width: `${Math.min(100, summary.overallOnTimeRate)}%` }}
+              style={{
+                width: `${
+                  summary.totalTasks > 0
+                    ? Math.min(100, Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100))
+                    : 0
+                }%`,
+              }}
             />
           </div>
         </div>
 
-        {/* KPI 3: Hoàn thành sau hạn */}
+        {/* KPI 4: Hoàn thành sau hạn = Hoàn thành sau hạn / Tổng công việc */}
         <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
           <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
             Hoàn thành sau hạn
           </p>
           <div className="flex items-baseline gap-2 mt-1.5">
             <span className="text-2xl font-title font-bold text-[#1d4ed8]">
-              {summary.completedLateCount}
+              {summary.totalTasks > 0
+                ? Math.round((summary.completedLateCount / summary.totalTasks) * 100)
+                : 0}%
             </span>
-            <span className="text-xs font-ui text-[#1d4ed8]">
-              việc ({summary.completedCount > 0 ? Math.round((summary.completedLateCount / summary.completedCount) * 100) : 0}%)
+            <span className="text-xs font-ui font-bold text-[#1d4ed8]">
+              ({summary.completedLateCount})
             </span>
           </div>
-          <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate" title={`${summary.lateConfirmationCount} việc sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} việc trễ ≥ 2 ngày`}>
+          <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate" title={`${summary.lateConfirmationCount} sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày`}>
             {summary.lateConfirmationCount} sau 1 ngày • {summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày
           </p>
         </div>
 
-        {/* KPI 4: Đang quá hạn */}
+        {/* KPI 5: Đang quá hạn (Giữ nguyên) */}
         <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
           <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f] flex items-center justify-between">
             <span>Đang quá hạn</span>
@@ -446,26 +499,6 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
           </div>
           <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
             {summary.currentlyOverdueCount > 0 ? 'Chưa hoàn thành' : '0 việc quá hạn'}
-          </p>
-        </div>
-
-        {/* KPI 5: Điểm nghẽn */}
-        <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs">
-          <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
-            Điểm nghẽn
-          </p>
-          <div className="flex items-baseline gap-2 mt-1.5">
-            <span
-              className={`text-2xl font-title font-bold ${
-                summary.blockedCount > 0 ? 'text-[#ea580c]' : 'text-[#166534]'
-              }`}
-            >
-              {summary.blockedCount}
-            </span>
-            <span className="text-xs font-ui text-[#5f5f5f]">việc</span>
-          </div>
-          <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
-            {summary.blockedCount > 0 ? 'Đang bị nghẽn' : '0 việc nghẽn'}
           </p>
         </div>
       </div>

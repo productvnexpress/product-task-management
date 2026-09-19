@@ -115,17 +115,17 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
   const detailTasks = useMemo(() => {
     if (!selectedKpi) return [];
     if (selectedKpi === 'total') return summary.analyzedTasks.map((a) => a.task);
+    if (selectedKpi === 'completed') {
+      return summary.analyzedTasks.filter((a) => a.isCompleted).map((a) => a.task);
+    }
     if (selectedKpi === 'ontime') {
       return summary.analyzedTasks.filter((a) => a.isCompleted && a.isOnTime).map((a) => a.task);
     }
-    if (selectedKpi === 'late_confirm') {
-      return summary.analyzedTasks.filter((a) => a.isCompleted && a.isLateConfirmation).map((a) => a.task);
+    if (selectedKpi === 'late_confirm' || selectedKpi === 'late') {
+      return summary.analyzedTasks.filter((a) => a.isCompleted && !a.isOnTime).map((a) => a.task);
     }
     if (selectedKpi === 'overdue') {
       return summary.analyzedTasks.filter((a) => !a.isCompleted && a.discipline === 'currently_overdue').map((a) => a.task);
-    }
-    if (selectedKpi === 'blocked') {
-      return summary.analyzedTasks.filter((a) => !a.isCompleted && a.discipline === 'blocked').map((a) => a.task);
     }
     return [];
   }, [selectedKpi, summary.analyzedTasks]);
@@ -249,7 +249,55 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
               </div>
             </div>
 
-            {/* KPI 2: Đúng hạn */}
+            {/* KPI 2: Hoàn thành = (Đúng hạn + Hoàn thành sau hạn) / Tổng công việc */}
+            <div
+              onClick={() => setSelectedKpi(selectedKpi === 'completed' ? null : 'completed')}
+              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
+                selectedKpi === 'completed' ? 'border-[#166534] ring-1 ring-[#166534]' : 'border-[#e0e0e0]'
+              }`}
+            >
+              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+                Hoàn thành
+              </p>
+              <div className="flex items-baseline gap-2 mt-1.5">
+                <span
+                  className={`text-2xl font-title font-bold ${
+                    (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
+                      ? 'text-[#166534]'
+                      : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
+                      ? 'text-[#ea580c]'
+                      : 'text-[#dc2626]'
+                  }`}
+                >
+                  {summary.totalTasks > 0
+                    ? Math.round((summary.completedCount / summary.totalTasks) * 100)
+                    : 0}%
+                </span>
+                <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+                  ({summary.completedCount})
+                </span>
+              </div>
+              <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
+                      ? 'bg-[#166534]'
+                      : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
+                      ? 'bg-[#ea580c]'
+                      : 'bg-[#dc2626]'
+                  }`}
+                  style={{
+                    width: `${
+                      summary.totalTasks > 0
+                        ? Math.min(100, Math.round((summary.completedCount / summary.totalTasks) * 100))
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* KPI 3: Đúng hạn = Đúng hạn / Tổng công việc */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'ontime' ? null : 'ontime')}
               className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
@@ -263,38 +311,46 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span
                   className={`text-2xl font-title font-bold ${
-                    summary.overallOnTimeRate >= 85
+                    (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
                       ? 'text-[#166534]'
-                      : summary.overallOnTimeRate >= 70
+                      : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
                       ? 'text-[#ea580c]'
                       : 'text-[#dc2626]'
                   }`}
                 >
-                  {summary.overallOnTimeRate}%
+                  {summary.totalTasks > 0
+                    ? Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100)
+                    : 0}%
                 </span>
-                <span className="text-xs font-ui text-[#5f5f5f]">
-                  ({summary.completedOnTimeCount}/{summary.completedCount})
+                <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+                  ({summary.completedOnTimeCount})
                 </span>
               </div>
               <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${
-                    summary.overallOnTimeRate >= 85
+                    (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
                       ? 'bg-[#166534]'
-                      : summary.overallOnTimeRate >= 70
+                      : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
                       ? 'bg-[#ea580c]'
                       : 'bg-[#dc2626]'
                   }`}
-                  style={{ width: `${Math.min(100, summary.overallOnTimeRate)}%` }}
+                  style={{
+                    width: `${
+                      summary.totalTasks > 0
+                        ? Math.min(100, Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100))
+                        : 0
+                    }%`,
+                  }}
                 />
               </div>
             </div>
 
-            {/* KPI 3: Hoàn thành sau hạn */}
+            {/* KPI 4: Hoàn thành sau hạn = Hoàn thành sau hạn / Tổng công việc */}
             <div
-              onClick={() => setSelectedKpi(selectedKpi === 'late_confirm' ? null : 'late_confirm')}
+              onClick={() => setSelectedKpi(selectedKpi === 'late' ? null : 'late')}
               className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'late_confirm' ? 'border-[#1d4ed8] ring-1 ring-[#1d4ed8]' : 'border-[#e0e0e0]'
+                selectedKpi === 'late' ? 'border-[#1d4ed8] ring-1 ring-[#1d4ed8]' : 'border-[#e0e0e0]'
               }`}
             >
               <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
@@ -302,18 +358,20 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span className="text-2xl font-title font-bold text-[#1d4ed8]">
-                  {summary.lateConfirmationCount}
+                  {summary.totalTasks > 0
+                    ? Math.round((summary.completedLateCount / summary.totalTasks) * 100)
+                    : 0}%
                 </span>
-                <span className="text-xs font-ui text-[#1d4ed8]">
-                  việc ({summary.overallLateConfirmationRate}%)
+                <span className="text-xs font-ui font-bold text-[#1d4ed8]">
+                  ({summary.completedLateCount})
                 </span>
               </div>
-              <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
-                Bấm xong sau ngày hạn
+              <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate" title={`${summary.lateConfirmationCount} sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày`}>
+                {summary.lateConfirmationCount} sau 1 ngày • {summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày
               </p>
             </div>
 
-            {/* KPI 4: Đang quá hạn */}
+            {/* KPI 5: Đang quá hạn (Giữ nguyên) */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'overdue' ? null : 'overdue')}
               className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
@@ -340,31 +398,6 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
                 {summary.currentlyOverdueCount > 0 ? 'Chưa hoàn thành' : '0 việc quá hạn'}
               </p>
             </div>
-
-            {/* KPI 5: Điểm nghẽn */}
-            <div
-              onClick={() => setSelectedKpi(selectedKpi === 'blocked' ? null : 'blocked')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'blocked' ? 'border-[#ea580c] ring-1 ring-[#ea580c]' : 'border-[#e0e0e0]'
-              }`}
-            >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
-                Điểm nghẽn
-              </p>
-              <div className="flex items-baseline gap-2 mt-1.5">
-                <span
-                  className={`text-2xl font-title font-bold ${
-                    summary.blockedCount > 0 ? 'text-[#ea580c]' : 'text-[#166534]'
-                  }`}
-                >
-                  {summary.blockedCount}
-                </span>
-                <span className="text-xs font-ui text-[#5f5f5f]">việc</span>
-              </div>
-              <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
-                {summary.blockedCount > 0 ? `${summary.blockedCount} việc nghẽn` : '0 việc nghẽn'}
-              </p>
-            </div>
           </div>
 
           {/* Drill-down list nếu click vào 1 KPI */}
@@ -375,13 +408,13 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
                   Danh sách công việc (
                   {selectedKpi === 'total'
                     ? 'Tổng công việc'
+                    : selectedKpi === 'completed'
+                    ? 'Hoàn thành'
                     : selectedKpi === 'ontime'
                     ? 'Đúng hạn'
-                    : selectedKpi === 'late_confirm'
+                    : selectedKpi === 'late' || selectedKpi === 'late_confirm'
                     ? 'Hoàn thành sau hạn'
-                    : selectedKpi === 'overdue'
-                    ? 'Đang quá hạn'
-                    : 'Điểm nghẽn'}
+                    : 'Đang quá hạn'}
                   : {detailTasks.length} việc)
                 </span>
                 <button
