@@ -53,6 +53,21 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
 }) => {
   const today = new Date();
   const isMonday = today.getDay() === 1;
+  const currentHour = today.getHours();
+
+  // Khung giờ hiển thị: Mặc định hiển thị từ 00:00 - 09:00 sáng Thứ Hai
+  const isMondayMorningWindow = isMonday && currentHour >= 0 && currentHour < 9;
+
+  // Hỗ trợ URL param khi cần kiểm thử / dev preview (?monday=1 hoặc ?previewMonday=1)
+  const isPreviewParam = (() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('monday') === '1' || urlParams.get('previewMonday') === '1';
+    } catch {
+      return false;
+    }
+  })();
+
   const weekKey = getWeekIdentifier(today);
   const storageKey = `vne_monday_summary_dismissed_${weekKey}`;
 
@@ -65,17 +80,10 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
     }
   });
 
-  // Mở mặc định nếu là Thứ Hai và chưa bị đóng, hoặc được chỉ định qua URL / props
-  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
-    if (typeof isOpenDefault === 'boolean') return isOpenDefault;
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('monday') === '1' || urlParams.get('previewMonday') === '1') {
-        return true;
-      }
-    } catch {}
-    return isMonday && !isDismissed;
-  });
+  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+
+  // Điều kiện hiển thị: Trong khung giờ 00:00 - 09:00 Thứ Hai (hoặc preview param) VÀ chưa bị đóng
+  const shouldShow = (isMondayMorningWindow || isPreviewParam || isOpenDefault) && !isDismissed;
 
   // Lọc theo cá nhân hay toàn bộ phận (dành cho Admin / Manager)
   const currentActor = currentAuthUser || activeProductMember || members[0];
@@ -124,35 +132,14 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    setIsExpanded(false);
     try {
       localStorage.setItem(storageKey, 'true');
     } catch {}
   };
 
-  const handleReopen = () => {
-    setIsDismissed(false);
-    setIsExpanded(true);
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {}
-  };
-
-  // Nếu đã bị đóng hoặc không phải thứ Hai và không được mở
-  if (isDismissed || (!isMonday && !isExpanded && !isOpenDefault)) {
-    return (
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleReopen}
-          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-ui font-semibold text-[#1d508d] bg-[#f0f4f9] hover:bg-[#e2ebf5] border border-[#c2d7f0] rounded-[6px] shadow-2xs transition-all cursor-pointer"
-          title="Xem thống kê kết quả công việc tuần trước"
-        >
-          <BarChart3 className="w-3.5 h-3.5" />
-          <span>Kết quả tuần trước</span>
-        </button>
-      </div>
-    );
+  // Ngoài khung giờ hoặc sau khi đóng: Ẩn hoàn toàn, không hiển thị nút bấm
+  if (!shouldShow) {
+    return null;
   }
 
   return (

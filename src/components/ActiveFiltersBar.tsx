@@ -79,7 +79,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   }
 
   return (
-    <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all">
+    <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all sticky top-[83px] z-10 shadow-2xs">
       <div className="max-w-[1040px] w-full mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-ui font-semibold text-[#64748b] flex items-center gap-1 shrink-0 mr-1">
