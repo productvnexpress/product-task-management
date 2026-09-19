@@ -44,6 +44,7 @@ import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/a
 import { ReminderPanel } from './components/ReminderPanel';
 import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotice';
+import { MondayWeeklySummary } from './components/MondayWeeklySummary';
 import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
@@ -1836,38 +1837,59 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         }}
                       />
 
-                      {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Căn chỉnh cân đối tỷ lệ ngang và đồng bộ chiều cao items-stretch */}
-                      {productLeavesData.hasAnyLeave ? (
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
-                          <div className="md:col-span-7 flex flex-col">
-                            <DailyCompletionAlert
-                              members={members}
-                              tasks={tasks}
-                              projects={projects}
-                              currentAuthUser={currentAuthUser}
-                              activeProductMember={activeProductMember}
-                              selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
-                              onSelectAssignee={(assigneeName) => {
-                                setFilterState((f) => ({ ...f, assignee: assigneeName }));
-                              }}
-                            />
+                      {/* Box Thống kê Kết quả công việc Tuần trước (Sáng thứ Hai cho từng tài khoản Product) */}
+                      <MondayWeeklySummary
+                        members={members}
+                        tasks={tasks}
+                        projects={projects}
+                        currentAuthUser={currentAuthUser}
+                        activeProductMember={activeProductMember}
+                        onSelectTask={(task) => {
+                          setSelectedTask(task);
+                          setIsDrawerOpen(true);
+                        }}
+                      />
+
+                      {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Ẩn cảnh báo vào ngày nghỉ (cuối tuần không làm bù) hoặc ngày lễ */}
+                      {workingTimeService.isWorkingDay(new Date()) ? (
+                        productLeavesData.hasAnyLeave ? (
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+                            <div className="md:col-span-7 flex flex-col">
+                              <DailyCompletionAlert
+                                members={members}
+                                tasks={tasks}
+                                projects={projects}
+                                currentAuthUser={currentAuthUser}
+                                activeProductMember={activeProductMember}
+                                selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
+                                onSelectAssignee={(assigneeName) => {
+                                  setFilterState((f) => ({ ...f, assignee: assigneeName }));
+                                }}
+                              />
+                            </div>
+                            <div className="md:col-span-5 flex flex-col">
+                              <DailyLeaveNotice members={members} leaveData={productLeavesData} />
+                            </div>
                           </div>
-                          <div className="md:col-span-5 flex flex-col">
+                        ) : (
+                          <DailyCompletionAlert
+                            members={members}
+                            tasks={tasks}
+                            projects={projects}
+                            currentAuthUser={currentAuthUser}
+                            activeProductMember={activeProductMember}
+                            selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
+                            onSelectAssignee={(assigneeName) => {
+                              setFilterState((f) => ({ ...f, assignee: assigneeName }));
+                            }}
+                          />
+                        )
+                      ) : (
+                        productLeavesData.hasAnyLeave ? (
+                          <div className="w-full">
                             <DailyLeaveNotice members={members} leaveData={productLeavesData} />
                           </div>
-                        </div>
-                      ) : (
-                        <DailyCompletionAlert
-                          members={members}
-                          tasks={tasks}
-                          projects={projects}
-                          currentAuthUser={currentAuthUser}
-                          activeProductMember={activeProductMember}
-                          selectedAssignee={filterState.assignee !== 'Tất cả' ? filterState.assignee : undefined}
-                          onSelectAssignee={(assigneeName) => {
-                            setFilterState((f) => ({ ...f, assignee: assigneeName }));
-                          }}
-                        />
+                        ) : null
                       )}
 
                       {/* Reminder & Urge Control Panel */}

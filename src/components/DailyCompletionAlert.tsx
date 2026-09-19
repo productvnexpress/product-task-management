@@ -10,6 +10,7 @@ import {
   DueTaskMemberStatus,
 } from '../utils/dailyAccountability';
 import { isSamePersonName } from '../utils/memberPersonalization';
+import { workingTimeService } from '../services/workingTimeService';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -50,6 +51,12 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
   selectedAssignee,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // Không hiển thị cảnh báo vào ngày nghỉ (cuối tuần không làm bù) hoặc ngày lễ
+  const isWorkingDay = workingTimeService.isWorkingDay(new Date());
+  if (!isWorkingDay) {
+    return null;
+  }
 
   const stats = getDailyDueTaskStats(
     members,
