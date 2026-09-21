@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { ProjectChecklistSection } from './ProjectChecklistSection';
 import { normalizeProjectChecklist } from '../data/defaultProjectChecklist';
+import { wmsDataService } from '../services/wmsDataService';
 import {
   X,
   Calendar,
@@ -633,6 +634,11 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const deletedPhase = phases.find((p) => p.id === phaseId);
     const updatedPhases = normalizeAndNumberPhases(phases.filter((p) => p.id !== phaseId));
     setPhases(updatedPhases);
+
+    // Xóa trực tiếp khỏi Supabase ngay lập tức
+    wmsDataService.deletePhase(phaseId).catch((err) => {
+      console.error('[handleDeletePhase] Lỗi khi xóa phase trực tiếp:', err);
+    });
 
     if (deletedPhase) {
       const logItem: ProjectHistoryLog = {

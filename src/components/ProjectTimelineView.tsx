@@ -274,23 +274,40 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded cursor-pointer"
-                        >
-                          Hủy
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSavePhase(ph.id)}
-                          disabled={!editName.trim()}
-                          className="px-3 py-1 bg-[#1d508d] hover:bg-[#153e6f] text-white text-xs font-semibold rounded flex items-center gap-1 disabled:opacity-50 cursor-pointer shadow-2xs"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          <span>Lưu giai đoạn</span>
-                        </button>
+                      <div className="flex items-center justify-between pt-1">
+                        {onDeletePhase && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Bạn có chắc muốn xóa giai đoạn "${ph.name}"?`)) {
+                                onDeletePhase(ph.id);
+                                handleCancelEdit();
+                              }
+                            }}
+                            className="px-2 py-1 text-xs font-semibold text-[#da1e28] hover:bg-[#fff0f1] rounded flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Xóa giai đoạn</span>
+                          </button>
+                        )}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded cursor-pointer"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSavePhase(ph.id)}
+                            disabled={!editName.trim()}
+                            className="px-3 py-1 bg-[#1d508d] hover:bg-[#153e6f] text-white text-xs font-semibold rounded flex items-center gap-1 disabled:opacity-50 cursor-pointer shadow-2xs"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Lưu giai đoạn</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -332,7 +349,11 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
                           {onDeletePhase && (
                             <button
                               type="button"
-                              onClick={() => onDeletePhase(ph.id)}
+                              onClick={() => {
+                                if (confirm(`Bạn có chắc muốn xóa giai đoạn "${ph.name}"?`)) {
+                                  onDeletePhase(ph.id);
+                                }
+                              }}
                               className="p-1 text-[#7f7f7f] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded transition-colors cursor-pointer"
                               title="Xóa giai đoạn này"
                             >

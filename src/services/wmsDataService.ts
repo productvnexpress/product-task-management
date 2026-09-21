@@ -267,7 +267,37 @@ export const wmsDataService = {
     console.log(`[saveProject] ✅ Đã lưu dự án "${project.name}" (${project.id}) [Mã: ${projectPayload.code}] vào Supabase thành công!`);
 
 
-    // 2. Lưu các phases nếu có
+    // 2. Đồng bộ các phases: Dọn dẹp phases đã bị xóa và upsert phases hiện tại
+    const currentPhaseIds = (project.phases || []).map((p) => p.id).filter(Boolean);
+
+    try {
+      const { data: existingDbPhases } = await supabase
+        .from('project_phases')
+        .select('id')
+        .eq('project_id', project.id);
+
+      if (existingDbPhases && existingDbPhases.length > 0) {
+        const currentSet = new Set(currentPhaseIds);
+        const toDeleteIds = existingDbPhases
+          .map((p) => p.id)
+          .filter((id) => !currentSet.has(id));
+
+        if (toDeleteIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from('project_phases')
+            .delete()
+            .in('id', toDeleteIds);
+          if (delErr) {
+            console.error('[saveProject] Lỗi khi xóa phase cũ khỏi Supabase:', delErr);
+          } else {
+            console.log(`[saveProject] ✅ Đã xóa ${toDeleteIds.length} phase không còn thuộc dự án ${project.id}`);
+          }
+        }
+      }
+    } catch (cleanPhaseErr) {
+      console.error('[saveProject] Ngoại lệ khi kiểm tra và xóa phase cũ:', cleanPhaseErr);
+    }
+
     if (project.phases && project.phases.length > 0) {
       const phaseRows = project.phases.map((ph, idx) => ({
         id: ph.id || `phase-${Date.now()}-${idx}`,
@@ -330,6 +360,21 @@ export const wmsDataService = {
     await this.moveToTrash(trashItem);
     const { error } = await supabase.from('projects').delete().eq('id', projectId);
     if (error) throw error;
+  },
+
+  async deletePhase(phaseId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.from('project_phases').delete().eq('id', phaseId);
+      if (error) {
+        console.error('[deletePhase] Lỗi khi xóa phase khỏi Supabase:', error);
+        return false;
+      }
+      console.log(`[deletePhase] ✅ Đã xóa phase ${phaseId} khỏi Supabase thành công.`);
+      return true;
+    } catch (err) {
+      console.error('[deletePhase] Ngoại lệ khi xóa phase:', err);
+      return false;
+    }
   },
 
   // ==========================================

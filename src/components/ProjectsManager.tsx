@@ -11,6 +11,7 @@ import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../u
 import { diffInDays, parseDateSafe } from '../utils/projectForecastUtils';
 import { canCreateProject, canEditProject, canDeleteProject } from '../utils/rbac';
 import { sortProjectsAlphabetically, normalizeProjectStatus } from '../utils/projectSortingUtils';
+import { wmsDataService } from '../services/wmsDataService';
 import {
   FolderKanban,
   History,
@@ -197,6 +198,9 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
       (selectedPhaseProject.phases || []).filter((p) => p.id !== phaseId)
     );
     const updatedProj = { ...selectedPhaseProject, phases: updatedPhases };
+    wmsDataService.deletePhase(phaseId).catch((err) => {
+      console.error('[handleDeletePhaseFromProject] Lỗi khi xóa phase:', err);
+    });
     onUpdateProject(updatedProj);
     setSelectedPhaseProject(updatedProj);
   };

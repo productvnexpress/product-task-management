@@ -20,6 +20,7 @@ import {
   RecurrenceEndType,
 } from '../types';
 import { workingTimeService, formatWorkingDaysCount } from '../services/workingTimeService';
+import { autoCacheService } from '../services/autoCacheService';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getUserRole, getRoleDisplayInfo, UserRole } from '../utils/rbac';
@@ -818,6 +819,21 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
               </button>
             </>
           )}
+
+          <div className="mt-4 pt-3 border-t border-[#f0f0f0] space-y-2">
+            <div className="text-[11px] text-[#7f7f7f] leading-snug">
+              Hệ thống tự động xóa bộ nhớ đệm mỗi 6 giờ và cập nhật phiên bản mới.
+            </div>
+            <button
+              type="button"
+              onClick={() => autoCacheService.clearCacheAndReload()}
+              className="w-full px-2.5 py-1.5 rounded-[6px] text-xs font-ui font-medium text-[#7f7f7f] hover:text-[#963861] bg-[#f9f9f9] hover:bg-[#fdf2f7] border border-[#e0e0e0] hover:border-[#f4c2d7] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              title="Xóa bộ nhớ đệm trình duyệt và tải lại phiên bản mới nhất"
+            >
+              <RotateCw className="w-3.5 h-3.5 shrink-0" />
+              <span>Dọn cache và làm mới</span>
+            </button>
+          </div>
         </aside>
 
         <div className="flex-1 min-w-0 space-y-6">
