@@ -67,6 +67,7 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Khi bấm checkbox hoàn thành hoặc chuyển dropdown sang `'Hoàn thành'`: Nếu công việc chưa có link kết quả (`resultLink`), hệ thống bắt buộc mở modal `CompleteTaskModal` yêu cầu nhập Link hoàn thành (Figma, PRD, Báo cáo, Code, Staging...). Cho phép bấm nhanh "Dùng link làm việc" nếu công việc đã có sẵn `workLink`.
    - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` khi trạng thái là `'Hoàn thành'`. Không cho phép lưu nếu trường này bị bỏ trống.
    - Khi chọn trạng thái `'Đang làm'`: **Không bắt buộc** nhập Link làm việc (`workLink`).
+7. **Sắp xếp Khối Việc Đã hoàn thành (Completed Tasks Ordering)**: Danh sách công việc thuộc khối "Đã hoàn thành" trên trang Công việc bắt buộc được sắp xếp theo thời gian từ mới nhất đến cũ nhất (descending) dựa trên ngày hạn hoàn thành (`dueDate`) và thời điểm hoàn thành (`completedAt`). Các công việc có hạn hoặc hoàn thành gần đây nhất luôn được hiển thị ở vị trí đầu tiên.
 
 ### 1.4. Giao diện Chi tiết Công việc (TaskDetailDrawer)
 - Giao diện dạng **Right Sidebar Drawer** trượt từ bên phải sang (chiều rộng tối ưu ~500-550px).
@@ -81,8 +82,8 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - **Phụ trách**: Dropdown chọn người phụ trách (chỉ hiển thị họ tên, không kèm IP Phone).
      - **Hạn hoàn thành**: Chọn ngày hạn kèm dòng xem trước định dạng chuẩn (ví dụ: `"Sun, 02 Aug 2026"`, `"Sun, 02 Aug 2026 • 14:30"`, `Hôm qua (Sun, 02 Aug 2026)`).
      - **Ưu tiên = Khẩn cấp**: Dạng Checkbox, tick chọn để đánh dấu công việc Khẩn cấp.
-     - **Ghi chú**: Khối lưu thông tin cập nhật gồm **Người cập nhật** (Cố định là tài khoản đang đăng nhập, hiển thị dạng read-only, tuyệt đối không cho phép chọn người khác) và **Nội dung** (Ô nhập lý do/ghi chú).
-  2. **Tab `Lịch sử`**: Dòng thời gian tự động hiển thị đầy đủ lịch sử thay đổi (Audit Log): Ai đã sửa gì, lúc nào, nội dung ghi chú. Khu vực "Thêm nhật ký tiến độ / Ghi chú mới" cũng cố định người ghi là tài khoản đang đăng nhập, không có dropdown chọn người khác.
+     - **Bình luận & Trao đổi**: Khối trao đổi thông tin công việc gồm **Người gửi** (Cố định là tài khoản đang đăng nhập, hiển thị dạng read-only, tuyệt đối không cho phép chọn người khác), **Nội dung bình luận** (Hỗ trợ gõ `@` để bung popup gợi ý và tag toàn bộ nhân sự hệ thống gồm cả ban Product và ngoài Product), nút **Gửi bình luận** gửi tức thì (hoặc phím tắt `Ctrl+Enter` / `Cmd+Enter`), danh sách các trao đổi gần đây của công việc có highlight tag `@`. Tự động kích hoạt luồng thông báo trao đổi: bắn thông báo nhắc đến bạn cho nhân sự được tag `@`, thông báo phản hồi cho người phụ trách và các nhân sự từng tham gia trao đổi trong công việc (loại trừ người gửi, chống trùng lặp, biên tập theo EDITOR.md).
+  2. **Tab `Lịch sử`**: Dòng thời gian tự động hiển thị đầy đủ lịch sử thay đổi (Audit Log): Ai đã sửa gì, lúc nào, nội dung bình luận / ghi chú (hỗ trợ hiển thị nổi bật các tag `@Nhân sự`). Khu vực "Thêm bình luận / Trao đổi mới" cũng cố định người ghi là tài khoản đang đăng nhập và hỗ trợ gõ `@` để tag toàn bộ nhân sự.
 - **Nút bấm tác vụ Footer**:
   - Nút **`Xoá`** (màu đỏ, icon `Trash2`) thay cho tên gọi cũ "Xóa việc".
   - Nút **`Đóng`** và **`Lưu thay đổi`**.

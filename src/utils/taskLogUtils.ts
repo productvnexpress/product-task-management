@@ -157,7 +157,7 @@ export function recordTaskChanges(
   } else if (changes.length > 0) {
     actionTitle = `Cập nhật ${changes.map((c) => c.field).join(', ')}`;
   } else if (customNote) {
-    actionTitle = 'Ghi chú / Nhật ký tiến độ';
+    actionTitle = 'Bình luận';
   }
 
   const actor = authorName || updatedTask.assignee || 'Hệ thống';
@@ -173,6 +173,17 @@ export function recordTaskChanges(
 
   const existingLogs = updatedTask.logs || [];
 
+  // Tránh tạo bản ghi trùng lặp nếu log đầu tiên đã có cùng nội dung ghi chú và người tạo
+  if (
+    existingLogs.length > 0 &&
+    existingLogs[0].author === actor &&
+    existingLogs[0].note &&
+    existingLogs[0].note.trim() === (newLogItem.note || '').trim() &&
+    changes.length === 0
+  ) {
+    return updatedTask;
+  }
+
   return {
     ...updatedTask,
     logs: [newLogItem, ...existingLogs],
@@ -187,7 +198,7 @@ export function addManualLog(
   task: TaskItem,
   authorName: string,
   noteText: string,
-  actionText = 'Thêm ghi chú tiến độ'
+  actionText = 'Bình luận'
 ): TaskItem {
   if (!noteText.trim()) return task;
 

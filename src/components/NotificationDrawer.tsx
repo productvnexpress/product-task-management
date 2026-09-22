@@ -21,6 +21,8 @@ import {
   Send,
   Calendar,
   Flag,
+  MessageSquare,
+  AtSign,
 } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { NotificationItem, NotificationType, MemberItem } from '../types';
@@ -122,6 +124,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         return (
           <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7] flex items-center justify-center shrink-0">
             <UserCheck className="w-4 h-4" />
+          </div>
+        );
+      case 'task_comment':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7] flex items-center justify-center shrink-0">
+            <MessageSquare className="w-4 h-4" />
           </div>
         );
       case 'task_created':

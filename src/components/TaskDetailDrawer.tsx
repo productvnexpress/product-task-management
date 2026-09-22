@@ -34,9 +34,12 @@ import {
   Edit3,
   Share2,
   RotateCw,
+  AtSign,
 } from 'lucide-react';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatFrequencyLabel } from '../services/recurringTaskService';
+import { MentionCommentInput } from './MentionCommentInput';
+import { renderCommentWithMentions } from '../utils/mentionUtils';
 
 interface TaskDetailDrawerProps {
   task: TaskItem | null;
@@ -66,9 +69,41 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   onOpenProjectDetail,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
+  const currentActorName = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
+  const productMembers = useMemo(() => getProductMembers(members), [members]);
   const userCanEdit = task ? canEditTask(effectiveUser, task, projects) : true;
   const userCanDelete = task ? canDeleteTask(effectiveUser, task, projects) : true;
   const [activeDrawerTab, setActiveDrawerTab] = useState<'details' | 'history'>('details');
+
+  // Helper lọc bỏ các bản ghi nhật ký/bình luận trùng lặp
+  const deduplicateLogs = (logs: TaskLogItem[]): TaskLogItem[] => {
+    if (!logs || logs.length === 0) return [];
+    const result: TaskLogItem[] = [];
+    logs.forEach((log) => {
+      const isDuplicate = result.some((prev) => {
+        if (prev.id === log.id) return true;
+        const sameAuthor = prev.author === log.author;
+        const sameNote = (prev.note || '').trim() === (log.note || '').trim();
+        if (!sameAuthor || !sameNote || !log.note) return false;
+        const tPrev = new Date(prev.timestamp).getTime();
+        const tCurr = new Date(log.timestamp).getTime();
+        return Math.abs(tPrev - tCurr) < 60000;
+      });
+      if (!isDuplicate) {
+        result.push(log);
+      }
+    });
+    return result;
+  };
+
+  // Danh sách các trao đổi / bình luận thực tế của task (đã lọc trùng)
+  const commentLogs = useMemo(() => {
+    if (!task?.logs) return [];
+    const withNotes = task.logs.filter((l) => Boolean(l.note && l.note.trim().length > 0));
+    return deduplicateLogs(withNotes);
+  }, [task?.logs]);
+
+  const [isSendingComment, setIsSendingComment] = useState(false);
 
   const [title, setTitle] = useState(task?.title || '');
   const [status, setStatus] = useState<TaskStatus>(task?.status || 'Chưa làm');
@@ -240,17 +275,34 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    const author = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
+    const author = currentActorName;
     onSaveTask(updatedTask, author, customUpdateNote.trim() || undefined);
     onClose();
   };
 
+  // Gửi bình luận nhanh trực tiếp trong Drawer
+  const handleSendQuickComment = () => {
+    if (!task || !customUpdateNote.trim()) return;
+    const author = currentActorName;
+    const commentText = customUpdateNote.trim();
+    setIsSendingComment(true);
+
+    try {
+      onSaveTask(task, author, commentText);
+      setCustomUpdateNote('');
+    } catch (err) {
+      console.error('Lỗi khi gửi bình luận:', err);
+    } finally {
+      setIsSendingComment(false);
+    }
+  };
+
   // Handle manual log addition in history tab
   const handleAddManualNote = () => {
-    if (!newLogNote.trim()) return;
-    const author = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
-    const updatedWithLog = addManualLog(task, author, newLogNote.trim());
-    onSaveTask(updatedWithLog, author);
+    if (!newLogNote.trim() || !task) return;
+    const author = currentActorName;
+    const noteText = newLogNote.trim();
+    onSaveTask(task, author, noteText);
     setNewLogNote('');
   };
 
@@ -266,7 +318,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     }
   };
 
-  const logList = task?.logs || [];
+  const logList = useMemo(() => {
+    return deduplicateLogs(task?.logs || []);
+  }, [task?.logs]);
 
   return (
     <AnimatePresence>
@@ -673,31 +727,98 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               </div>
             )}
 
-            {/* 10. Ghi chú */}
-            <div className="p-4 bg-[#f8fafc] rounded-[8px] border border-[#e2e8f0] space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-[#334155]">
-                <Edit3 className="w-4 h-4 text-[#b13460]" />
-                <span>Ghi chú:</span>
+            {/* 10. Bình luận & Trao đổi */}
+            <div className="p-4 bg-white rounded-[8px] border border-[#e2e8f0] space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between gap-2 border-b border-[#f1f5f9] pb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f172a]">
+                  <MessageSquare className="w-4 h-4 text-[#963861]" />
+                  <span>Bình luận & Trao đổi</span>
+                  {commentLogs.length > 0 && (
+                    <span className="text-[10px] font-ui font-bold px-1.5 py-0.2 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]">
+                      {commentLogs.length}
+                    </span>
+                  )}
+                </div>
+
+                <span className="text-[10px] font-ui font-semibold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f4c2d7] inline-flex items-center gap-1">
+                  <AtSign className="w-3 h-3" />
+                  <span>Gõ @ để tag nhân sự</span>
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#64748b]">Người cập nhật:</label>
-                  <div className="w-full text-xs font-ui p-2 bg-[#f1f5f9] border border-[#cbd5e1] rounded-[6px] text-[#0f172a] font-medium">
-                    {currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống')}
+              {/* Ô nhập bình luận hỗ trợ @tag */}
+              <div className="space-y-2">
+                <MentionCommentInput
+                  value={customUpdateNote}
+                  onChange={setCustomUpdateNote}
+                  onSubmit={handleSendQuickComment}
+                  members={members}
+                  placeholder="Nhập bình luận, trao đổi... Gõ @ để tag nhân sự (Ctrl+Enter để gửi)"
+                  rows={2}
+                />
+
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="text-[11px] text-[#64748b] flex items-center gap-1">
+                    <User className="w-3 h-3 text-[#963861]" />
+                    <span>
+                      Người gửi: <strong className="text-[#0f172a]">{currentActorName}</strong>
+                    </span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSendQuickComment}
+                    disabled={!customUpdateNote.trim() || isSendingComment}
+                    className="px-3 py-1.5 bg-[#963861] hover:bg-[#7a2b4e] text-white rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors shadow-2xs cursor-pointer"
+                    title="Gửi bình luận ngay lập tức (Ctrl+Enter)"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Gửi bình luận</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Lịch sử trao đổi / bình luận */}
+              <div className="space-y-2 pt-2 border-t border-[#f1f5f9]">
+                <div className="flex items-center justify-between text-[11px] font-ui font-bold text-[#64748b]">
+                  <span>Lịch sử trao đổi {commentLogs.length > 0 ? `(${commentLogs.length})` : ''}</span>
+                  {commentLogs.length > 0 && (
+                    <span className="text-[10px] font-normal text-[#94a3b8]">Mới nhất trước</span>
+                  )}
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#64748b]">Nội dung:</label>
-                  <input
-                    type="text"
-                    value={customUpdateNote}
-                    onChange={(e) => setCustomUpdateNote(e.target.value)}
-                    placeholder="Nhập nội dung ghi chú cập nhật..."
-                    className="w-full text-xs font-body p-2 bg-white border border-[#cbd5e1] rounded-[6px] text-[#0f172a]"
-                  />
-                </div>
+                {commentLogs.length === 0 ? (
+                  <div className="py-3 px-3 text-center bg-[#fafafa] rounded-[6px] border border-dashed border-[#e2e8f0] text-[11px] text-[#94a3b8]">
+                    Chưa có trao đổi nào. Nhập nội dung phía trên và gõ @ để tag đồng nghiệp.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {commentLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="p-2.5 bg-[#f8fafc] rounded-[6px] border border-[#e2e8f0] space-y-1.5 text-xs hover:border-[#cbd5e1] transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-[#0f172a] flex items-center gap-1.5 text-[11px]">
+                            <span className="w-5 h-5 rounded-full bg-[#963861] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {log.author ? log.author.charAt(0).toUpperCase() : 'U'}
+                            </span>
+                            <span>{log.author}</span>
+                          </span>
+
+                          <span className="text-[10px] text-[#94a3b8] font-ui flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 text-[#94a3b8]" />
+                            <span>{formatLogTimestamp(log.timestamp)}</span>
+                          </span>
+                        </div>
+
+                        <div className="text-[#334155] font-body text-xs whitespace-pre-wrap leading-relaxed pl-6.5">
+                          {renderCommentWithMentions(log.note || '', members)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -708,42 +829,40 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
           <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm font-body bg-[#fafafa]">
             {/* Quick Add Manual Progress Note Box */}
             <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-2xs space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#202020]">
-                <MessageSquare className="w-4 h-4 text-[#b13460]" />
-                <span>Thêm nhật ký tiến độ / Ghi chú mới</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#202020]">
+                  <MessageSquare className="w-4 h-4 text-[#963861]" />
+                  <span>Thêm bình luận / Trao đổi mới</span>
+                </div>
+                <span className="text-[10px] font-ui font-semibold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f4c2d7] inline-flex items-center gap-1">
+                  <AtSign className="w-3 h-3" />
+                  <span>Gõ @ để tag</span>
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-1 md:col-span-1">
-                  <label className="text-[11px] font-bold text-[#5f5f5f]">Người ghi nhật ký:</label>
-                  <div className="w-full text-xs font-ui p-2 bg-[#f1f5f9] border border-[#d6d6d6] rounded-[6px] text-[#202020] font-medium">
-                    {currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống')}
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <MentionCommentInput
+                  value={newLogNote}
+                  onChange={setNewLogNote}
+                  onSubmit={handleAddManualNote}
+                  members={members}
+                  placeholder="Nhập nội dung trao đổi, tiến độ... Gõ @ để tag nhân sự (Ctrl+Enter để gửi)"
+                  rows={2}
+                />
 
-                <div className="space-y-1 md:col-span-2">
-                  <label className="text-[11px] font-bold text-[#5f5f5f]">Nội dung cập nhật / Ghi chú:</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newLogNote}
-                      onChange={(e) => setNewLogNote(e.target.value)}
-                      placeholder="Nhập tiến độ công việc hôm nay..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddManualNote();
-                      }}
-                      className="flex-1 text-xs font-body p-2 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddManualNote}
-                      disabled={!newLogNote.trim()}
-                      className="px-3 py-2 bg-[#b13460] hover:bg-[#8f274c] text-white rounded-[6px] text-xs font-bold flex items-center gap-1 disabled:opacity-50 transition-colors"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Gửi</span>
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <span className="text-[11px] text-[#5f5f5f]">
+                    Người gửi: <strong className="text-[#202020]">{currentActorName}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddManualNote}
+                    disabled={!newLogNote.trim()}
+                    className="px-3 py-1.5 bg-[#963861] hover:bg-[#7a2b4e] text-white rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Gửi bình luận</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -839,9 +958,13 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
                       {/* Log Note / Comment */}
                       {log.note && (
-                        <div className="bg-[#fcf0f5] p-2.5 rounded-[6px] border border-[#fbd3e1] text-xs text-[#832e52] mt-2 space-y-0.5">
-                          <span className="font-bold block text-[11px]">Ghi chú đính kèm:</span>
-                          <p className="whitespace-pre-wrap">{log.note}</p>
+                        <div className="bg-[#fcf0f5] p-2.5 rounded-[6px] border border-[#fbd3e1] text-xs text-[#832e52] mt-2 space-y-1">
+                          <span className="font-bold block text-[11px] text-[#963861]">
+                            {log.action === 'Bình luận' ? 'Nội dung bình luận:' : 'Ghi chú / Bình luận:'}
+                          </span>
+                          <div className="whitespace-pre-wrap leading-relaxed text-[#334155]">
+                            {renderCommentWithMentions(log.note, members)}
+                          </div>
                         </div>
                       )}
                     </div>

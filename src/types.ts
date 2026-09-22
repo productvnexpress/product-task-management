@@ -242,6 +242,7 @@ export type NotificationType =
   | 'task_completed'
   | 'task_blocked'
   | 'task_updated'
+  | 'task_comment'
   | 'phase_due_soon'
   | 'project_due_soon'
   | 'daily_close_reminder';

@@ -58,6 +58,7 @@ import { PersonalizationBanner, TaskPersonalScope } from './components/Personali
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
 import { formatDateWithEnDay } from './utils/formatters';
+import { extractMentions, getTaskThreadParticipants } from './utils/mentionUtils';
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
@@ -841,6 +842,124 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           createdAt: new Date().toISOString(),
         });
       }
+    } else if (actionType === 'comment') {
+      const rawNote = (extra?.note || '').trim();
+      const commentSnippet = rawNote.length > 120 ? rawNote.slice(0, 117) + '...' : rawNote;
+
+      // 1. Quét và gửi thông báo đích danh cho những người được tag bằng @ (Ưu tiên cao nhất)
+      const mentionedMembers = extractMentions(rawNote, members);
+      const taggedNames = new Set<string>();
+
+      mentionedMembers.forEach((m) => {
+        if (!isSamePersonName(m.name, actorName)) {
+          taggedNames.add(m.name);
+          newNotifs.push({
+            id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            recipientName: m.name,
+            recipientId: m.username || m.id,
+            actorName,
+            projectId: proj?.id,
+            projectName,
+            taskId: newOrUpdatedTask.id,
+            taskTitle: newOrUpdatedTask.title,
+            type: 'task_comment',
+            title: `Nhắc đến bạn: ${newOrUpdatedTask.title}`,
+            content: `${actorName}: "${commentSnippet}"`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
+
+      // 2. Gửi thông báo cho đối tượng đang trao đổi (Assignee, người bình luận trước đó, người tạo việc)
+      const threadParticipants = getTaskThreadParticipants(newOrUpdatedTask, actorName);
+      threadParticipants.forEach((participantName) => {
+        // Bỏ qua nếu đã nhận thông báo mention hoặc là chính người gửi
+        if (
+          taggedNames.has(participantName) ||
+          isSamePersonName(participantName, actorName) ||
+          newNotifs.some((n) => isSamePersonName(n.recipientName, participantName))
+        ) {
+          return;
+        }
+
+        const participantMember = members.find((m) => isSamePersonName(m.name, participantName));
+        const isAssignee = isSamePersonName(participantName, newOrUpdatedTask.assignee);
+
+        newNotifs.push({
+          id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          recipientName: participantName,
+          recipientId: participantMember?.username || participantMember?.id,
+          actorName,
+          projectId: proj?.id,
+          projectName,
+          taskId: newOrUpdatedTask.id,
+          taskTitle: newOrUpdatedTask.title,
+          type: 'task_comment',
+          title: isAssignee
+            ? `Trao đổi công việc: ${newOrUpdatedTask.title}`
+            : `Phản hồi trao đổi: ${newOrUpdatedTask.title}`,
+          content: `${actorName}: "${commentSnippet}"`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        });
+      });
+
+      // 3. Thông báo cho PM phụ trách dự án nếu chưa nằm trong danh sách trên
+      pms.forEach((pmName) => {
+        if (
+          pmName &&
+          !isSamePersonName(pmName, actorName) &&
+          !taggedNames.has(pmName) &&
+          !newNotifs.some((n) => isSamePersonName(n.recipientName, pmName))
+        ) {
+          const pmMember = members.find((m) => isSamePersonName(m.name, pmName));
+          newNotifs.push({
+            id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            recipientName: pmName,
+            recipientId: pmMember?.username || pmMember?.id,
+            actorName,
+            projectId: proj?.id,
+            projectName,
+            taskId: newOrUpdatedTask.id,
+            taskTitle: newOrUpdatedTask.title,
+            type: 'task_comment',
+            title: `Trao đổi trong ${projectName.replace('Dự án ', '')}`,
+            content: `${actorName}: "${commentSnippet}"`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
+    }
+
+    // Với các hành động khác (như updated, status_changed...) nếu có tag @ trong ghi chú, vẫn bắn thông báo tag
+    if (actionType !== 'comment' && extra?.note) {
+      const rawNote = extra.note.trim();
+      const commentSnippet = rawNote.length > 120 ? rawNote.slice(0, 117) + '...' : rawNote;
+      const mentionedMembers = extractMentions(rawNote, members);
+      mentionedMembers.forEach((m) => {
+        if (
+          !isSamePersonName(m.name, actorName) &&
+          !newNotifs.some((n) => isSamePersonName(n.recipientName, m.name))
+        ) {
+          newNotifs.push({
+            id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            recipientName: m.name,
+            recipientId: m.username || m.id,
+            actorName,
+            projectId: proj?.id,
+            projectName,
+            taskId: newOrUpdatedTask.id,
+            taskTitle: newOrUpdatedTask.title,
+            type: 'task_comment',
+            title: `Nhắc đến bạn: ${newOrUpdatedTask.title}`,
+            content: `${actorName}: "${commentSnippet}"`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      });
     }
 
     if (newNotifs.length > 0) {
@@ -1232,7 +1351,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             ...updatedTask,
             completedAt: isComp ? (updatedTask.completedAt || t.completedAt || new Date().toISOString()) : undefined,
           };
-          const logged = recordTaskChanges(t, taskWithCompletedAt, actor || updatedTask.assignee, customNote);
+          const rawLogged = recordTaskChanges(t, taskWithCompletedAt, actor || updatedTask.assignee, customNote);
+          // Lọc bỏ trùng lặp nếu có trong danh sách nhật ký
+          const cleanLogs: TaskLogItem[] = [];
+          (rawLogged.logs || []).forEach((l) => {
+            const isDup = cleanLogs.some(
+              (prev) =>
+                prev.author === l.author &&
+                prev.note &&
+                prev.note.trim() === (l.note || '').trim() &&
+                Math.abs(new Date(prev.timestamp).getTime() - new Date(l.timestamp).getTime()) < 60000
+            );
+            if (!isDup) cleanLogs.push(l);
+          });
+          const logged: TaskItem = { ...rawLogged, logs: cleanLogs };
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(logged);
           }
@@ -1251,7 +1383,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             Boolean(customNote);
 
           if (hasContentChanges && updatedTask.status === t.status && updatedTask.assignee === t.assignee) {
-            createAndDispatchNotifications(logged, 'updated', actor || logged.assignee, { note: customNote });
+            const actType = customNote && (
+              updatedTask.title === t.title &&
+              updatedTask.dueDate === t.dueDate &&
+              updatedTask.priority === t.priority &&
+              updatedTask.resultLink === t.resultLink
+            ) ? 'comment' : 'updated';
+            createAndDispatchNotifications(logged, actType, actor || logged.assignee, { note: customNote });
           }
           if (isComp && t.status !== 'Hoàn thành' && t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
@@ -1548,10 +1686,62 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     () => filteredTasks.filter((t) => t.status !== 'Hoàn thành'),
     [filteredTasks]
   );
-  const completedTasks = useMemo(
-    () => filteredTasks.filter((t) => t.status === 'Hoàn thành'),
-    [filteredTasks]
-  );
+  const completedTasks = useMemo(() => {
+    return filteredTasks
+      .filter((t) => t.status === 'Hoàn thành')
+      .sort((a, b) => {
+        // 1. So sánh ngày hạn hoàn thành (dueDate: YYYY-MM-DD) từ mới nhất đến cũ nhất
+        const dateA = a.dueDate ? a.dueDate.slice(0, 10) : '';
+        const dateB = b.dueDate ? b.dueDate.slice(0, 10) : '';
+
+        if (dateA !== dateB) {
+          if (dateA && dateB) {
+            return dateB.localeCompare(dateA); // Mới nhất lên đầu
+          }
+          return dateB ? 1 : -1;
+        }
+
+        // 2. Nếu cùng ngày hạn, so sánh thời điểm hoàn thành (completedAt) từ mới đến cũ
+        const compA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+        const compB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+        if (compA !== compB) {
+          return compB - compA;
+        }
+
+        // 3. Nếu không có completedAt, so sánh thời điểm log hoàn thành
+        const getLogCompletionTime = (t: TaskItem): number => {
+          if (!t.logs || t.logs.length === 0) return 0;
+          const log = t.logs.find(
+            (l) =>
+              l.changes?.some((c) => c.field === 'Trạng thái' && c.newValue === 'Hoàn thành') ||
+              l.action?.toLowerCase().includes('hoàn thành')
+          );
+          return log?.timestamp ? new Date(log.timestamp).getTime() : 0;
+        };
+
+        const logA = getLogCompletionTime(a);
+        const logB = getLogCompletionTime(b);
+        if (logA !== logB) {
+          return logB - logA;
+        }
+
+        // 4. So sánh thời điểm cập nhật (updatedAt) từ mới đến cũ
+        const updateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const updateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        if (updateA !== updateB) {
+          return updateB - updateA;
+        }
+
+        // 5. So sánh thời điểm tạo (createdAt) từ mới đến cũ
+        const createA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (createA !== createB) {
+          return createB - createA;
+        }
+
+        return (b.id || '').localeCompare(a.id || '');
+      });
+  }, [filteredTasks]);
 
   // Group active tasks by project if 'all' projects selected
   const activeTasksByProject = useMemo(() => {
