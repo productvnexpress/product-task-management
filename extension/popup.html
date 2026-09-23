@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VnExpress WMS</title>
+  <style>
+    :root {
+      --primary: #963861;
+      --primary-hover: #7b2a4e;
+      --primary-light: #fdf2f7;
+      --bg-gray: #f8fafc;
+      --border: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --success: #166534;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+      background: #ffffff;
+      line-height: 1.4;
+      user-select: none;
+    }
+
+    /* Header */
+    .header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .brand-text h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.2px;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10.5px;
+      font-weight: 600;
+      background: #ecfdf5;
+      color: var(--success);
+      border: 1px solid #a7f3d0;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    /* Container */
+    .content {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* User Selector Card */
+    .card {
+      background: var(--bg-gray);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .select-user {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 12.5px;
+      color: var(--text-main);
+      background: #ffffff;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-user:focus {
+      border-color: var(--primary);
+    }
+
+    /* Action Buttons Row */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      border: none;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Notifications List Section */
+    .notif-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .btn-refresh {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-refresh:hover {
+      text-decoration: underline;
+    }
+
+    .notif-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .notif-item {
+      padding: 9px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: background 0.12s;
+    }
+
+    .notif-item:hover {
+      background: #f8fafc;
+    }
+
+    .notif-item.unread {
+      background: var(--primary-light);
+      border-color: #f4c2d7;
+    }
+
+    .notif-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .notif-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .unread-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      shrink-0: 0;
+    }
+
+    .notif-content {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .notif-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .empty-state {
+      padding: 24px 12px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      background: var(--bg-gray);
+      border-radius: 6px;
+      border: 1px dashed var(--border);
+    }
+
+    /* Footer settings */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Settings modal / toggle */
+    .settings-drawer {
+      display: none;
+      padding: 10px 12px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .settings-drawer.open {
+      display: block;
+    }
+
+    .settings-drawer input {
+      width: 100%;
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-logo">W</div>
+      <div class="brand-text">
+        <h1>VnExpress WMS</h1>
+        <p>Thông báo công việc</p>
+      </div>
+    </div>
+    <div class="status-badge" id="statusBadge">
+      <span class="status-dot"></span>
+      <span id="statusText">Trực tuyến</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 1. GIAO DIỆN KHI CHƯA ĐĂNG NHẬP -->
+    <div id="loginView" style="display: none; flex-direction: column; gap: 12px;">
+      <div class="card" style="padding: 14px 12px; background: #ffffff;">
+        <h3 style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">Đăng nhập WMS</h3>
+        <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Xác thực tài khoản để nhận thông báo công việc cá nhân.</p>
+
+        <form id="formLogin" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label" for="loginUserSelect">Chọn tài khoản của bạn:</label>
+            <select id="loginUserSelect" class="select-user" required>
+              <option value="">-- Chọn thành viên nhận việc --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputLoginPassword">Mật khẩu:</label>
+            <input
+              type="password"
+              id="inputLoginPassword"
+              class="select-user"
+              placeholder="Mật khẩu mặc định @26022001!"
+              required
+            />
+          </div>
+
+          <div id="loginError" style="display: none; padding: 6px 8px; border-radius: 4px; font-size: 11px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;"></div>
+
+          <button type="submit" class="btn btn-primary" id="btnSubmitLogin" style="width: 100%; margin-top: 4px;">
+            <span>Đăng nhập</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 12px; text-align: center;">
+          <button type="button" id="btnQuickLoginWeb" style="background: none; border: none; color: #963861; font-size: 11.5px; font-weight: 600; cursor: pointer; text-decoration: underline;">
+            Hoặc mở Web WMS để tự động đồng bộ ➔
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. GIAO DIỆN KHI ĐÃ ĐĂNG NHẬP -->
+    <div id="mainView" style="display: flex; flex-direction: column; gap: 12px;">
+      <!-- Profile Card -->
+      <div class="card" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div id="userAvatar" style="width: 32px; height: 32px; border-radius: 50%; background: #963861; color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center;">
+            W
+          </div>
+          <div>
+            <div id="userNameDisplay" style="font-size: 12.5px; font-weight: 700; color: #0f172a;">Tài khoản</div>
+            <div id="userTeamDisplay" style="font-size: 10.5px; color: #64748b;">Ban SP-CN</div>
+          </div>
+        </div>
+        <button type="button" id="btnLogout" style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 11px; color: #64748b; font-weight: 600; cursor: pointer;">
+          Đăng xuất
+        </button>
+      </div>
+
+      <!-- Actions Row -->
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnOpenWMS">
+          <span>🚀 Mở trang Công việc</span>
+        </button>
+        <button class="btn btn-secondary" id="btnTestNotif" title="Bắn một thông báo thử nghiệm để kiểm tra chuông">
+          <span>🔔 Test chuông</span>
+        </button>
+      </div>
+
+      <!-- Feedback Banner khi test -->
+      <div id="testFeedback" style="display: none; padding: 7px 10px; border-radius: 6px; font-size: 11px; line-height: 1.35; background: #ecfdf5; border: 1px solid #a7f3d0; color: #166534;">
+        <div style="font-weight: 600;">✓ Đã phát chuông & gửi thông báo thử!</div>
+        <div style="margin-top: 3px; font-size: 10px; color: #475569;">
+          Nếu chưa thấy banner góc màn hình: Vào <strong>macOS Cài đặt hệ thống ➔ Thông báo ➔ Google Chrome</strong> (bật Cho phép thông báo & tắt chế độ Không làm phiền).
+        </div>
+      </div>
+
+      <!-- Notifications Section -->
+      <div class="notif-section">
+        <div class="notif-header">
+          <span>Thông báo cá nhân (<span id="notifCount">0</span>)</span>
+          <button type="button" class="btn-refresh" id="btnRefresh">Làm mới</button>
+        </div>
+
+        <div class="notif-list" id="notifList">
+          <div class="empty-state">Đang tải thông báo...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden Settings Drawer -->
+    <div class="settings-drawer" id="settingsDrawer">
+      <label style="font-weight: 600; color: #475569;">Địa chỉ máy chủ WMS (App URL):</label>
+      <input type="text" id="inputAppUrl" placeholder="https://product-task-management-qr39.vercel.app" />
+      <button class="btn btn-secondary" id="btnSaveAppUrl" style="margin-top: 6px; width: 100%; padding: 4px;">Lưu địa chỉ</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>Ban SP-CN VnExpress</span>
+    <a href="#" id="toggleSettings">⚙️ Cài đặt URL</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

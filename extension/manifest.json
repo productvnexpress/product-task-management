@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "VnExpress WMS - Thông Báo Công Việc",
+  "version": "1.0.1",
+  "description": "Nhận thông báo công việc & dự án VnExpress WMS tức thì ngay cả khi không mở trình duyệt.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "VnExpress WMS Thông Báo"
+  },
+  "permissions": [
+    "notifications",
+    "alarms",
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://hyhtykhfnyrrvydizwta.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
