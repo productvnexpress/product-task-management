@@ -154,7 +154,7 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - Định dạng tên: Kết hợp dạng `[Tên] [Họ]` (ví dụ: `Trung Tiêu`, `Trung Vũ`, `Vinh Ngô`, `Hiếu Nguyễn`, `Sơn Vũ`, `Tùng Trần`...) giúp phân biệt rõ ràng khi có nhiều nhân sự trùng tên gọi.
      - Sắp xếp tự động theo thứ tự bảng chữ cái ABC tiếng Việt (A-Z) ưu tiên theo Tên gọi (`firstName`), nếu trùng tên sẽ xét tiếp theo Họ (`lastName`).
      - Bấm vào tên để lọc nhanh danh sách công việc của nhân sự đó (bấm lại để hoàn tác).
-   - Khi 100% nhân sự trong phạm vi đã có task đến hạn hôm nay: Hiển thị thanh thông báo xanh chúc mừng tinh gọn (`Tất cả nhân sự đã có task đến hạn hôm nay` / `Tất cả nhân sự trong dự án đã có task đến hạn hôm nay`).
+   - Khi 100% nhân sự trong phạm vi đã có task đến hạn hôm nay hoặc người dùng cá nhân đã có task/nghỉ phép: Hệ thống tự động ẩn hoàn toàn thông báo để giữ màn hình tinh gọn (lược bỏ thông báo 'Kế hoạch hôm nay' theo yêu cầu).
 
 ### 1.8. Quy chuẩn Thông báo Lịch nghỉ Phép Trong Ngày & 3 Ngày làm việc Tới (DailyLeaveNotice Specification)
 1. **Quy tắc Nghiệp vụ**:
@@ -727,11 +727,13 @@ Hệ thống tự động kích hoạt phạm vi công việc mặc định ngay
    - Ghim cố định (`sticky top-0 z-20`) liền mạch ngay dưới Header của vùng nội dung chính.
    - Khi cuộn màn hình qua danh sách công việc dài, thanh điều kiện lọc và Header luôn được giữ cố định ở đầu trang, đảm bảo người dùng luôn nắm bắt được ngữ cảnh lọc hiện tại.
 2. **Mục đích & Tương tác thuận tiện**:
-   - Giúp người dùng tức thì nhận biết toàn bộ các tiêu chí lọc đang được kích hoạt (Dự án, Nhân sự, Trạng thái, Thời hạn, Nhóm, Từ khóa, Phạm vi cá nhân).
+   - Giúp người dùng tức thì nhận biết toàn bộ các tiêu chí lọc đang được kích hoạt (Dự án, Nhân sự, Trạng thái, Thời hạn, Nhóm, Từ khóa). Tự động ẩn khi không có tiêu chí lọc phát sinh ngoài góc nhìn mặc định của người dùng.
    - Mỗi tiêu chí hiển thị dưới dạng badge phẳng nhỏ gọn kèm nút `x` xóa nhanh (hỗ trợ hover đổi màu đỏ và vùng bấm thoải mái).
    - Nút **`+ Thêm lọc`**: Cho phép bổ sung nhanh các tiêu chí lọc (Dự án, Trạng thái, Thời hạn, Nhóm) qua popover trực tiếp ngay trên thanh ghim mà không cần cuộn trang lên trên.
-   - Nút **`Xóa bộ lọc`** (icon `RotateCcw`): Đặt lại toàn bộ các điều kiện lọc về mặc định chỉ với 1 click từ bất kỳ vị trí cuộn nào.
-3. **Phong cách thiết kế (EDITOR.md & Design System)**:
+   - Nút **`Xóa bộ lọc`** (icon `RotateCcw`): Đặt lại toàn bộ các điều kiện lọc về **mặc định công việc của từng User** đang đăng nhập (Executive về *Của tôi*, Manager về *Dự án của tôi*, Admin về *Toàn bộ phận*), tuyệt đối không tự ý chuyển người dùng về danh sách toàn bộ phận.
+3. **Tác vụ khi bấm Logo hệ thống (Sidebar Logo Action)**:
+   - Khi bấm vào Logo & Tên hệ thống (VnExpress Product / Công việc) tại Left Sidebar: Hệ thống chuyển về tab Công việc (`tasks`), cuộn mượt lên đầu trang và tự động đặt lại toàn bộ các điều kiện lọc về mặc định công việc của User tương ứng.
+4. **Phong cách thiết kế (EDITOR.md & Design System)**:
    - Thiết kế tinh gọn, trang nhã: nền `#fafafa`, viền dưới `#e5e7eb`, bóng mờ `shadow-2xs` tách biệt rõ nét với danh sách trượt bên dưới.
    - Font chữ chuẩn `Merriweather Sans` (`font-ui`), text súc tích, trực diện. Tự động ẩn khi không có bất kỳ điều kiện lọc nào kích hoạt để giữ không gian thoáng đãng.
 

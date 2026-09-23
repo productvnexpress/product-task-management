@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   TaskItem,
@@ -41,20 +41,19 @@ import { StandupModal } from './components/StandupModal';
 import { LoginView } from './components/LoginView';
 import { ProfileModal } from './components/ProfileModal';
 import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/authService';
-import { ReminderPanel } from './components/ReminderPanel';
 import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotice';
+import { getDailyDueTaskStats } from './utils/dailyAccountability';
 import { MondayWeeklySummary } from './components/MondayWeeklySummary';
 import { UpcomingHolidayBanner } from './components/UpcomingHolidayBanner';
 import { CompleteTaskModal } from './components/CompleteTaskModal';
 import { workingTimeService } from './services/workingTimeService';
 import { recurringTaskService } from './services/recurringTaskService';
 import { fetchMasterChecklistTemplateFromSupabase } from './data/defaultProjectChecklist';
-import { ProjectDeadlineAlertBanner } from './components/ProjectDeadlineAlertBanner';
 import { checkAndDispatchProjectDeadlineNotifications } from './utils/projectDeadlineAlerts';
 import { checkAndDispatchDailyCloseTaskNotifications } from './utils/dailyCloseTaskAlerts';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
-import { PersonalizationBanner, TaskPersonalScope } from './components/PersonalizationBanner';
+import { TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
 import { formatDateWithEnDay } from './utils/formatters';
@@ -266,6 +265,17 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // Product Leaves Data (Hôm nay & 3 ngày làm việc tới)
   const productLeavesData = useProductLeaves(members);
 
+  // Kiểm tra xem có cảnh báo chưa có task đến hạn hôm nay hay không
+  const hasMissingTasksAlert = useMemo(() => {
+    if (!workingTimeService.isWorkingDay(new Date())) return false;
+    const stats = getDailyDueTaskStats(members, tasks, projects, currentAuthUser, activeProductMember);
+    if (stats.roleScope === 'Executive') {
+      const exec = stats.targetMembers[0];
+      return Boolean(exec && !exec.hasTaskDueToday && !exec.isOnLeaveToday);
+    }
+    return stats.missingMembers.length > 0;
+  }, [members, tasks, projects, currentAuthUser, activeProductMember]);
+
   // Perspective Change Handler (Toàn bộ phận / Của tôi / Dự án của tôi / Đồng nghiệp)
   const handlePerspectiveChange = (scope: TaskPersonalScope, member?: MemberItem | null) => {
     if (scope === 'all' || !member) {
@@ -314,6 +324,31 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       searchQuery: '',
     };
   });
+
+  // Đặt lại toàn bộ bộ lọc và góc nhìn về mặc định công việc của từng tài khoản
+  const handleResetToDefaultView = useCallback(() => {
+    const def = getDefaultPerspectiveForUser(currentAuthUser);
+    setActiveProductMember(def.activeMember);
+    setTaskPersonalScope(def.scope);
+    setFilterState({
+      projectId: 'all',
+      team: 'Tất cả',
+      status: 'Tất cả',
+      assignee: def.assignee,
+      dueFilter: 'all',
+      searchQuery: '',
+    });
+  }, [currentAuthUser]);
+
+  // Bấm vào Logo: Chuyển về tab Công việc và đặt lại về mặc định công việc của User
+  const handleLogoClick = useCallback(() => {
+    setActiveTab('tasks');
+    setIsDrawerOpen(false);
+    setIsProjectDrawerOpen(false);
+    setIsStandupOpen(false);
+    handleResetToDefaultView();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [handleResetToDefaultView]);
 
   // Drawer & Modal states
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
@@ -1919,6 +1954,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         onOpenAddProject={handleOpenAddProject}
         onOpenAddMember={handleOpenAddMember}
         onResetData={handleResetData}
+        onLogoClick={handleLogoClick}
       />
 
       {/* 2. MAIN CONTENT AREA */}
@@ -1962,28 +1998,25 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             members={members}
             taskPersonalScope={taskPersonalScope}
             activeProductMember={activeProductMember}
+            currentAuthUser={currentAuthUser}
             onClearProject={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
             onClearAssignee={() => {
-              setFilterState((f) => ({ ...f, assignee: 'Tất cả' }));
-              if (activeProductMember) setActiveProductMember(null);
+              const def = getDefaultPerspectiveForUser(currentAuthUser);
+              setActiveProductMember(def.activeMember);
+              setTaskPersonalScope(def.scope);
+              setFilterState((f) => ({ ...f, assignee: def.assignee }));
             }}
             onClearTeam={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
             onClearStatus={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
             onClearDue={() => setFilterState((f) => ({ ...f, dueFilter: 'all' }))}
             onClearSearch={() => setFilterState((f) => ({ ...f, searchQuery: '' }))}
-            onClearPersonalScope={() => setTaskPersonalScope('all')}
-            onClearAll={() => {
-              setFilterState({
-                projectId: 'all',
-                team: 'Tất cả',
-                status: 'Tất cả',
-                assignee: 'Tất cả',
-                dueFilter: 'all',
-                searchQuery: '',
-              });
-              setActiveProductMember(null);
-              setTaskPersonalScope('all');
+            onClearPersonalScope={() => {
+              const def = getDefaultPerspectiveForUser(currentAuthUser);
+              setActiveProductMember(def.activeMember);
+              setTaskPersonalScope(def.scope);
+              setFilterState((f) => ({ ...f, assignee: def.assignee }));
             }}
+            onClearAll={handleResetToDefaultView}
             onSelectProject={(projId) => setFilterState((f) => ({ ...f, projectId: projId }))}
             onSelectStatus={(status) => setFilterState((f) => ({ ...f, status }))}
             onSelectDue={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
@@ -2011,70 +2044,6 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                   <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                     <div className="hidden md:block w-48 lg:w-52 shrink-0" />
                     <div className="w-full max-w-[800px] space-y-6">
-                      {/* Perspective Control Bar: Fast 1-click access to Toàn ban, Việc của tôi, Dự án của tôi */}
-                      {!activeProductMember ? (
-                        <div className="bg-white border border-[#e2e8f0] rounded-[10px] p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-ui font-bold text-[#64748b] flex items-center gap-1.5">
-                              <Filter className="w-3.5 h-3.5 text-[#963861]" />
-                              <span>Lọc:</span>
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => handleSelectProductMember(null)}
-                              className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#1e293b] text-white shadow-2xs cursor-pointer flex items-center gap-1.5"
-                            >
-                              <Globe className="w-3.5 h-3.5" />
-                              <span>Toàn bộ phận</span>
-                            </button>
-
-                            {currentAuthUser && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSelectProductMember(currentAuthUser)}
-                                  className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#fcf0f5] text-[#963861] hover:bg-[#fae6ee] border border-[#f3c2d4] transition-all cursor-pointer flex items-center gap-1.5"
-                                  title="Lọc nhanh danh sách công việc do bạn phụ trách"
-                                >
-                                  <Star className="w-3.5 h-3.5 fill-current" />
-                                  <span>Của tôi ({myActiveTasksCount})</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveProductMember(currentAuthUser);
-                                    setFilterState((prev) => ({ ...prev, assignee: 'Tất cả' }));
-                                    setTaskPersonalScope('my_projects_tasks');
-                                  }}
-                                  className="px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] border border-[#bfdbfe] transition-all cursor-pointer flex items-center gap-1.5"
-                                  title="Lọc các công việc nằm trong những dự án bạn tham gia"
-                                >
-                                  <Briefcase className="w-3.5 h-3.5" />
-                                  <span>Dự án của tôi ({myProjectsCount})</span>
-                                </button>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="text-xs font-ui text-[#64748b] hidden sm:block">
-                            <strong className="text-[#1e293b]">{tasks.length} công việc</strong>
-                          </div>
-                        </div>
-                      ) : (
-                        <PersonalizationBanner
-                          member={activeProductMember}
-                          currentAuthUser={currentAuthUser}
-                          tasks={tasks}
-                          projects={projects}
-                          personalScope={taskPersonalScope}
-                          onChangeScope={setTaskPersonalScope}
-                          onClearMember={() => handleSelectProductMember(null)}
-                          onSelectMyTasks={() => currentAuthUser && handleSelectProductMember(currentAuthUser)}
-                        />
-                      )}
-
                       {/* Subtle Web Push Personalized Prompt Banner */}
                       <WebPushPromptBanner
                         onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
@@ -2082,20 +2051,6 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
                       {/* Thông báo Kỳ nghỉ lễ sắp tới (trong vòng 5 ngày) - Tách riêng 1 dòng nổi bật, nhiều màu sắc */}
                       <UpcomingHolidayBanner customDays={5} />
-
-                      {/* Cảnh báo Giai đoạn & Deadline Dự án sắp đến hạn trước 3 ngày */}
-                      <ProjectDeadlineAlertBanner
-                        projects={projects}
-                        tasks={tasks}
-                        members={members}
-                        currentAuthUser={currentAuthUser}
-                        activeProductMember={activeProductMember}
-                        onOpenProjectDetail={handleOpenProjectDetail}
-                        onFilterProjectTasks={(projId) => {
-                          setFilterState((f) => ({ ...f, projectId: projId }));
-                          window.scrollTo({ top: 350, behavior: 'smooth' });
-                        }}
-                      />
 
                       {/* Box Thống kê Kết quả công việc Tuần trước (Sáng thứ Hai cho từng tài khoản Product) */}
                       <MondayWeeklySummary
@@ -2110,9 +2065,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         }}
                       />
 
-                      {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Ẩn cảnh báo vào ngày nghỉ (cuối tuần không làm bù) hoặc ngày lễ */}
+                      {/* Khu vực Cảnh báo tiến độ ngày & Lịch nghỉ phép: Chỉ hiển thị khi có cảnh báo hoặc có người nghỉ */}
                       {workingTimeService.isWorkingDay(new Date()) ? (
-                        productLeavesData.hasAnyLeave ? (
+                        hasMissingTasksAlert && productLeavesData.hasAnyLeave ? (
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
                             <div className="md:col-span-7 flex flex-col">
                               <DailyCompletionAlert
@@ -2131,7 +2086,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                               <DailyLeaveNotice members={members} leaveData={productLeavesData} />
                             </div>
                           </div>
-                        ) : (
+                        ) : hasMissingTasksAlert ? (
                           <DailyCompletionAlert
                             members={members}
                             tasks={tasks}
@@ -2143,7 +2098,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                               setFilterState((f) => ({ ...f, assignee: assigneeName }));
                             }}
                           />
-                        )
+                        ) : productLeavesData.hasAnyLeave ? (
+                          <div className="w-full">
+                            <DailyLeaveNotice members={members} leaveData={productLeavesData} />
+                          </div>
+                        ) : null
                       ) : (
                         productLeavesData.hasAnyLeave ? (
                           <div className="w-full">
@@ -2151,18 +2110,6 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           </div>
                         ) : null
                       )}
-
-                      {/* Reminder & Urge Control Panel */}
-                      <ReminderPanel
-                        tasks={scopedTasksForDue}
-                        members={members}
-                        activeDueFilter={filterState.dueFilter}
-                        onSelectDueFilter={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
-                        onSelectTask={(task) => {
-                          setSelectedTask(task);
-                          setIsDrawerOpen(true);
-                        }}
-                      />
 
                       {/* Quick Add Form Box */}
                       <QuickAddBar
@@ -2285,18 +2232,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                             filterState.dueFilter !== 'all' ||
                             filterState.searchQuery) && (
                             <button
-                              onClick={() =>
-                                setFilterState({
-                                  projectId: 'all',
-                                  team: 'Tất cả',
-                                  status: 'Tất cả',
-                                  assignee: 'Tất cả',
-                                  dueFilter: 'all',
-                                  customDueDate: undefined,
-                                  searchQuery: '',
-                                })
-                              }
-                              className="text-[11px] font-ui text-[#b13460] hover:underline px-1 font-bold"
+                              onClick={handleResetToDefaultView}
+                              className="text-[11px] font-ui text-[#b13460] hover:underline px-1 font-bold cursor-pointer"
                             >
                               Xóa tất cả bộ lọc
                             </button>

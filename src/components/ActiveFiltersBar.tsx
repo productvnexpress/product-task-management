@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Filter, X, RotateCcw, Plus, ChevronRight, Check } from 'lucide-react';
 import { FilterState, ProjectItem, MemberItem, TaskStatus, TeamType, DueFilterType } from '../types';
 import { TaskPersonalScope } from './PersonalizationBanner';
+import { isSamePersonName } from '../utils/memberPersonalization';
+import { getUserRole } from '../utils/rbac';
 
 interface ActiveFiltersBarProps {
   filterState: FilterState;
@@ -9,6 +11,7 @@ interface ActiveFiltersBarProps {
   members?: MemberItem[];
   taskPersonalScope?: TaskPersonalScope;
   activeProductMember?: MemberItem | null;
+  currentAuthUser?: MemberItem | null;
   onClearProject: () => void;
   onClearAssignee: () => void;
   onClearTeam: () => void;
@@ -30,6 +33,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   members = [],
   taskPersonalScope,
   activeProductMember,
+  currentAuthUser,
   onClearProject,
   onClearAssignee,
   onClearTeam,
@@ -66,12 +70,29 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
       ? projects.find((p) => p.id === filterState.projectId)?.name || filterState.projectId
       : null;
 
-  const activeAssignee =
-    filterState.assignee && filterState.assignee !== 'Tất cả'
-      ? filterState.assignee
-      : activeProductMember
-      ? activeProductMember.name
-      : null;
+  // Xác định người dùng có đang xem danh sách của chính mình trong chế độ "Của tôi"
+  const isViewingSelfTasks = Boolean(
+    currentAuthUser &&
+      taskPersonalScope === 'my_tasks' &&
+      ((activeProductMember && activeProductMember.id === currentAuthUser.id) ||
+        (!activeProductMember && filterState.assignee && isSamePersonName(filterState.assignee, currentAuthUser.name)))
+  );
+
+  const activeAssignee = useMemo(() => {
+    // 1. Nếu có lọc theo assignee cụ thể
+    if (filterState.assignee && filterState.assignee !== 'Tất cả') {
+      // Nếu đang ở góc nhìn "Của tôi" và assignee là chính tài khoản đăng nhập -> không coi là filter bổ sung
+      if (isViewingSelfTasks && currentAuthUser && isSamePersonName(filterState.assignee, currentAuthUser.name)) {
+        return null;
+      }
+      return filterState.assignee;
+    }
+    // 2. Nếu đang chọn xem một đồng nghiệp khác (khác với tài khoản đang đăng nhập)
+    if (activeProductMember && currentAuthUser && activeProductMember.id !== currentAuthUser.id) {
+      return activeProductMember.name;
+    }
+    return null;
+  }, [filterState.assignee, activeProductMember, currentAuthUser, isViewingSelfTasks]);
 
   const activeTeam = filterState.team && filterState.team !== 'Tất cả' ? filterState.team : null;
   const activeStatus = filterState.status && filterState.status !== 'Tất cả' ? filterState.status : null;
@@ -86,7 +107,11 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
       : null;
 
   const activeSearch = filterState.searchQuery?.trim() ? filterState.searchQuery.trim() : null;
-  const isMyProjectsScope = taskPersonalScope === 'my_projects_tasks';
+
+  // Chỉ coi "Dự án của tôi" là filter nếu tài khoản hiện tại không phải là Manager (vì với Manager đây là góc nhìn mặc định)
+  const isMyProjectsScope =
+    taskPersonalScope === 'my_projects_tasks' &&
+    (!currentAuthUser || getUserRole(currentAuthUser) !== 'Manager');
 
   const hasAnyFilter = Boolean(
     activeProject ||

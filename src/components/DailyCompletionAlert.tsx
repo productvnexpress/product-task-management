@@ -71,41 +71,8 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
     const execMember = stats.targetMembers[0];
     if (!execMember) return null;
 
-    if (execMember.isOnLeaveToday) {
-      return (
-        <div className="bg-[#fdf4f8] border border-[#f3c2d4] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#963861]/15 text-[#963861] flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <span className="font-title text-xs font-semibold text-[#963861]">
-              Kế hoạch hôm nay: Bạn đang trong lịch nghỉ phép
-            </span>
-          </div>
-        </div>
-      );
-    }
-
-    if (execMember.hasTaskDueToday) {
-      return (
-        <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#22c55e]/15 text-[#15803d] flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <span className="font-title text-xs font-semibold text-[#166534]">
-              Kế hoạch hôm nay: Bạn có {execMember.tasksDueTodayCount} task đến hạn
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onSelectAssignee(execMember.member.name)}
-            className="px-2.5 py-1 rounded-[6px] text-xs font-ui font-semibold bg-white border border-[#bbf7d0] text-[#15803d] hover:bg-[#dcfce7] transition-all cursor-pointer"
-          >
-            Xem việc hôm nay
-          </button>
-        </div>
-      );
+    if (execMember.isOnLeaveToday || execMember.hasTaskDueToday) {
+      return null;
     }
 
     // Executive chưa có task đến hạn hôm nay
@@ -132,24 +99,9 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
   }
 
   // --- TRƯỜNG HỢP 2 & 3: MANAGER HOẶC ADMIN ---
-  const isManager = stats.roleScope === 'Manager';
-
-  // Nếu 100% nhân sự trong phạm vi đã có task đến hạn
+  // Nếu 100% nhân sự trong phạm vi đã có task đến hạn -> không hiển thị banner
   if (stats.missingMembers.length === 0) {
-    return (
-      <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#22c55e]/15 text-[#15803d] flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-          </div>
-          <h4 className="font-title text-xs font-semibold text-[#166534]">
-            {isManager
-              ? 'Tất cả nhân sự trong dự án đã có task đến hạn hôm nay'
-              : 'Tất cả nhân sự đã có task đến hạn hôm nay'}
-          </h4>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Sắp xếp danh sách nhân sự chưa có task theo ABC tiếng Việt của Tên gọi (firstName), nếu trùng tên thì xét tiếp theo Họ (lastName)

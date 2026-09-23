@@ -66,6 +66,7 @@ interface SidebarProps {
   onOpenAddProject?: () => void;
   onOpenAddMember?: () => void;
   onResetData?: () => void;
+  onLogoClick?: () => void;
 }
 
 const TEAMS: ('Tất cả' | TeamType)[] = [
@@ -115,6 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAddProject,
   onOpenAddMember,
   onResetData,
+  onLogoClick,
 }) => {
   const currentMember = activeProductMember || (selectedAssignee !== 'Tất cả' ? members?.find((m) => m.name === selectedAssignee) : null);
   const isAdmin = getUserRole(currentAuthUser || activeProductMember) === 'Admin';
@@ -231,19 +233,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand & App Title Header */}
       <div className="p-6 border-b border-[#f0f0f0] space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-[8px] bg-[#963861] text-white flex items-center justify-center font-ui font-bold text-lg shadow-xs">
+          <button
+            type="button"
+            onClick={onLogoClick}
+            className="flex items-center gap-2.5 text-left group cursor-pointer transition-opacity hover:opacity-90 focus:outline-none"
+            title="Về công việc mặc định"
+          >
+            <div className="w-9 h-9 rounded-[8px] bg-[#963861] group-hover:bg-[#80284f] text-white flex items-center justify-center font-ui font-bold text-lg shadow-xs transition-colors">
               ✓
             </div>
             <div>
-              <span className="font-ui font-extrabold text-[11px] tracking-wider uppercase text-[#913257] block">
+              <span className="font-ui font-extrabold text-[11px] tracking-wider uppercase text-[#913257] group-hover:text-[#80284f] block transition-colors">
                 VnExpress Product
               </span>
-              <h1 className="font-title text-base font-bold text-[#202020] leading-snug">
+              <h1 className="font-title text-base font-bold text-[#202020] group-hover:text-[#963861] leading-snug transition-colors">
                 Công việc
               </h1>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Primary CTA tailored to active tab with RBAC */}
