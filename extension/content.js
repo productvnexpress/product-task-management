@@ -271,6 +271,10 @@
 
     const card = document.createElement('div');
     card.className = 'wms-toast-card';
+    const notifId = String(notif.id || '');
+    if (notifId) {
+      card.setAttribute('data-notif-id', notifId);
+    }
 
     card.innerHTML = `
       <div class="wms-toast-header">
@@ -308,7 +312,7 @@
     let progressAnimId = null;
     let isPaused = false;
 
-    function closeToast() {
+    function closeToast(broadcast = false) {
       if (isClosed) return;
       isClosed = true;
       cancelAnimationFrame(progressAnimId);
@@ -317,16 +321,24 @@
       setTimeout(() => {
         card.remove();
       }, 250);
+
+      // Phát thông điệp đóng tới tất cả các tab/màn hình khác
+      if (broadcast && notifId) {
+        chrome.runtime.sendMessage({
+          action: 'DISMISS_TOAST',
+          notificationId: notifId,
+        }).catch(() => {});
+      }
     }
 
     btnClose.addEventListener('click', (e) => {
       e.stopPropagation();
-      closeToast();
+      closeToast(true);
     });
 
     // Bấm vào nút Xem việc hoặc card: Mở tab WMS
     const handleOpenWMS = () => {
-      closeToast();
+      closeToast(true);
       chrome.runtime.sendMessage({
         action: 'OPEN_WMS_TAB',
         url: targetUrl,
@@ -383,6 +395,21 @@
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'SHOW_INPAGE_TOAST' && request.notification) {
       showInPageToast(request.notification);
+      sendResponse({ success: true });
+      return true;
+    }
+
+    // Đóng đồng bộ từ màn hình/tab khác
+    if (request.action === 'DISMISS_INPAGE_TOAST' && request.notificationId) {
+      if (shadowRoot) {
+        const targetCards = shadowRoot.querySelectorAll(`.wms-toast-card[data-notif-id="${request.notificationId}"]`);
+        targetCards.forEach((targetCard) => {
+          targetCard.classList.add('closing');
+          setTimeout(() => {
+            targetCard.remove();
+          }, 250);
+        });
+      }
       sendResponse({ success: true });
       return true;
     }

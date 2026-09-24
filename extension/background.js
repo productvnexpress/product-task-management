@@ -180,12 +180,41 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
     }).catch(console.warn);
   }
 
-  // Xóa notification khỏi trung tâm thông báo
+  // Xóa notification khỏi trung tâm thông báo và đóng toast trên các màn hình khác
   chrome.notifications.clear(notifId);
+  broadcastDismissToast(realId);
 
   // Mở hoặc focus vào tab WMS
   openOrFocusAppTab(targetUrl);
 });
+
+// Phát lệnh đóng toast tới tất cả các tab và đóng notification OS
+function broadcastDismissToast(notifId, excludeTabId = null) {
+  try {
+    const nid = String(notifId || '');
+    if (!nid) return;
+
+    // 1. Xóa thông báo OS nếu có
+    try {
+      chrome.notifications.clear(`wms-notif-${nid}`);
+      chrome.notifications.clear(nid);
+    } catch (_) {}
+
+    // 2. Gửi lệnh đóng tới tất cả các tab
+    chrome.tabs.query({}, (tabs) => {
+      if (!tabs || tabs.length === 0) return;
+      tabs.forEach((tab) => {
+        if (!tab.id || (excludeTabId && tab.id === excludeTabId)) return;
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'DISMISS_INPAGE_TOAST',
+          notificationId: nid,
+        }).catch(() => {});
+      });
+    });
+  } catch (e) {
+    console.warn('[WMS Background] Lỗi broadcastDismissToast:', e);
+  }
+}
 
 // 6. Tự động kiểm tra và nhắc nhở đóng task lúc 16:30 hàng ngày
 async function checkDaily1630Reminder() {
@@ -361,9 +390,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           body: JSON.stringify({ is_read: true }),
         }).catch(console.warn);
       }
+
+      // Đóng toast tương ứng trên tất cả các tab/màn hình
+      if (request.notificationId) {
+        broadcastDismissToast(String(request.notificationId));
+      }
+
       openOrFocusAppTab(targetUrl);
       sendResponse({ success: true });
     });
+    return true;
+  }
+
+  // Đóng đồng bộ toast trên tất cả các màn hình khi user đóng ở 1 tab
+  if (request.action === 'DISMISS_TOAST' && request.notificationId) {
+    broadcastDismissToast(String(request.notificationId), sender?.tab?.id);
+    sendResponse({ success: true });
     return true;
   }
 
