@@ -22,10 +22,12 @@
     "alarms",
     "storage",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
-    "https://hyhtykhfnyrrvydizwta.supabase.co/*"
+    "https://hyhtykhfnyrrvydizwta.supabase.co/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"

@@ -10,15 +10,31 @@
   window.__VNE_WMS_TOAST_INITIALIZED__ = true;
 
   const HOST_ID = 'vne-wms-toast-host';
-  let hostEl = document.getElementById(HOST_ID);
+  let hostEl = null;
   let shadowRoot = null;
 
   function initHost() {
-    if (hostEl && shadowRoot) return;
-    hostEl = document.createElement('div');
-    hostEl.id = HOST_ID;
-    hostEl.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; pointer-events: none;';
-    document.documentElement.appendChild(hostEl);
+    hostEl = document.getElementById(HOST_ID);
+    if (!hostEl) {
+      hostEl = document.createElement('div');
+      hostEl.id = HOST_ID;
+      hostEl.style.cssText =
+        'all: initial; position: fixed; bottom: 0; right: 0; width: 0; height: 0; overflow: visible; z-index: 2147483647; pointer-events: none; border: none; margin: 0; padding: 0;';
+      const container = document.body || document.documentElement;
+      if (container) {
+        container.appendChild(hostEl);
+      }
+    } else if (!hostEl.isConnected) {
+      const container = document.body || document.documentElement;
+      if (container) {
+        container.appendChild(hostEl);
+      }
+    }
+
+    if (hostEl.shadowRoot) {
+      shadowRoot = hostEl.shadowRoot;
+      return;
+    }
 
     shadowRoot = hostEl.attachShadow({ mode: 'open' });
 
@@ -230,15 +246,18 @@
 
   function showInPageToast(notif) {
     initHost();
-    const wrap = shadowRoot.querySelector('.wms-toast-wrap');
-    if (!wrap) return;
+    if (!shadowRoot) return;
+    let wrap = shadowRoot.querySelector('.wms-toast-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.className = 'wms-toast-wrap';
+      shadowRoot.appendChild(wrap);
+    }
 
     // Giới hạn tối đa 3 toasts cùng lúc
     while (wrap.children.length >= 3) {
       wrap.firstElementChild.remove();
     }
-
-    playInPageChime();
 
     const title = notif.title || 'VnExpress WMS - Thông báo công việc';
     const message = notif.content || notif.message || '';
@@ -282,7 +301,7 @@
     const progressBar = card.querySelector('.wms-toast-progress');
 
     let isClosed = false;
-    let timerDuration = 8000; // 8 giây
+    let timerDuration = 180000; // 3 phút (180 giây) - người dùng có thể chủ động bấm đóng bất kỳ lúc nào
     let startTime = Date.now();
     let remainingTime = timerDuration;
     let timerId = null;
@@ -357,6 +376,7 @@
     progressAnimId = requestAnimationFrame(updateProgress);
 
     wrap.appendChild(card);
+    playInPageChime();
   }
 
   // Lắng nghe lệnh từ Extension (Background hoặc Popup)
@@ -367,31 +387,4 @@
       return true;
     }
   });
-
-  // Tự động nhận diện tài khoản đã đăng nhập từ web app WMS Vercel
-  if (
-    window.location.hostname.includes('product-task-management') ||
-    window.location.hostname.includes('localhost')
-  ) {
-    function syncAuthUser() {
-      try {
-        const username =
-          localStorage.getItem('vne_auth_username_v1') ||
-          localStorage.getItem('vne_wms_auth_user');
-        if (username) {
-          chrome.runtime.sendMessage({
-            action: 'SYNC_LOGGED_IN_USER',
-            username: username.trim().toLowerCase(),
-          }).catch(() => {});
-        }
-      } catch (_) {}
-    }
-
-    syncAuthUser();
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'vne_auth_username_v1' || e.key === 'vne_wms_auth_user') {
-        syncAuthUser();
-      }
-    });
-  }
 })();

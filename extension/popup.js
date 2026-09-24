@@ -34,11 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Login View Elements
   const formLogin = document.getElementById('formLogin');
-  const loginUserSelect = document.getElementById('loginUserSelect');
+  const inputLoginAccount = document.getElementById('inputLoginAccount');
   const inputLoginPassword = document.getElementById('inputLoginPassword');
   const loginError = document.getElementById('loginError');
   const btnSubmitLogin = document.getElementById('btnSubmitLogin');
-  const btnQuickLoginWeb = document.getElementById('btnQuickLoginWeb');
 
   // Main View Elements
   const userAvatar = document.getElementById('userAvatar');
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const testFeedback = document.getElementById('testFeedback');
   const btnRefresh = document.getElementById('btnRefresh');
   const notifList = document.getElementById('notifList');
-  const notifCount = document.getElementById('notifCount');
+  const notifUnreadBadge = document.getElementById('notifUnreadBadge');
 
   // Settings
   const toggleSettings = document.getElementById('toggleSettings');
@@ -58,8 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const inputAppUrl = document.getElementById('inputAppUrl');
   const btnSaveAppUrl = document.getElementById('btnSaveAppUrl');
 
-  // 1. Nạp danh sách thành viên vào form Đăng nhập
-  await initMembersDropdown();
+  // 1. Tải trước danh sách thành viên để đối soát
+  fetchMembersCache();
 
   // 2. Kiểm tra phiên đăng nhập đã lưu
   const storage = await chrome.storage.local.get([
@@ -87,33 +86,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     showLoginForm();
   }
 
-  // 3. Xử lý Đăng nhập
+  // 3. Xử lý Đăng nhập chủ động (User tự nhập tài khoản & mật khẩu)
   formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
 
-    const selectedName = loginUserSelect.value;
-    const password = inputLoginPassword.value.trim();
+    const accountInput = (inputLoginAccount.value || '').trim();
+    const password = (inputLoginPassword.value || '').trim();
 
-    if (!selectedName) {
-      showError('Vui lòng chọn tài khoản của bạn.');
+    if (!accountInput) {
+      showError('Chưa nhập tên tài khoản hoặc email.');
       return;
     }
     if (!password) {
-      showError('Vui lòng nhập mật khẩu.');
+      showError('Chưa nhập mật khẩu.');
       return;
     }
 
-    const member = membersList.find((m) => m.name === selectedName);
-    const username = member?.username || selectedName.toLowerCase().replace(/\s+/g, '');
-
     btnSubmitLogin.disabled = true;
-    btnSubmitLogin.innerHTML = '<span>Đang xác thực...</span>';
+    btnSubmitLogin.innerHTML = '<span>Đang kiểm tra...</span>';
 
     try {
+      const normInput = accountInput.toLowerCase();
+      // Tìm trong membersList trước hoặc fetch từ Supabase
+      let member = membersList.find((m) => {
+        const u = (m.username || '').toLowerCase();
+        const email = (m.email || '').toLowerCase();
+        const emailPrefix = email.split('@')[0];
+        const name = (m.name || '').toLowerCase();
+        return u === normInput || email === normInput || emailPrefix === normInput || name === normInput;
+      });
+
+      // Nếu chưa có trong cache, thử tìm trực tiếp trên Supabase
+      if (!member) {
+        try {
+          const resMem = await fetch(
+            `${SUPABASE_URL}/rest/v1/members?or=(username.ilike.${encodeURIComponent(normInput)},email.ilike.${encodeURIComponent(normInput)},name.ilike.${encodeURIComponent(normInput)})&limit=1`,
+            {
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+            }
+          );
+          if (resMem.ok) {
+            const found = await resMem.json();
+            if (found && found.length > 0) {
+              member = found[0];
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!member) {
+        showError('Sai tài khoản hoặc mật khẩu.');
+        btnSubmitLogin.disabled = false;
+        btnSubmitLogin.innerHTML = '<span>Đăng nhập</span>';
+        return;
+      }
+
+      const username = member.username || member.name.toLowerCase().replace(/\s+/g, '');
+
       // Kiểm tra mật khẩu trong Supabase member_credentials
       let isValid = false;
-      const res = await fetch(
+      const resCred = await fetch(
         `${SUPABASE_URL}/rest/v1/member_credentials?username=eq.${encodeURIComponent(username)}&select=password_hash`,
         {
           headers: {
@@ -123,12 +159,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       );
 
-      if (res.ok) {
-        const creds = await res.json();
+      if (resCred.ok) {
+        const creds = await resCred.json();
         if (creds && creds.length > 0 && creds[0].password_hash) {
           isValid = password === creds[0].password_hash;
         } else {
-          // Chưa đổi mật khẩu: dùng mật khẩu mặc định
           isValid = password === DEFAULT_PASSWORD;
         }
       } else {
@@ -136,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (!isValid) {
-        showError('Mật khẩu không chính xác. Mật khẩu mặc định là @26022001!');
+        showError('Sai tài khoản hoặc mật khẩu.');
         btnSubmitLogin.disabled = false;
         btnSubmitLogin.innerHTML = '<span>Đăng nhập</span>';
         return;
@@ -144,9 +179,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Đăng nhập thành công: Lưu vào storage
       const userObj = {
-        name: member?.name || selectedName,
+        name: member.name,
         username: username,
-        team: member?.team || 'Ban Sản phẩm - Công nghệ',
+        team: member.team || 'Ban Sản phẩm - Công nghệ',
       };
 
       await chrome.storage.local.set({ wms_user: userObj });
@@ -158,20 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshNotifications();
     } catch (err) {
       console.warn('Lỗi đăng nhập:', err);
-      // Fallback kiểm tra mật khẩu mặc định
-      if (password === DEFAULT_PASSWORD) {
-        const userObj = {
-          name: member?.name || selectedName,
-          username: username,
-          team: member?.team || 'Ban Sản phẩm - Công nghệ',
-        };
-        await chrome.storage.local.set({ wms_user: userObj });
-        chrome.runtime.sendMessage({ action: 'TRIGGER_CHECK' });
-        showMainDashboard(userObj);
-        refreshNotifications();
-      } else {
-        showError('Không thể kết nối máy chủ. Mật khẩu mặc định là @26022001!');
-      }
+      showError('Lỗi kết nối máy chủ. Thử lại sau.');
     } finally {
       btnSubmitLogin.disabled = false;
       btnSubmitLogin.innerHTML = '<span>Đăng nhập</span>';
@@ -184,13 +206,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.action.setBadgeText({ text: '!' });
     chrome.action.setBadgeBackgroundColor({ color: '#ea580c' });
     showLoginForm();
-  });
-
-  // 5. Nút Mở Web WMS để đăng nhập nhanh
-  btnQuickLoginWeb.addEventListener('click', async () => {
-    const s = await chrome.storage.local.get(['wms_app_url']);
-    const targetUrl = s.wms_app_url || DEFAULT_APP_URL;
-    chrome.tabs.create({ url: targetUrl });
   });
 
   // 6. Lắng nghe thay đổi storage (Tự động cập nhật nếu web app sync tài khoản)
@@ -212,49 +227,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.runtime.sendMessage({ action: 'OPEN_WMS_TAB', url: targetUrl });
   });
 
-  // 8. Nút Test thông báo & âm thanh chuông
-  btnTestNotif.addEventListener('click', () => {
+  // 8. Nút Thử thông báo & âm thanh chuông
+  btnTestNotif.addEventListener('click', async () => {
     const originalHtml = btnTestNotif.innerHTML;
-    btnTestNotif.innerHTML = '<span>🔔 Đang phát...</span>';
+    btnTestNotif.innerHTML = '<span>🔔 Đang thử...</span>';
     btnTestNotif.disabled = true;
 
     // Phát chuông bằng Web Audio API
     playChimeSound();
 
-    // Tạo thông báo Desktop
+    // Gửi yêu cầu test tới background service worker
     try {
-      chrome.notifications.create(
-        `test-${Date.now()}`,
-        {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
-          title: 'Kiểm tra chuông WMS thành công! 🔔',
-          message: 'Extension đang hoạt động bình thường và sẵn sàng nhận thông báo.',
-          contextMessage: 'Ban Sản phẩm - Công nghệ VnExpress',
-          priority: 2,
-        },
-        (id) => {
-          if (chrome.runtime.lastError) {
-            console.warn('[Popup] Notification error:', chrome.runtime.lastError);
-          }
+      const resp = await chrome.runtime.sendMessage({ action: 'TEST_NOTIFICATION' });
+      if (testFeedback) {
+        testFeedback.style.display = 'block';
+        const titleEl = document.getElementById('testFeedbackTitle');
+        const descEl = document.getElementById('testFeedbackDesc');
+        if (resp && resp.hasSystemActiveTab && resp.sentCount === 0) {
+          if (titleEl) titleEl.textContent = '✓ Đã phát chuông.';
+          if (descEl) descEl.textContent = 'Chrome chặn popup trên trang hệ thống chrome://. Chuyển sang tab trang web (VnExpress, Google, WMS) để thấy popup góc phải.';
+        } else {
+          if (titleEl) titleEl.textContent = '✓ Đã phát chuông và gửi thông báo.';
+          if (descEl) descEl.textContent = 'Popup hiển thị ở góc phải màn hình các tab trang web (VnExpress, Google, WMS...).';
         }
-      );
-    } catch (_) {}
-
-    // Gửi thêm cho background
-    try {
-      chrome.runtime.sendMessage({ action: 'TEST_NOTIFICATION' }).catch(() => {});
-    } catch (_) {}
-
-    if (testFeedback) {
-      testFeedback.style.display = 'block';
+      }
+    } catch (_) {
+      if (testFeedback) {
+        testFeedback.style.display = 'block';
+      }
     }
 
-    btnTestNotif.innerHTML = '<span style="color: #166534;">✓ Đã phát chuông!</span>';
+    btnTestNotif.innerHTML = '<span style="color: #166534;">✓ Đã thử!</span>';
     setTimeout(() => {
       btnTestNotif.innerHTML = originalHtml;
       btnTestNotif.disabled = false;
-    }, 2500);
+    }, 2000);
   });
 
   // 9. Nút Làm mới
@@ -273,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!url) url = DEFAULT_APP_URL;
     await chrome.storage.local.set({ wms_app_url: url });
     settingsDrawer.classList.remove('open');
-    alert('Đã lưu địa chỉ máy chủ WMS thành công!');
+    alert('Đã lưu địa chỉ máy chủ WMS.');
   });
 
   // --- Helper Functions ---
@@ -281,7 +288,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function showLoginForm() {
     loginView.style.display = 'flex';
     mainView.style.display = 'none';
-    inputLoginPassword.value = '';
+    if (inputLoginAccount) inputLoginAccount.value = '';
+    if (inputLoginPassword) inputLoginPassword.value = '';
     loginError.style.display = 'none';
   }
 
@@ -306,18 +314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loginError.style.display = 'block';
   }
 
-  async function initMembersDropdown() {
-    loginUserSelect.innerHTML = '<option value="">-- Chọn thành viên nhận việc --</option>';
-
-    // Tạo option từ membersList mặc định
-    membersList.forEach((m) => {
-      const opt = document.createElement('option');
-      opt.value = m.name;
-      opt.textContent = `${m.name} (${m.team})`;
-      loginUserSelect.appendChild(opt);
-    });
-
-    // Cập nhật thêm từ Supabase nếu có
+  function fetchMembersCache() {
     fetch(`${SUPABASE_URL}/rest/v1/members?select=id,name,username,team,email&order=name.asc`, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -328,16 +325,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       .then((data) => {
         if (data && data.length > 0) {
           membersList = data;
-          const currentVal = loginUserSelect.value;
-          loginUserSelect.innerHTML = '<option value="">-- Chọn thành viên nhận việc --</option>';
-          data.forEach((m) => {
-            if (!m.name) return;
-            const opt = document.createElement('option');
-            opt.value = m.name;
-            opt.textContent = m.team ? `${m.name} (${m.team})` : m.name;
-            loginUserSelect.appendChild(opt);
-          });
-          if (currentVal) loginUserSelect.value = currentVal;
         }
       })
       .catch(() => {});
@@ -376,18 +363,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderNotifications(list);
     } catch (err) {
       console.warn('[Popup] Lỗi tải notifications:', err);
-      notifList.innerHTML = '<div class="empty-state">Không thể kết nối máy chủ Supabase</div>';
+      notifList.innerHTML = '<div class="empty-state">Lỗi kết nối máy chủ Supabase.</div>';
+    }
+  }
+
+  function updateUnreadBadge(unreadCount) {
+    if (!notifUnreadBadge) return;
+    if (unreadCount > 0) {
+      notifUnreadBadge.textContent = `${unreadCount} chưa đọc`;
+      notifUnreadBadge.style.display = 'inline-block';
+    } else {
+      notifUnreadBadge.style.display = 'none';
     }
   }
 
   function renderNotifications(items) {
     if (!items || items.length === 0) {
-      notifList.innerHTML = '<div class="empty-state">Chưa có thông báo nào</div>';
-      notifCount.textContent = '0';
+      notifList.innerHTML = '<div class="empty-state">Chưa có thông báo.</div>';
+      updateUnreadBadge(0);
       return;
     }
 
-    notifCount.textContent = String(items.length);
+    let unreadCount = items.filter((n) => !n.is_read).length;
+    updateUnreadBadge(unreadCount);
     notifList.innerHTML = '';
 
     items.slice(0, 15).forEach((n) => {
@@ -440,6 +438,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           itemEl.classList.remove('unread');
           const d = itemEl.querySelector('.unread-dot');
           if (d) d.remove();
+
+          unreadCount = Math.max(0, unreadCount - 1);
+          updateUnreadBadge(unreadCount);
+          chrome.action.setBadgeText({ text: unreadCount > 0 ? String(unreadCount) : '' });
         }
 
         const s = await chrome.storage.local.get(['wms_app_url']);

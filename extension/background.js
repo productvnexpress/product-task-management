@@ -207,8 +207,8 @@ async function checkDaily1630Reminder() {
       const appUrl = await getEffectiveAppUrl();
       const reminderNotif = {
         id: `1630-${todayStr}`,
-        title: 'Đóng task trong ngày (16:30)',
-        content: 'Rà soát và hoàn thành hoặc dời hạn các task đến hạn hôm nay trước khi kết thúc ca làm việc.',
+        title: 'Nhắc việc cuối ngày (16:30)',
+        content: 'Hoàn thành hoặc dời hạn các task đến hạn hôm nay.',
         project_name: 'Ban Sản phẩm - Công nghệ VnExpress',
         targetUrl: `${appUrl}/tasks`,
       };
@@ -230,7 +230,47 @@ async function checkDaily1630Reminder() {
   }
 }
 
-// 7. Bắn Toast Notification trực tiếp lên trang web người dùng đang lướt (Facebook, VnExpress, Google...)
+function isSystemUrl(url) {
+  if (!url) return true;
+  return (
+    url.startsWith('chrome://') ||
+    url.startsWith('chrome-extension://') ||
+    url.startsWith('edge://') ||
+    url.startsWith('about:') ||
+    url.startsWith('view-source:')
+  );
+}
+
+// Gửi toast tới tab, tự động inject content.js nếu tab chưa nạp
+async function sendToastToTab(tabId, payload) {
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      action: 'SHOW_INPAGE_TOAST',
+      notification: payload,
+    });
+    return true;
+  } catch (err) {
+    // Nếu tab chưa nạp content.js (tab mở trước khi cài/cập nhật extension) -> inject bằng scripting
+    try {
+      if (chrome.scripting) {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content.js'],
+        });
+        await chrome.tabs.sendMessage(tabId, {
+          action: 'SHOW_INPAGE_TOAST',
+          notification: payload,
+        });
+        return true;
+      }
+    } catch (e) {
+      console.warn('[WMS Background] Không thể inject content.js vào tab:', tabId, e);
+    }
+    return false;
+  }
+}
+
+// 7. Bắn Toast Notification trực tiếp lên trang web người dùng đang xem
 async function broadcastInPageToast(notif) {
   try {
     const appUrl = await getEffectiveAppUrl();
@@ -238,30 +278,35 @@ async function broadcastInPageToast(notif) {
     const targetUrl = notif.targetUrl || (taskId ? `${appUrl}/tasks/${taskId}` : `${appUrl}/tasks`);
     const payload = { ...notif, appUrl, targetUrl };
 
-    // Tìm tất cả các tab đang active trên các cửa sổ trình duyệt
-    chrome.tabs.query({ active: true }, (tabs) => {
-      if (!tabs || tabs.length === 0) return;
-      tabs.forEach((tab) => {
-        if (!tab.id || !tab.url) return;
-        // Bỏ qua các trang nội bộ của Chrome
-        if (
-          tab.url.startsWith('chrome://') ||
-          tab.url.startsWith('chrome-extension://') ||
-          tab.url.startsWith('edge://') ||
-          tab.url.startsWith('about:')
-        ) {
-          return;
-        }
+    // 1. Quét các tab đang active
+    const activeTabs = await chrome.tabs.query({ active: true });
+    let sentCount = 0;
+    let hasSystemActiveTab = false;
 
-        // Gửi tới Content Script trên tab
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'SHOW_INPAGE_TOAST',
-          notification: payload,
-        }).catch(() => {});
-      });
-    });
+    for (const tab of activeTabs) {
+      if (!tab.id || !tab.url) continue;
+      if (isSystemUrl(tab.url)) {
+        hasSystemActiveTab = true;
+        continue;
+      }
+      const ok = await sendToastToTab(tab.id, payload);
+      if (ok) sentCount++;
+    }
+
+    // 2. Nếu tab active là trang hệ thống (chrome://), tìm tab web bất kỳ để hiển thị
+    if (sentCount === 0) {
+      const allTabs = await chrome.tabs.query({});
+      const webTab = allTabs.find((t) => t.id && t.url && !isSystemUrl(t.url));
+      if (webTab) {
+        const ok = await sendToastToTab(webTab.id, payload);
+        if (ok) sentCount++;
+      }
+    }
+
+    return { success: true, sentCount, hasSystemActiveTab };
   } catch (err) {
     console.warn('[WMS Background] Lỗi broadcast toast:', err);
+    return { success: false, sentCount: 0 };
   }
 }
 
@@ -323,86 +368,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'TEST_NOTIFICATION') {
-    getEffectiveAppUrl().then((appUrl) => {
+    getEffectiveAppUrl().then(async (appUrl) => {
       const testNotif = {
         id: `test-${Date.now()}`,
-        title: 'Kiểm tra chuông WMS thành công! 🔔',
-        content: 'Popup thông báo hoạt động trực tiếp trên mọi website bạn đang xem (Facebook, VnExpress, Google...)',
+        title: 'Thử chuông thông báo WMS',
+        content: 'Hệ thống thông báo hoạt động bình thường.',
         project_name: 'Ban Sản phẩm - Công nghệ VnExpress',
-        actor_name: 'Hệ thống WMS',
+        actor_name: 'WMS',
         targetUrl: `${appUrl}/tasks`,
       };
 
       // 1. Gửi OS notification
-      chrome.notifications.create(
-        testNotif.id,
-        {
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
-          title: testNotif.title,
-          message: testNotif.content,
-          contextMessage: testNotif.project_name,
-          priority: 2,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            // Không crash nếu macOS chặn
-          }
-        }
-      );
+      try {
+        chrome.notifications.create(
+          testNotif.id,
+          {
+            type: 'basic',
+            iconUrl: chrome.runtime.getURL('icons/icon-128.png'),
+            title: testNotif.title,
+            message: testNotif.content,
+            contextMessage: testNotif.project_name,
+            priority: 2,
+          },
+          () => {}
+        );
+      } catch (_) {}
 
-      // 2. Bắn ngay In-page toast lên tab hiện tại
-      broadcastInPageToast(testNotif);
+      // 2. Bắn In-page toast góc phải lên tab web
+      const result = await broadcastInPageToast(testNotif);
 
-      sendResponse({ success: true });
-    });
-    return true;
-  }
-
-  // Tự động nhận diện tài khoản đồng bộ từ Web App
-  if (request.action === 'SYNC_LOGGED_IN_USER' && request.username) {
-    handleSyncUser(request.username).then((user) => {
-      sendResponse({ success: true, user });
+      sendResponse(result);
     });
     return true;
   }
 });
 
-// Hàm hỗ trợ đồng bộ nhân sự từ Supabase dựa trên username từ Web App
-async function handleSyncUser(username) {
-  try {
-    const norm = String(username).trim().toLowerCase();
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/members?select=id,name,username,team,email&order=name.asc`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (!res.ok) return null;
-    const members = await res.json();
-
-    const matched = members.find((m) => {
-      const u = (m.username || '').toLowerCase();
-      const emailPrefix = (m.email || '').split('@')[0].toLowerCase();
-      return u === norm || emailPrefix === norm;
-    });
-
-    if (matched && matched.name) {
-      const userObj = {
-        id: matched.id,
-        name: matched.name,
-        username: matched.username || norm,
-        team: matched.team || 'Ban Sản phẩm - Công nghệ',
-      };
-      await chrome.storage.local.set({ wms_user: userObj });
-      checkNotifications();
-      return userObj;
-    }
-  } catch (e) {
-    console.warn('[WMS Background] Lỗi sync user:', e);
-  }
-  return null;
-}
