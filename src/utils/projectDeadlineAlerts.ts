@@ -255,8 +255,9 @@ export function checkAndDispatchProjectDeadlineNotifications(
         content = `Dự án [${alert.projectCode}] cần hoàn thành mục tiêu. PM phụ trách: ${pmDisplay}.`;
       }
 
+      const safeRecipientKey = recipientName.toLowerCase().replace(/[\s\/\\]+/g, '_');
       const notif: NotificationItem = {
-        id: `notif-deadline-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id: `notif-deadline-${todayStr}-${alert.id}-${safeRecipientKey}`,
         recipientName,
         recipientId: recipientMember?.username || recipientMember?.id,
         actorName: 'Hệ thống Quản trị (Cảnh báo Hạn chót)',

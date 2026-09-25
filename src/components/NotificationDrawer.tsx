@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Bell,
@@ -34,6 +34,7 @@ import {
   WebPushPermissionState,
 } from '../utils/webPushNotifications';
 import { PersonalizedWebPushCard } from './PersonalizedWebPushCard';
+import { deduplicateNotifications } from '../utils/notificationDeduplication';
 
 interface NotificationDrawerProps {
   isOpen: boolean;
@@ -106,10 +107,13 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const activeSourceList =
-    isManagerOrAdmin && scope === 'department'
-      ? (allNotifications && allNotifications.length > 0 ? allNotifications : notifications)
-      : notifications;
+  const activeSourceList = useMemo(() => {
+    const raw =
+      isManagerOrAdmin && scope === 'department'
+        ? (allNotifications && allNotifications.length > 0 ? allNotifications : notifications)
+        : notifications;
+    return deduplicateNotifications(raw);
+  }, [isManagerOrAdmin, scope, allNotifications, notifications]);
 
   const unreadCount = activeSourceList.filter((n) => !n.isRead).length;
 
@@ -166,6 +170,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         return (
           <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] flex items-center justify-center shrink-0">
             <Clock className="w-4 h-4" />
+          </div>
+        );
+      case 'daily_task_reminder':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4" />
           </div>
         );
       case 'task_updated':

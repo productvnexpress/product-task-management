@@ -114,21 +114,21 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
   // Danh sách công việc theo từng KPI được chọn để drill-down
   const detailTasks = useMemo(() => {
     if (!selectedKpi) return [];
-    if (selectedKpi === 'total') return summary.analyzedTasks.map((a) => a.task);
+    if (selectedKpi === 'total') return summary.tasksAnalyzed.map((a) => a.task);
     if (selectedKpi === 'completed') {
-      return summary.analyzedTasks.filter((a) => a.isCompleted).map((a) => a.task);
+      return summary.tasksAnalyzed.filter((a) => a.isCompleted).map((a) => a.task);
     }
     if (selectedKpi === 'ontime') {
-      return summary.analyzedTasks.filter((a) => a.isCompleted && a.isOnTime).map((a) => a.task);
+      return summary.tasksAnalyzed.filter((a) => a.isCompleted && a.isOnTime).map((a) => a.task);
     }
     if (selectedKpi === 'late_confirm' || selectedKpi === 'late') {
-      return summary.analyzedTasks.filter((a) => a.isCompleted && !a.isOnTime).map((a) => a.task);
+      return summary.tasksAnalyzed.filter((a) => a.isCompleted && !a.isOnTime).map((a) => a.task);
     }
     if (selectedKpi === 'overdue') {
-      return summary.analyzedTasks.filter((a) => !a.isCompleted && a.discipline === 'currently_overdue').map((a) => a.task);
+      return summary.tasksAnalyzed.filter((a) => !a.isCompleted && a.discipline === 'currently_overdue').map((a) => a.task);
     }
     return [];
-  }, [selectedKpi, summary.analyzedTasks]);
+  }, [selectedKpi, summary.tasksAnalyzed]);
 
   const handleDismiss = () => {
     setIsDismissed(true);

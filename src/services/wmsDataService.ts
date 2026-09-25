@@ -16,6 +16,7 @@ import {
   NotificationItem,
 } from '../types';
 import { normalizeProjectStatus } from '../utils/projectSortingUtils';
+import { deduplicateNotifications } from '../utils/notificationDeduplication';
 
 export const wmsDataService = {
   // ==========================================
@@ -628,18 +629,19 @@ export const wmsDataService = {
       }));
 
       // Đồng bộ vào localStorage để dự phòng ngoại tuyến
-      if (items.length > 0) {
+      const dedupedItems = deduplicateNotifications(items);
+      if (dedupedItems.length > 0) {
         try {
-          localStorage.setItem('vne_notifications_v1', JSON.stringify(items));
+          localStorage.setItem('vne_notifications_v1', JSON.stringify(dedupedItems));
         } catch (e) {}
       }
 
-      return items;
+      return dedupedItems;
     } catch (e) {
       console.warn('Exception khi fetchNotifications:', e);
       try {
         const local = localStorage.getItem('vne_notifications_v1');
-        return local ? JSON.parse(local) : [];
+        return local ? deduplicateNotifications(JSON.parse(local)) : [];
       } catch {
         return [];
       }
@@ -647,17 +649,17 @@ export const wmsDataService = {
   },
 
   async saveNotification(item: NotificationItem): Promise<void> {
-    // 1. Luôn lưu dự phòng vào localStorage trước
+    // 1. Luôn lưu dự phòng vào localStorage trước (loại trừ bản ghi trùng lặp)
     try {
       const local = localStorage.getItem('vne_notifications_v1');
       const list: NotificationItem[] = local ? JSON.parse(local) : [];
-      const updated = [item, ...list.filter((n) => n.id !== item.id)].slice(0, 100);
+      const updated = deduplicateNotifications([item, ...list]).slice(0, 100);
       localStorage.setItem('vne_notifications_v1', JSON.stringify(updated));
     } catch (e) {
       console.warn('Không thể lưu notification vào localStorage:', e);
     }
 
-    // 2. Lưu lên Supabase nếu bảng tồn tại
+    // 2. Lưu lên Supabase nếu bảng tồn tại (upsert để chống duplicate ID)
     try {
       const payload: any = {
         id: item.id,
@@ -675,7 +677,7 @@ export const wmsDataService = {
         created_at: item.createdAt,
       };
 
-      const { error } = await supabase.from('notifications').insert(payload);
+      const { error } = await supabase.from('notifications').upsert(payload, { onConflict: 'id' });
       if (error) {
         console.warn('Lỗi lưu notification lên Supabase:', error.message);
         // Dự phòng tương thích nếu bảng cũ dùng cột message / recipient_id
@@ -693,7 +695,7 @@ export const wmsDataService = {
             is_read: Boolean(item.isRead),
             created_at: item.createdAt,
           };
-          await supabase.from('notifications').insert(fallbackPayload);
+          await supabase.from('notifications').upsert(fallbackPayload, { onConflict: 'id' });
         }
       }
     } catch (e) {

@@ -5,52 +5,54 @@
 
 import { MemberItem, NotificationItem, TaskItem } from '../types';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
-import { isSamePersonName } from './memberPersonalization';
+import { isSamePersonName, getProductMembers } from './memberPersonalization';
 import { workingTimeService } from '../services/workingTimeService';
 
 /**
- * Kiểm tra và phát thông báo nhắc đóng task hàng ngày vào lúc 16:30 cho từng account
- * - Điều kiện: Ngày làm việc (loại trừ Thứ 7, CN và ngày lễ theo workingTimeService)
- * - Mốc giờ: Từ 16:30 trở đi (hoặc preview param ?closeTaskAlert=1)
- * - Nhân sự đang nghỉ phép được miễn trừ
+ * Kiểm tra và phát thông báo nhắc nhở lập kế hoạch task vào lúc 08:30 sáng các ngày làm việc
+ * - Điều kiện: Ngày làm việc (loại trừ Thứ 7, CN và ngày nghỉ lễ theo workingTimeService)
+ * - Mốc giờ: Từ 08:30 trở đi (hoặc preview param ?morningTaskAlert=1 hoặc ?preview0830=1)
+ * - Đối tượng: Toàn bộ nhân sự thuộc bộ phận Product (PM, Designer, SEO, Data)
+ * - Miễn trừ: Nhân sự đang nghỉ phép hôm nay được miễn trừ hoàn toàn
+ * - Tiêu chí nhắc: Chỉ nhắc nhân sự CHƯA CÓ task nào đến hạn hôm nay (tasksDueToday.length === 0)
  * - Chống trùng lặp: Lưu mã ngày vào localStorage, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày
- * - Biên tập chuẩn EDITOR.md: Ngắn gọn, súc tích, facts first, thể chủ động, cắt bỏ từ rườm rà
+ * - Biên tập chuẩn EDITOR.md: Facts first, ngắn gọn, súc tích, thể chủ động, cắt bỏ từ rườm rà
  */
-export function checkAndDispatchDailyCloseTaskNotifications(
+export function checkAndDispatchDailyMorningTaskNotifications(
   tasks: TaskItem[],
   allMembers: MemberItem[],
   onDispatchNotification: (notif: NotificationItem) => void,
   refDate: Date = new Date()
 ): number {
-  // 1. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày lễ)
+  // 1. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày nghỉ lễ)
   if (!workingTimeService.isWorkingDay(refDate)) {
     return 0;
   }
 
-  // 2. Kiểm tra khung giờ 16:30
+  // 2. Kiểm tra khung giờ 08:30
   const hours = refDate.getHours();
   const minutes = refDate.getMinutes();
   const timeInMinutes = hours * 60 + minutes;
 
-  // 16:30 tương đương 16 * 60 + 30 = 990 phút
-  const isAfter1630 = timeInMinutes >= 990;
+  // 08:30 tương đương 8 * 60 + 30 = 510 phút
+  const isAfter0830 = timeInMinutes >= 510;
 
   // Hỗ trợ preview / test qua URL param
   const isPreviewParam = (() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('closeTaskAlert') === '1' || urlParams.get('preview1630') === '1';
+      return urlParams.get('morningTaskAlert') === '1' || urlParams.get('preview0830') === '1';
     } catch {
       return false;
     }
   })();
 
-  if (!isAfter1630 && !isPreviewParam) {
+  if (!isAfter0830 && !isPreviewParam) {
     return 0;
   }
 
   const todayStr = getTodayDateString(refDate);
-  const storageKey = `vne_daily_close_task_notif_${todayStr}`;
+  const storageKey = `vne_daily_morning_task_notif_${todayStr}`;
 
   let sentMemberKeys: string[] = [];
   try {
@@ -63,12 +65,14 @@ export function checkAndDispatchDailyCloseTaskNotifications(
   const sentSet = new Set(sentMemberKeys);
   let dispatchedCount = 0;
 
-  // 3. Quét từng account trong hệ thống
-  allMembers.forEach((member) => {
+  // 3. Chỉ xét các nhân sự thuộc bộ phận Product
+  const productMembers = getProductMembers(allMembers);
+  const leavesToday = workingTimeService.getLeavesForDate(todayStr);
+
+  productMembers.forEach((member) => {
     if (!member.name || !member.name.trim()) return;
 
     // Miễn trừ nếu nhân sự đang nghỉ phép hôm nay
-    const leavesToday = workingTimeService.getLeavesForDate(todayStr);
     if (leavesToday.some((l) => isSamePersonName(l.memberName, member.name))) {
       return;
     }
@@ -78,31 +82,30 @@ export function checkAndDispatchDailyCloseTaskNotifications(
       return;
     }
 
-    // Kiểm tra các task đến hạn hôm nay hoặc quá hạn của nhân sự chưa hoàn thành
-    const openTasks = tasks.filter((t) => {
-      if (!isSamePersonName(t.assignee, member.name)) return false;
-      if (t.status === 'Hoàn thành') return false;
+    // Kiểm tra nhân sự đã có task đến hạn hôm nay chưa
+    const memberTasks = tasks.filter((t) => isSamePersonName(t.assignee, member.name));
+    const tasksDueToday = memberTasks.filter((t) => {
       const due = normalizeDateString(t.dueDate);
-      return due === todayStr || due < todayStr;
+      return due === todayStr;
     });
 
-    const openCount = openTasks.length;
+    // Nếu đã có ít nhất 1 task đến hạn hôm nay -> không cần nhắc
+    if (tasksDueToday.length > 0) {
+      return;
+    }
 
     // Biên tập nội dung chuẩn EDITOR.md: Facts first, ngắn gọn, súc tích, thể chủ động
-    const title = 'Đóng task trong ngày (16:30)';
-    const content =
-      openCount > 0
-        ? `Còn ${openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`
-        : 'Rà soát và đóng toàn bộ công việc đến hạn hôm nay trước khi kết thúc ca làm việc.';
+    const title = 'Nhắc việc trong ngày (08:30)';
+    const content = 'Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.';
 
     const safeKey = (member.username || member.name).toLowerCase().replace(/[\s\/\\]+/g, '_');
     const notif: NotificationItem = {
-      id: `notif-daily-close-${todayStr}-${safeKey}`,
+      id: `notif-daily-morning-${todayStr}-${safeKey}`,
       recipientName: member.name,
       recipientId: member.username || member.id,
       actorName: 'Hệ thống WMS',
       projectName: 'Công việc',
-      type: 'daily_close_reminder',
+      type: 'daily_task_reminder',
       title,
       content,
       isRead: false,
@@ -118,7 +121,7 @@ export function checkAndDispatchDailyCloseTaskNotifications(
     try {
       localStorage.setItem(storageKey, JSON.stringify(Array.from(sentSet)));
     } catch (e) {
-      console.warn('[DailyCloseTaskAlerts] Lỗi lưu cache localStorage:', e);
+      console.warn('[DailyMorningTaskAlerts] Lỗi lưu cache localStorage:', e);
     }
   }
 

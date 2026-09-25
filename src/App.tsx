@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   TaskItem,
@@ -52,12 +52,15 @@ import { recurringTaskService } from './services/recurringTaskService';
 import { fetchMasterChecklistTemplateFromSupabase } from './data/defaultProjectChecklist';
 import { checkAndDispatchProjectDeadlineNotifications } from './utils/projectDeadlineAlerts';
 import { checkAndDispatchDailyCloseTaskNotifications } from './utils/dailyCloseTaskAlerts';
+import { checkAndDispatchDailyMorningTaskNotifications } from './utils/dailyMorningTaskAlerts';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { TaskPersonalScope } from './components/PersonalizationBanner';
 import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
 import { formatDateWithEnDay } from './utils/formatters';
 import { extractMentions, getTaskThreadParticipants } from './utils/mentionUtils';
+import { isValidUrl, normalizeUrl } from './utils/urlValidator';
+import { deduplicateNotifications } from './utils/notificationDeduplication';
 import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
@@ -138,13 +141,19 @@ export function App() {
     const saved = localStorage.getItem('vne_notifications_v1');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return deduplicateNotifications(parsed);
       } catch (e) {
         return [];
       }
     }
     return [];
   });
+
+  const notificationsRef = useRef(notifications);
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
@@ -704,7 +713,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   const currentUserName = currentViewingUser?.name;
   const userNotifications = useMemo(() => {
     if (!currentUserName) return [];
-    return notifications.filter((n) => isSamePersonName(n.recipientName, currentUserName));
+    return deduplicateNotifications(notifications.filter((n) => isSamePersonName(n.recipientName, currentUserName)));
   }, [notifications, currentUserName]);
 
   const unreadNotificationsCount = useMemo(() => {
@@ -714,7 +723,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // Helper dispatching targeted notifications based on project roles
   const createAndDispatchNotifications = (
     newOrUpdatedTask: TaskItem,
-    actionType: 'created' | 'status_changed' | 'reassigned' | 'updated',
+    actionType: 'created' | 'status_changed' | 'reassigned' | 'updated' | 'comment',
     actorName: string,
     extra?: { oldAssignee?: string; oldStatus?: string; note?: string }
   ) => {
@@ -998,7 +1007,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     }
 
     if (newNotifs.length > 0) {
-      setNotifications((prev) => [...newNotifs, ...prev]);
+      setNotifications((prev) => deduplicateNotifications([...newNotifs, ...prev]));
       newNotifs.forEach((n) => {
         wmsDataService.saveNotification(n).catch(console.warn);
 
@@ -1033,7 +1042,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    setNotifications((prev) => [testNotif, ...prev]);
+    setNotifications((prev) => deduplicateNotifications([testNotif, ...prev]));
     wmsDataService.saveNotification(testNotif).catch(console.warn);
     dispatchNotificationWebPush(testNotif);
   };
@@ -1080,13 +1089,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         projects,
         tasks,
         members,
-        notifications,
+        notificationsRef.current,
         (newNotif) => {
           console.log(
             `%c[DeadlineEngine] ⏰ Cảnh báo hạn chót: "${newNotif.title}" cho ${newNotif.recipientName}`,
             'color: #d97706; font-weight: bold;'
           );
-          setNotifications((prev) => [newNotif, ...prev]);
+          setNotifications((prev) => deduplicateNotifications([newNotif, ...prev]));
           wmsDataService
             .saveNotification(newNotif)
             .catch((e) => console.error('Supabase deadline notification save error:', e));
@@ -1116,10 +1125,38 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     };
   }, [projects, tasks, members, currentUserName, activeProductMember]);
 
-  // Automated 16:30 Daily Close Task Notifications Engine
-  // Tự động kiểm tra và gửi thông báo nhắc đóng task lúc 16:30 các ngày làm việc cho từng account
+  // Automated 08:30 & 16:30 Daily Notifications Engine
+  // 1. Lúc 08:30 sáng: Tự động kiểm tra và nhắc nhở nhân sự Product chưa có task đến hạn hôm nay
+  // 2. Lúc 16:30 chiều: Tự động kiểm tra và nhắc đóng task trước khi kết thúc ca làm việc
   useEffect(() => {
     if (members.length === 0) return;
+
+    const runMorningTaskCheck = () => {
+      checkAndDispatchDailyMorningTaskNotifications(
+        tasks,
+        members,
+        (newNotif) => {
+          console.log(
+            `%c[MorningTaskEngine] ⏰ Nhắc việc 08:30: "${newNotif.title}" cho ${newNotif.recipientName}`,
+            'color: #963861; font-weight: bold;'
+          );
+          setNotifications((prev) => deduplicateNotifications([newNotif, ...prev]));
+          wmsDataService
+            .saveNotification(newNotif)
+            .catch((e) => console.error('Supabase morning task notification save error:', e));
+
+          const isTargetUser =
+            (currentUserName && isSamePersonName(newNotif.recipientName, currentUserName)) ||
+            (activeProductMember && isSamePersonName(newNotif.recipientName, activeProductMember.name));
+
+          if (isTargetUser) {
+            dispatchNotificationWebPush(newNotif, () => {
+              setActiveTab('tasks');
+            });
+          }
+        }
+      );
+    };
 
     const runCloseTaskCheck = () => {
       checkAndDispatchDailyCloseTaskNotifications(
@@ -1130,7 +1167,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             `%c[CloseTaskEngine] ⏰ Nhắc đóng task 16:30: "${newNotif.title}" cho ${newNotif.recipientName}`,
             'color: #963861; font-weight: bold;'
           );
-          setNotifications((prev) => [newNotif, ...prev]);
+          setNotifications((prev) => deduplicateNotifications([newNotif, ...prev]));
           wmsDataService
             .saveNotification(newNotif)
             .catch((e) => console.error('Supabase close task notification save error:', e));
@@ -1148,15 +1185,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       );
     };
 
+    const runAllDailyChecks = () => {
+      runMorningTaskCheck();
+      runCloseTaskCheck();
+    };
+
     // 1. Quét sau 3s khi dữ liệu khởi động ổn định
-    const initialTimer = setTimeout(runCloseTaskCheck, 3000);
+    const initialTimer = setTimeout(runAllDailyChecks, 3000);
 
     // 2. Chạy ticker định kỳ mỗi 60 giây
-    const closeTaskTicker = setInterval(runCloseTaskCheck, 60000);
+    const dailyTicker = setInterval(runAllDailyChecks, 60000);
 
     return () => {
       clearTimeout(initialTimer);
-      clearInterval(closeTaskTicker);
+      clearInterval(dailyTicker);
     };
   }, [tasks, members, currentUserName, activeProductMember]);
 
@@ -1190,8 +1232,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       }
     }
 
-    // 4. Nếu là thông báo nhắc đóng task 16:30, chuyển ngay sang tab Công việc
-    if (item.type === 'daily_close_reminder') {
+    // 4. Nếu là thông báo nhắc việc 08:30 hoặc nhắc đóng task 16:30, chuyển ngay sang tab Công việc
+    if (item.type === 'daily_close_reminder' || item.type === 'daily_task_reminder') {
       setActiveTab('tasks');
       setFilterState((f) => ({ ...f, dueFilter: 'today', assignee: item.recipientName }));
       setIsNotificationDrawerOpen(false);
@@ -1217,8 +1259,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Nếu đang chưa hoàn thành và muốn chuyển sang hoàn thành, nhưng CHƯA CÓ resultLink -> buộc nhập link
-    if (task.status !== 'Hoàn thành' && !task.resultLink) {
+    // Nếu đang chưa hoàn thành và muốn chuyển sang hoàn thành, nhưng CHƯA CÓ resultLink hoặc link không đúng định dạng URL -> buộc nhập link
+    if (task.status !== 'Hoàn thành' && (!task.resultLink || !isValidUrl(task.resultLink))) {
       setTaskToCompleteModal(task);
       return;
     }
@@ -1255,8 +1297,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Nếu chọn 'Hoàn thành' mà CHƯA CÓ resultLink -> buộc nhập link
-    if (newStatus === 'Hoàn thành' && !task.resultLink) {
+    // Nếu chọn 'Hoàn thành' mà CHƯA CÓ resultLink hoặc link không đúng định dạng URL -> buộc nhập link
+    if (newStatus === 'Hoàn thành' && (!task.resultLink || !isValidUrl(task.resultLink))) {
       setTaskToCompleteModal(task);
       return;
     }
@@ -1290,7 +1332,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const handleConfirmCompleteWithLink = (taskId: string, resultLink: string) => {
     const actor = currentAuthUser?.name || activeProductMember?.name;
-    const finalLink = resultLink.trim();
+    const finalLink = normalizeUrl(resultLink);
+    if (!isValidUrl(finalLink)) return;
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
@@ -2100,13 +2143,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           />
                         ) : productLeavesData.hasAnyLeave ? (
                           <div className="w-full">
-                            <DailyLeaveNotice members={members} leaveData={productLeavesData} />
+                            <DailyLeaveNotice members={members} leaveData={productLeavesData} isSingleLine={true} />
                           </div>
                         ) : null
                       ) : (
                         productLeavesData.hasAnyLeave ? (
                           <div className="w-full">
-                            <DailyLeaveNotice members={members} leaveData={productLeavesData} />
+                            <DailyLeaveNotice members={members} leaveData={productLeavesData} isSingleLine={true} />
                           </div>
                         ) : null
                       )}

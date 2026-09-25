@@ -245,7 +245,8 @@ export type NotificationType =
   | 'task_comment'
   | 'phase_due_soon'
   | 'project_due_soon'
-  | 'daily_close_reminder';
+  | 'daily_close_reminder'
+  | 'daily_task_reminder';
 
 export interface NotificationItem {
   id: string;

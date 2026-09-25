@@ -35,7 +35,13 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
         taskId: customEvent.detail.taskId,
       };
 
-      setToasts((prev) => [newToast, ...prev.slice(0, 3)]); // Giữ tối đa 4 toasts gần nhất
+      setToasts((prev) => {
+        const isDuplicate = prev.some(
+          (t) => t.title === customEvent.detail.title && t.body === customEvent.detail.body
+        );
+        if (isDuplicate) return prev;
+        return [newToast, ...prev.slice(0, 3)];
+      });
 
       // Tự động đóng sau 5 giây
       setTimeout(() => {

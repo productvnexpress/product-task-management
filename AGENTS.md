@@ -63,9 +63,13 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 5. **Đánh dấu Hoàn thành (Quick Toggle)**:
    - Khi bấm checkbox hoàn thành: Trạng thái chuyển thành `'Hoàn thành'`, `progress` chuyển thành `100%`.
    - Khi bỏ chọn hoàn thành: Trạng thái chuyển về `'Chưa làm'` hoặc `'Đang làm'`, `progress` giữ theo giá trị trước đó (hoặc mặc định `0%`/`50%`).
-6. **Bắt buộc nhập Link hoàn thành khi chuyển trạng thái Hoàn thành**:
-   - Khi bấm checkbox hoàn thành hoặc chuyển dropdown sang `'Hoàn thành'`: Nếu công việc chưa có link kết quả (`resultLink`), hệ thống bắt buộc mở modal `CompleteTaskModal` yêu cầu nhập Link hoàn thành (Figma, PRD, Báo cáo, Code, Staging...). Cho phép bấm nhanh "Dùng link làm việc" nếu công việc đã có sẵn `workLink`.
-   - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` khi trạng thái là `'Hoàn thành'`. Không cho phép lưu nếu trường này bị bỏ trống.
+6. **Bắt buộc nhập Link hoàn thành đúng định dạng URL khi chuyển trạng thái Hoàn thành**:
+   - Khi bấm checkbox hoàn thành hoặc chuyển dropdown sang `'Hoàn thành'`: Nếu công việc chưa có link kết quả hoặc link hiện tại không đúng định dạng URL (`!isValidUrl(resultLink)`), hệ thống bắt buộc mở modal `CompleteTaskModal` yêu cầu nhập Link hoàn thành (Figma, PRD, Báo cáo, Code, Staging...). Cho phép bấm nhanh "Dùng link làm việc" nếu công việc đã có sẵn `workLink` hợp lệ.
+   - **Quy chuẩn Kiểm tra Định dạng URL (`urlValidator.ts`)**:
+     - Bắt buộc là đường dẫn URL hợp lệ: Chấp nhận URL có protocol (`https://...`, `http://...`) hoặc domain hợp lệ (`figma.com/...`, `vnexpress.net/...`, `jira.vne.internal/...`, `localhost:3000`).
+     - Tự động chuẩn hóa (`normalizeUrl`): Bổ sung tiền tố `https://` nếu người dùng nhập domain mà không gõ protocol, đảm bảo link luôn click được và hiển thị nút "Mở kiểm tra".
+     - Tuyệt đối từ chối các chuỗi không phải URL: Ký tự rỗng, văn bản tự do ("xong rồi", "đã làm", "ok", "test", "done"), số đơn lẻ ("12345"), chuỗi chứa dấu cách hoặc xuống dòng.
+   - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` đúng định dạng URL khi trạng thái là `'Hoàn thành'`. Đồng thời nếu nhập `Link làm việc` (`workLink`) cũng phải tuân thủ chuẩn URL hợp lệ. Hệ thống chặn lưu và hiển thị cảnh báo đỏ trực quan nếu link không hợp lệ.
    - Khi chọn trạng thái `'Đang làm'`: **Không bắt buộc** nhập Link làm việc (`workLink`).
 7. **Sắp xếp Khối Việc Đã hoàn thành (Completed Tasks Ordering)**: Danh sách công việc thuộc khối "Đã hoàn thành" trên trang Công việc bắt buộc được sắp xếp theo thời gian từ mới nhất đến cũ nhất (descending) dựa trên ngày hạn hoàn thành (`dueDate`) và thời điểm hoàn thành (`completedAt`). Các công việc có hạn hoặc hoàn thành gần đây nhất luôn được hiển thị ở vị trí đầu tiên.
 
@@ -75,8 +79,8 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
   1. **Tab `Thông tin`**: Hiển thị và chỉnh sửa các trường thông tin tác nghiệp chuẩn hóa:
      - **Công việc**: Textarea tiêu đề công việc đưa lên đầu tiên, **bắt buộc sử dụng font `Merriweather Sans` (`font-title`)**.
      - **Trạng thái**: Dropdown chọn 4 trạng thái chuẩn (`Chưa làm`, `Đang làm`, `Bị nghẽn`, `Hoàn thành`). Kèm ô nhập lý do nếu chọn `Bị nghẽn`. Không bắt buộc nhập Link làm việc khi chọn `Đang làm`.
-     - **Link làm việc (Figma, Google, Notion,...)**: Ô nhập đường dẫn làm việc (luôn được nhập trước), hỗ trợ nút mở link nhanh.
-     - **Link kết quả (Figma, Beta, Production...)**: Ô nhập đường dẫn kết quả sản phẩm. Hỗ trợ tùy chọn **"Link kết quả và Link làm việc là một"** (Checkbox đồng bộ tự động giá trị từ Link làm việc để tránh phải nhập 2 lần, tự động khóa ô nhập và mở link tương ứng).
+     - **Link làm việc (Figma, Google, Notion,...)**: Ô nhập đường dẫn làm việc (luôn được nhập trước), hỗ trợ nút mở link nhanh. Bắt buộc hiển thị dòng lưu ý: `* Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.`
+     - **Link kết quả (Figma, Beta, Production...)**: Ô nhập đường dẫn kết quả sản phẩm. Hỗ trợ tùy chọn **"Link kết quả và Link làm việc là một"** (Checkbox đồng bộ tự động giá trị từ Link làm việc để tránh phải nhập 2 lần, tự động khóa ô nhập và mở link tương ứng). Bắt buộc hiển thị dòng lưu ý: `* Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.`
      - **Dự án**: Dropdown chọn dự án thuộc hệ thống.
      - **Giai đoạn**: Dropdown chọn giai đoạn dự án tương ứng.
      - **Phụ trách**: Dropdown chọn người phụ trách (chỉ hiển thị họ tên, không kèm IP Phone).
@@ -164,11 +168,14 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - **3 ngày làm việc tới**: Xác định 3 ngày làm việc tiếp theo bằng `workingTimeService.getNextWorkingDays(3)` (tự động loại trừ Thứ Bảy, Chủ Nhật không làm bù và các ngày lễ quốc gia), sau đó tổng hợp nhân sự nghỉ trong 3 ngày này.
 2. **Quy chuẩn Bố cục Tỷ lệ Ngang & Căn chỉnh Cân đối (Balanced Layout)**:
    - **Bố cục khi có người nghỉ**:
-     - **Khối Cảnh báo (`DailyCompletionAlert`)**: Chiếm 7/12 (~58.3% chiều rộng), đủ không gian hiển thị tiêu đề và danh sách tên không bị chật.
-     - **Khối Lịch nghỉ phép (`DailyLeaveNotice`)**: Chiếm 5/12 (~41.7% chiều rộng), sử dụng tông màu **hồng nhẹ VnExpress (`#963861`, nền `#fdf4f8`, viền `#f3c2d4`)**, đảm bảo hiển thị trọn vẹn tiêu đề và ngày tháng dạng `Trung Tiêu (sáng Mon, 14 Sep 2026)` trên một hàng thoáng đãng.
-     - **Đồng bộ chiều cao (`items-stretch`)**: Cả 2 khối cùng có `h-full flex flex-col`, chiều cao Header đồng nhất (`min-h-[44px]`), đường kẻ phân cách ngang và đáy card khớp hàng hoàn hảo.
-   - **Bố cục khi không có ai nghỉ (cả hôm nay và 3 ngày tới)**:
-     - Khối Lịch nghỉ tự động ẩn. Toàn bộ 100% không gian này được nhường trọn cho khối Cảnh báo (`DailyCompletionAlert`).
+      - **Khi hiển thị cùng khối Cảnh báo (`DailyCompletionAlert`)**:
+        - Khối Cảnh báo chiếm 7/12 (~58.3% chiều rộng).
+        - Khối Lịch nghỉ phép (`DailyLeaveNotice`) chiếm 5/12 (~41.7% chiều rộng), sử dụng tông màu **hồng nhẹ VnExpress (`#963861`, nền `#fdf4f8`, viền `#f3c2d4`)**.
+        - Đồng bộ chiều cao (`items-stretch`): Cả 2 khối cùng có `h-full flex flex-col`, chiều cao Header đồng nhất (`min-h-[44px]`).
+        - Loại bỏ văn bản đệm thừa: Chỉ hiển thị mục có người nghỉ, tuyệt đối không hiển thị "3 ngày tới: Đủ quân số" gây rác thông tin.
+      - **Khi không có các box khác (đứng một mình)**: Thu gọn thành **1 dòng duy nhất (Single-line banner)** để tiết kiệm tối đa diện tích màn hình.
+   - **Bố cục khi Đủ quân số (không có ai nghỉ)**:
+     - Tự động ẩn hoàn toàn khối Lịch nghỉ, không hiển thị thông báo.
 3. **Quy chuẩn Biên tập Ngôn ngữ & Kiểu chữ (`EDITOR.md`)**:
    - Đưa facts quan trọng nhất lên đầu (Facts first), súc tích, trực diện, không dùng từ đệm rườm rà.
    - Tên nhân sự: Sử dụng kiểu chữ thường `font-normal` ở cả mục "Hôm nay" và "3 ngày tới" để nhất quán với khối bên trái.
@@ -177,6 +184,16 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Hiển thị:
      - Hôm nay: `[Tên Họ] (sáng)` hoặc `[Tên Họ]`
      - 3 ngày tới: `[Tên Họ] (sáng Mon, 14 Sep 2026)` hoặc `[Tên Họ] (Mon, 14 Sep 2026)`
+
+### 1.8. Tự động Nhắc việc Lúc 08:30 Sáng Ngày Làm việc (Daily Morning Task Alert Specification)
+- **Mốc thời gian**: 08:30 sáng các ngày làm việc (workday, loại trừ Thứ 7, Chủ Nhật và ngày lễ).
+- **Đối tượng**: Toàn bộ nhân sự thuộc bộ phận Product (PM, Designer, SEO, Data).
+- **Điều kiện phát thông báo**: Nhân sự chưa có bất kỳ task nào có hạn hoàn thành trong ngày hôm nay (`tasksDueToday.length === 0`).
+- **Miễn trừ**: Nhân sự có lịch nghỉ phép đã duyệt trong ngày tự động được miễn trừ hoàn toàn.
+- **Biên tập theo EDITOR.md (Facts first, súc tích)**:
+  - Tiêu đề: `Nhắc việc trong ngày (08:30)`
+  - Nội dung: `Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.`
+- **Chống trùng lặp**: Lưu cache theo ngày `vne_daily_morning_task_notif_YYYY-MM-DD`, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày. Khi bấm vào thông báo, hệ thống tự động chuyển sang trang Công việc.
 
 ### 1.9. Dòng Thông báo Nghỉ Lễ Sắp Tới (UpcomingHolidayBanner Specification)
 1. **Quy chuẩn Tách Dòng Độc lập & Màu sắc Nổi bật**:

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel } from '../types';
+import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel, TaskLogItem } from '../types';
 import { formatLogTimestamp, addManualLog } from '../utils/taskLogUtils';
 import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
@@ -40,6 +40,7 @@ import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatFrequencyLabel } from '../services/recurringTaskService';
 import { MentionCommentInput } from './MentionCommentInput';
 import { renderCommentWithMentions } from '../utils/mentionUtils';
+import { isValidUrl, normalizeUrl } from '../utils/urlValidator';
 
 interface TaskDetailDrawerProps {
   task: TaskItem | null;
@@ -245,11 +246,27 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     const finalResultLink = isSameAsWorkLink ? finalWorkLink : resultLink.trim();
 
     // Validation for Result Link when status is 'Hoàn thành'
-    if (status === 'Hoàn thành' && !finalResultLink) {
+    if (status === 'Hoàn thành') {
+      if (!finalResultLink) {
+        setValidationError(
+          isSameAsWorkLink
+            ? '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng nhập Link làm việc (đang dùng chung làm Link hoàn thành).'
+            : '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng bổ sung Link hoàn thành (Link Figma, PRD, Staging, Bài xuất bản...).'
+        );
+        return;
+      }
+      if (!isValidUrl(finalResultLink)) {
+        setValidationError(
+          '⚠️ Link hoàn thành không đúng định dạng URL (ví dụ: https://figma.com/..., vnexpress.net/...).'
+        );
+        return;
+      }
+    }
+
+    // Validation for Work Link if provided
+    if (finalWorkLink && !isValidUrl(finalWorkLink)) {
       setValidationError(
-        isSameAsWorkLink
-          ? '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng nhập Link làm việc (đang dùng chung làm Link hoàn thành).'
-          : '⚠️ Khi chọn trạng thái "Hoàn thành", vui lòng bổ sung Link hoàn thành (Link Figma, PRD, Staging, Bài xuất bản...).'
+        '⚠️ Link làm việc không đúng định dạng URL (ví dụ: https://figma.com/..., vnexpress.net/...).'
       );
       return;
     }
@@ -270,8 +287,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       priority,
       details,
       blockerReason: status === 'Bị nghẽn' ? blockerReason : '',
-      workLink: finalWorkLink || undefined,
-      resultLink: finalResultLink || undefined,
+      workLink: finalWorkLink ? normalizeUrl(finalWorkLink) : undefined,
+      resultLink: finalResultLink ? normalizeUrl(finalResultLink) : undefined,
       updatedAt: new Date().toISOString(),
     };
 
@@ -499,6 +516,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 placeholder="https://figma.com/... hoặc https://docs.google.com/..."
                 className="w-full text-xs font-body p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] focus:outline-hidden text-[#202020]"
               />
+              <p className="text-[11px] font-ui text-[#963861] font-medium">
+                * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
+              </p>
             </div>
 
             {/* 4. Link kết quả (Figma, Beta, Production...) */}
@@ -569,6 +589,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   }`}
                 />
               )}
+              <p className="text-[11px] font-ui text-[#963861] font-medium">
+                * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
+              </p>
             </div>
 
             {/* Grid for Dự án, Giai đoạn, Phụ trách, Hạn hoàn thành */}

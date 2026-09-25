@@ -5,7 +5,8 @@
 
 import React, { useState } from 'react';
 import { TaskItem } from '../types';
-import { CheckCircle2, X, ExternalLink, Link2 } from 'lucide-react';
+import { CheckCircle2, X, ExternalLink, Link2, AlertCircle } from 'lucide-react';
+import { isValidUrl, validateResultLink, normalizeUrl } from '../utils/urlValidator';
 
 interface CompleteTaskModalProps {
   task: TaskItem;
@@ -27,6 +28,10 @@ export const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
   const handleUseWorkLink = () => {
     if (task.workLink) {
+      if (!isValidUrl(task.workLink)) {
+        setError('Link làm việc hiện tại không đúng định dạng URL hợp lệ.');
+        return;
+      }
       setResultLink(task.workLink);
       setError('');
     }
@@ -34,11 +39,12 @@ export const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalLink = resultLink.trim();
-    if (!finalLink) {
-      setError('Vui lòng nhập link hoàn thành để xác nhận.');
+    const validation = validateResultLink(resultLink);
+    if (!validation.isValid) {
+      setError(validation.error || 'Link không đúng định dạng URL.');
       return;
     }
+    const finalLink = validation.normalizedUrl || normalizeUrl(resultLink);
     onConfirm(task.id, finalLink);
     onClose();
   };
@@ -112,17 +118,40 @@ export const CompleteTaskModal: React.FC<CompleteTaskModalProps> = ({
                 if (error) setError('');
               }}
               placeholder="https://... (Figma, PRD, Báo cáo, Code, Staging...)"
-              className="w-full px-3 py-2 border border-[#d4d4d8] rounded-[6px] text-xs font-ui text-[#202020] focus:border-[#15803d] focus:outline-hidden"
+              className={`w-full px-3 py-2 border rounded-[6px] text-xs font-ui text-[#202020] focus:outline-hidden ${
+                error
+                  ? 'border-[#dc2626] focus:border-[#dc2626] bg-[#fef2f2]'
+                  : 'border-[#d4d4d8] focus:border-[#15803d]'
+              }`}
             />
 
             {error && (
-              <p className="text-[11px] font-ui text-[#dc2626] font-semibold">
-                {error}
+              <p className="text-[11px] font-ui text-[#dc2626] font-semibold flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{error}</span>
               </p>
+            )}
+
+            {isValidUrl(resultLink) && (
+              <div className="flex items-center justify-between text-[11px] font-ui bg-[#f0fdf4] text-[#166534] px-2.5 py-1.5 rounded-[6px] border border-[#bbf7d0]">
+                <span className="truncate max-w-[260px]">Đích đến: {normalizeUrl(resultLink)}</span>
+                <a
+                  href={normalizeUrl(resultLink)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold hover:underline flex items-center gap-1 shrink-0 ml-2"
+                >
+                  <span>Mở kiểm tra</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             )}
 
             <p className="text-[11px] font-ui text-[#71717a]">
               Bắt buộc nhập đường dẫn kết quả sản phẩm để hoàn tất và lưu vết nghiệm thu.
+            </p>
+            <p className="text-[11px] font-ui text-[#963861] font-medium">
+              * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
             </p>
           </div>
 

@@ -138,7 +138,7 @@ export function getTaskThreadParticipants(
         log.author &&
         !isSamePersonName(log.author, currentActorName) &&
         !isSamePersonName(log.author, 'Hệ thống') &&
-        (log.action === 'Bình luận' || log.action === 'Cập nhật' || Boolean(log.note) || Boolean(log.details))
+        (log.action === 'Bình luận' || log.action === 'Cập nhật' || Boolean(log.note) || (log.changes && log.changes.length > 0))
       ) {
         participants.add(log.author);
       }
