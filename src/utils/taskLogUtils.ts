@@ -141,21 +141,54 @@ export function recordTaskChanges(
     });
   }
 
+  // Check Completed At (Thời điểm hoàn thành)
+  const oldCompDate = oldTask.completedAt ? formatLogTimestamp(oldTask.completedAt, true) : '';
+  const newCompDate = updatedTask.completedAt ? formatLogTimestamp(updatedTask.completedAt, true) : '';
+  if (
+    updatedTask.status === 'Hoàn thành' &&
+    Boolean(updatedTask.completedAt) &&
+    oldCompDate !== newCompDate &&
+    oldTask.completedAt !== updatedTask.completedAt
+  ) {
+    changes.push({
+      field: 'Thời điểm hoàn thành',
+      oldValue: oldCompDate || 'Chưa ghi nhận',
+      newValue: newCompDate || 'Chưa ghi nhận',
+    });
+  }
+
+  // Lọc bỏ mọi thay đổi giả mạo nếu oldValue === newValue
+  const validChanges = changes.filter((c) => {
+    if (c.oldValue !== undefined && c.newValue !== undefined) {
+      return c.oldValue.trim() !== c.newValue.trim();
+    }
+    return true;
+  });
+
   // If no direct field changes and no customNote, return updatedTask as is
-  if (changes.length === 0 && !customNote) {
-    return updatedTask;
+  if (validChanges.length === 0 && !customNote) {
+    return {
+      ...updatedTask,
+      logs: deduplicateTaskLogs(updatedTask.logs || []),
+    };
   }
 
   // Construct action text
   let actionTitle = 'Cập nhật công việc';
   if (oldTask.status !== updatedTask.status) {
     actionTitle = `Đổi trạng thái ➔ ${updatedTask.status}`;
+  } else if (
+    updatedTask.status === 'Hoàn thành' &&
+    oldCompDate !== newCompDate &&
+    Boolean(updatedTask.completedAt)
+  ) {
+    actionTitle = 'Điều chỉnh thời điểm hoàn thành';
   } else if (oldTask.assignee !== updatedTask.assignee) {
     actionTitle = `Đổi người phụ trách ➔ ${updatedTask.assignee}`;
   } else if (oldTask.dueDate !== updatedTask.dueDate) {
     actionTitle = `Gia hạn / Đổi thời hạn ➔ ${formatDateWithEnDay(updatedTask.dueDate)}`;
-  } else if (changes.length > 0) {
-    actionTitle = `Cập nhật ${changes.map((c) => c.field).join(', ')}`;
+  } else if (validChanges.length > 0) {
+    actionTitle = `Cập nhật ${validChanges.map((c) => c.field).join(', ')}`;
   } else if (customNote) {
     actionTitle = 'Bình luận';
   }
@@ -167,21 +200,24 @@ export function recordTaskChanges(
     timestamp: new Date().toISOString(),
     author: actor,
     action: actionTitle,
-    changes,
+    changes: validChanges,
     note: customNote || (updatedTask.status === 'Bị nghẽn' && updatedTask.blockerReason ? `Cảnh báo nghẽn: ${updatedTask.blockerReason}` : undefined),
   };
 
-  const existingLogs = updatedTask.logs || [];
+  const existingLogs = deduplicateTaskLogs(updatedTask.logs || []);
 
-  // Tránh tạo bản ghi trùng lặp nếu log đầu tiên đã có cùng nội dung ghi chú và người tạo
+  // Tránh tạo bản ghi trùng lặp nếu log đầu tiên đã có cùng người tạo, hành động và nội dung
   if (
     existingLogs.length > 0 &&
     existingLogs[0].author === actor &&
-    existingLogs[0].note &&
-    existingLogs[0].note.trim() === (newLogItem.note || '').trim() &&
-    changes.length === 0
+    existingLogs[0].action === actionTitle &&
+    (existingLogs[0].note || '').trim() === (newLogItem.note || '').trim() &&
+    JSON.stringify(existingLogs[0].changes || []) === JSON.stringify(validChanges)
   ) {
-    return updatedTask;
+    return {
+      ...updatedTask,
+      logs: existingLogs,
+    };
   }
 
   return {
@@ -189,6 +225,60 @@ export function recordTaskChanges(
     logs: [newLogItem, ...existingLogs],
     updatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Lọc bỏ triệt để các bản ghi nhật ký trùng lặp (Audit Log & Trao đổi/Bình luận)
+ * Xử lý cả log có ghi chú và log kiểm toán (audit change logs) không có ghi chú.
+ */
+export function deduplicateTaskLogs(logs: TaskLogItem[]): TaskLogItem[] {
+  if (!logs || logs.length === 0) return [];
+  const result: TaskLogItem[] = [];
+
+  logs.forEach((log) => {
+    if (!log) return;
+
+    const isDuplicate = result.some((prev) => {
+      // 1. Trùng ID chính xác
+      if (prev.id && log.id && prev.id === log.id) return true;
+
+      // 2. So sánh người thao tác
+      if (prev.author !== log.author) return false;
+
+      // 3. So sánh hành động
+      if (prev.action !== log.action) return false;
+
+      // 4. So sánh thời điểm: cùng thời điểm hoặc cách nhau dưới 3 phút
+      const tPrev = new Date(prev.timestamp).getTime();
+      const tCurr = new Date(log.timestamp).getTime();
+      const timeDiff = Math.abs(tPrev - tCurr);
+      if (isNaN(tPrev) || isNaN(tCurr) || timeDiff > 180000) return false;
+
+      // 5. So sánh ghi chú / bình luận
+      const notePrev = (prev.note || '').trim();
+      const noteCurr = (log.note || '').trim();
+      if (notePrev !== noteCurr) return false;
+
+      // 6. So sánh chi tiết thay đổi (changes)
+      const sanitizeChanges = (changes: TaskLogChange[] = []) =>
+        changes
+          .filter((c) => c && c.field)
+          .map((c) => `${c.field}:${(c.oldValue || '').trim()}->${(c.newValue || '').trim()}`)
+          .sort()
+          .join('|');
+
+      const changesPrev = sanitizeChanges(prev.changes);
+      const changesCurr = sanitizeChanges(log.changes);
+
+      return changesPrev === changesCurr;
+    });
+
+    if (!isDuplicate) {
+      result.push(log);
+    }
+  });
+
+  return result;
 }
 
 /**
@@ -202,16 +292,30 @@ export function addManualLog(
 ): TaskItem {
   if (!noteText.trim()) return task;
 
+  const actor = authorName.trim() || task.assignee || 'Hệ thống';
+  const existingLogs = deduplicateTaskLogs(task.logs || []);
+
+  // Tránh duplicate comment nếu vừa gửi cùng nội dung trong vòng 1 phút
+  if (
+    existingLogs.length > 0 &&
+    existingLogs[0].author === actor &&
+    (existingLogs[0].note || '').trim() === noteText.trim() &&
+    Math.abs(new Date(existingLogs[0].timestamp).getTime() - Date.now()) < 60000
+  ) {
+    return {
+      ...task,
+      logs: existingLogs,
+    };
+  }
+
   const newLogItem: TaskLogItem = {
     id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     timestamp: new Date().toISOString(),
-    author: authorName.trim() || task.assignee || 'Hệ thống',
+    author: actor,
     action: actionText,
     changes: [],
     note: noteText.trim(),
   };
-
-  const existingLogs = task.logs || [];
 
   return {
     ...task,

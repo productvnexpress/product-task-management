@@ -17,6 +17,7 @@ import {
 } from '../types';
 import { normalizeProjectStatus } from '../utils/projectSortingUtils';
 import { deduplicateNotifications } from '../utils/notificationDeduplication';
+import { deduplicateTaskLogs } from '../utils/taskLogUtils';
 
 export const wmsDataService = {
   // ==========================================
@@ -426,10 +427,11 @@ export const wmsDataService = {
         resultLink: t.result_link || undefined,
         latestUpdateNote: t.latest_update_note || undefined,
         createdBy: t.created_by || undefined,
+        completedAt: t.completed_at || undefined,
         isRecurring: Boolean(t.is_recurring),
         recurringRuleId: t.recurring_rule_id || undefined,
         recurringFrequency: t.recurring_frequency || undefined,
-        logs: sortedLogs,
+        logs: deduplicateTaskLogs(sortedLogs),
       };
     });
   },
@@ -456,6 +458,7 @@ export const wmsDataService = {
       result_link: task.resultLink || null,
       latest_update_note: task.latestUpdateNote || null,
       created_by: task.createdBy || null,
+      completed_at: task.completedAt || null,
       is_recurring: Boolean(task.isRecurring),
       recurring_rule_id: task.recurringRuleId || null,
       recurring_frequency: task.recurringFrequency || null,
@@ -463,10 +466,15 @@ export const wmsDataService = {
     };
 
     let { error: taskErr } = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
-    if (taskErr && (taskErr.message?.toLowerCase().includes('recurring') || (taskErr as any).code === '42703')) {
-      delete taskPayload.is_recurring;
-      delete taskPayload.recurring_rule_id;
-      delete taskPayload.recurring_frequency;
+    if (taskErr && ((taskErr as any).code === '42703' || taskErr.message?.toLowerCase().includes('column'))) {
+      if (taskErr.message?.toLowerCase().includes('completed_at')) {
+        delete taskPayload.completed_at;
+      }
+      if (taskErr.message?.toLowerCase().includes('recurring')) {
+        delete taskPayload.is_recurring;
+        delete taskPayload.recurring_rule_id;
+        delete taskPayload.recurring_frequency;
+      }
       const retry = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
       taskErr = retry.error;
     }
@@ -474,7 +482,7 @@ export const wmsDataService = {
 
     // 2. Lưu log thay đổi nếu có
     if (newLog) {
-      const { error: logErr } = await supabase.from('task_logs').insert({
+      const { error: logErr } = await supabase.from('task_logs').upsert({
         id: newLog.id || `log-${Date.now()}`,
         task_id: task.id,
         author: newLog.author,
@@ -482,7 +490,7 @@ export const wmsDataService = {
         changes: newLog.changes || [],
         note: newLog.note || null,
         created_at: newLog.timestamp || new Date().toISOString(),
-      });
+      }, { onConflict: 'id' });
       if (logErr) console.error('Lỗi khi lưu task log:', logErr);
     }
   },

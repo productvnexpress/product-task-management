@@ -6,12 +6,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel, TaskLogItem } from '../types';
-import { formatLogTimestamp, addManualLog } from '../utils/taskLogUtils';
+import { formatLogTimestamp, addManualLog, deduplicateTaskLogs } from '../utils/taskLogUtils';
 import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
-import { canEditTask, canDeleteTask } from '../utils/rbac';
+import { canEditTask, canDeleteTask, getUserRole } from '../utils/rbac';
 import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
 import { getTodayDateString } from '../utils/dateUtils';
+import { analyzeTaskDiscipline, getTaskCompletionDate } from '../utils/reportUtils';
 import {
   X,
   Check,
@@ -35,6 +36,7 @@ import {
   Share2,
   RotateCw,
   AtSign,
+  Zap,
 } from 'lucide-react';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatFrequencyLabel } from '../services/recurringTaskService';
@@ -70,44 +72,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   onOpenProjectDetail,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
+  const isAdmin = getUserRole(effectiveUser) === 'Admin';
   const currentActorName = currentAuthUser?.name || activeProductMember?.name || (members[0]?.name || 'Hệ thống');
   const productMembers = useMemo(() => getProductMembers(members), [members]);
   const userCanEdit = task ? canEditTask(effectiveUser, task, projects) : true;
   const userCanDelete = task ? canDeleteTask(effectiveUser, task, projects) : true;
   const [activeDrawerTab, setActiveDrawerTab] = useState<'details' | 'history'>('details');
 
-  // Helper lọc bỏ các bản ghi nhật ký/bình luận trùng lặp
-  const deduplicateLogs = (logs: TaskLogItem[]): TaskLogItem[] => {
-    if (!logs || logs.length === 0) return [];
-    const result: TaskLogItem[] = [];
-    logs.forEach((log) => {
-      const isDuplicate = result.some((prev) => {
-        if (prev.id === log.id) return true;
-        const sameAuthor = prev.author === log.author;
-        const sameNote = (prev.note || '').trim() === (log.note || '').trim();
-        if (!sameAuthor || !sameNote || !log.note) return false;
-        const tPrev = new Date(prev.timestamp).getTime();
-        const tCurr = new Date(log.timestamp).getTime();
-        return Math.abs(tPrev - tCurr) < 60000;
-      });
-      if (!isDuplicate) {
-        result.push(log);
-      }
-    });
-    return result;
-  };
-
   // Danh sách các trao đổi / bình luận thực tế của task (đã lọc trùng)
   const commentLogs = useMemo(() => {
     if (!task?.logs) return [];
     const withNotes = task.logs.filter((l) => Boolean(l.note && l.note.trim().length > 0));
-    return deduplicateLogs(withNotes);
+    return deduplicateTaskLogs(withNotes);
   }, [task?.logs]);
 
   const [isSendingComment, setIsSendingComment] = useState(false);
 
   const [title, setTitle] = useState(task?.title || '');
   const [status, setStatus] = useState<TaskStatus>(task?.status || 'Chưa làm');
+  const [completedAt, setCompletedAt] = useState<string | undefined>(task?.completedAt);
   const [projectId, setProjectId] = useState(task?.projectId || '');
   const [phaseId, setPhaseId] = useState(task?.phaseId || '');
   const [phaseName, setPhaseName] = useState(task?.phaseName || '');
@@ -126,6 +109,27 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     Boolean(task?.workLink && task?.resultLink && task.workLink.trim() === task.resultLink.trim())
   );
   const [validationError, setValidationError] = useState('');
+
+  // States dành riêng cho Admin xử lý kỷ luật hoàn thành
+  const [showAdminDateDialog, setShowAdminDateDialog] = useState(false);
+  const [adminDateInput, setAdminDateInput] = useState('');
+  const [adminTimeInput, setAdminTimeInput] = useState('17:30');
+  const [adminNoteInput, setAdminNoteInput] = useState('');
+  const [adminResultLinkInput, setAdminResultLinkInput] = useState('');
+  const [adminSuccessMsg, setAdminSuccessMsg] = useState('');
+
+  // Phân tích kỷ luật hoàn thành của task
+  const currentDiscipline = useMemo(() => {
+    if (!task) return null;
+    return analyzeTaskDiscipline({
+      ...task,
+      status,
+      completedAt,
+      dueDate,
+      resultLink,
+      workLink,
+    });
+  }, [task, status, completedAt, dueDate, resultLink, workLink]);
 
   const sortedProjects = useMemo(() => sortProjectsAlphabetically(projects), [projects]);
 
@@ -167,6 +171,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       setIsSameAsWorkLink(
         Boolean(task.workLink && task.resultLink && task.workLink.trim() === task.resultLink.trim())
       );
+      setCompletedAt(task.completedAt);
+      setShowAdminDateDialog(false);
+      setAdminSuccessMsg('');
       setValidationError('');
       setCustomUpdateNote('');
       const defaultAuthor = currentAuthUser?.name || activeProductMember?.name || task.assignee || (members[0]?.name || 'Hệ thống');
@@ -276,6 +283,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       ...task,
       title: title.trim() || task.title,
       status,
+      completedAt: status === 'Hoàn thành' ? (completedAt || task.completedAt || new Date().toISOString()) : undefined,
       projectId,
       projectName: selectedProj ? selectedProj.name : task.projectName,
       phaseId: phaseId || undefined,
@@ -289,12 +297,94 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       blockerReason: status === 'Bị nghẽn' ? blockerReason : '',
       workLink: finalWorkLink ? normalizeUrl(finalWorkLink) : undefined,
       resultLink: finalResultLink ? normalizeUrl(finalResultLink) : undefined,
+      progress: status === 'Hoàn thành' ? 100 : (task.status === 'Hoàn thành' ? 50 : task.progress),
       updatedAt: new Date().toISOString(),
     };
 
     const author = currentActorName;
     onSaveTask(updatedTask, author, customUpdateNote.trim() || undefined);
     onClose();
+  };
+
+  // Thao tác Admin: 1-click Xác nhận hoàn thành đúng hạn cho tất cả các task
+  const handleAdminConfirmOnTime = () => {
+    if (!task) return;
+    const actor = currentActorName;
+    const targetIso = new Date(`${task.dueDate.slice(0, 10)}T17:30:00`).toISOString();
+
+    const candidateLink = resultLink.trim() || task.resultLink || workLink.trim() || task.workLink || '';
+    if (!candidateLink || !isValidUrl(candidateLink)) {
+      setAdminDateInput(task.dueDate.slice(0, 10));
+      setAdminTimeInput('17:30');
+      setAdminResultLinkInput(candidateLink);
+      setAdminNoteInput(`Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(task.dueDate)}).`);
+      setShowAdminDateDialog(true);
+      return;
+    }
+
+    const finalLink = normalizeUrl(candidateLink);
+    const note = `Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(task.dueDate)}).`;
+
+    const updated: TaskItem = {
+      ...task,
+      title: title.trim() || task.title,
+      status: 'Hoàn thành',
+      progress: 100,
+      completedAt: targetIso,
+      resultLink: finalLink,
+      workLink: workLink || finalLink,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setStatus('Hoàn thành');
+    setCompletedAt(targetIso);
+    setResultLink(finalLink);
+    if (!workLink) setWorkLink(finalLink);
+    onSaveTask(updated, actor, note);
+    setAdminSuccessMsg(`Đã chuyển sang Hoàn thành đúng hạn (ngày ${formatDateWithEnDay(task.dueDate)})`);
+    setTimeout(() => setAdminSuccessMsg(''), 4000);
+  };
+
+  // Thao tác Admin: Lưu ngày hoàn thành tùy chỉnh
+  const handleAdminSaveCustomDate = () => {
+    if (!task || !adminDateInput) return;
+    const actor = currentActorName;
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(adminDateInput)) {
+      setValidationError('Ngày hoàn thành không đúng định dạng YYYY-MM-DD.');
+      return;
+    }
+
+    const candidateLink = adminResultLinkInput.trim() || resultLink.trim() || task.resultLink || workLink.trim() || task.workLink || '';
+    if (!candidateLink || !isValidUrl(candidateLink)) {
+      setValidationError('Vui lòng nhập Link kết quả hợp lệ để hoàn thành công việc.');
+      return;
+    }
+
+    const finalLink = normalizeUrl(candidateLink);
+    const timeVal = adminTimeInput || '17:30';
+    const customIso = new Date(`${adminDateInput}T${timeVal}:00`).toISOString();
+    const note = adminNoteInput.trim() || `Admin ${actor} điều chỉnh thời điểm hoàn thành về ngày ${formatDateWithEnDay(adminDateInput)}.`;
+
+    const updated: TaskItem = {
+      ...task,
+      title: title.trim() || task.title,
+      status: 'Hoàn thành',
+      progress: 100,
+      completedAt: customIso,
+      resultLink: finalLink,
+      workLink: workLink || finalLink,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setStatus('Hoàn thành');
+    setCompletedAt(customIso);
+    setResultLink(finalLink);
+    if (!workLink) setWorkLink(finalLink);
+    setShowAdminDateDialog(false);
+    onSaveTask(updated, actor, note);
+    setAdminSuccessMsg(`Đã điều chỉnh ngày hoàn thành: ${formatDateWithEnDay(adminDateInput)}`);
+    setTimeout(() => setAdminSuccessMsg(''), 4000);
   };
 
   // Gửi bình luận nhanh trực tiếp trong Drawer
@@ -336,7 +426,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   };
 
   const logList = useMemo(() => {
-    return deduplicateLogs(task?.logs || []);
+    return deduplicateTaskLogs(task?.logs || []);
   }, [task?.logs]);
 
   return (
@@ -487,6 +577,97 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   rows={2}
                   className="w-full text-xs font-body p-2 bg-white border border-[#fbd3d6] rounded-[6px] focus:outline-hidden text-[#202020]"
                 />
+              </div>
+            )}
+
+            {/* Khối Kỷ luật hoàn thành & Đặc quyền Admin */}
+            {isAdmin && currentDiscipline && (
+              <div className="bg-[#fcfcfd] border border-[#e2e8f0] rounded-[8px] p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-ui text-xs font-bold text-[#475569]">
+                      Kỷ luật hoàn thành:
+                    </span>
+                    {status === 'Hoàn thành' ? (
+                      currentDiscipline.isOnTime ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#15803d] bg-[#f0fdf4] border border-[#bbf7d0] px-2 py-0.5 rounded-[5px]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#15803d]" />
+                          <span>Hoàn thành đúng hạn</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#b45309] bg-[#fffbeb] border border-[#fde68a] px-2 py-0.5 rounded-[5px]">
+                          <AlertTriangle className="w-3.5 h-3.5 text-[#b45309]" />
+                          <span>Hoàn thành sau hạn (+{currentDiscipline.daysDiff} ngày)</span>
+                        </span>
+                      )
+                    ) : currentDiscipline.discipline === 'currently_overdue' ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#dc2626] bg-[#fef2f2] border border-[#fecaca] px-2 py-0.5 rounded-[5px]">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#dc2626]" />
+                        <span>Đang quá hạn {currentDiscipline.daysDiff} ngày</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#475569] bg-[#f1f5f9] border border-[#e2e8f0] px-2 py-0.5 rounded-[5px]">
+                        <Clock className="w-3.5 h-3.5 text-[#64748b]" />
+                        <span>{status} (Hạn: {formatDateWithEnDay(dueDate)})</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="font-ui text-[11px] text-[#64748b]">
+                    {status === 'Hoàn thành' && (completedAt || task?.completedAt)
+                      ? formatLogTimestamp(completedAt || task?.completedAt, true)
+                      : `Hạn: ${formatDateWithEnDay(dueDate)}`}
+                  </span>
+                </div>
+
+                {adminSuccessMsg && (
+                  <div className="p-2 bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] text-xs font-bold rounded-[6px] flex items-center gap-1.5 animate-fade-in">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>{adminSuccessMsg}</span>
+                  </div>
+                )}
+
+                {/* Thao tác dành riêng cho Admin */}
+                <div className="pt-2 border-t border-[#f1f5f9] flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-[#64748b] font-medium">
+                    {status !== 'Hoàn thành'
+                      ? 'Xác nhận nhân sự đã xong trước hạn:'
+                      : 'Đặc quyền Admin:'}
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    {/* Nút 1-click: Chuyển sang Hoàn thành đúng hạn */}
+                    {(status !== 'Hoàn thành' || !currentDiscipline.isOnTime) && (
+                      <button
+                        type="button"
+                        onClick={handleAdminConfirmOnTime}
+                        className="px-2.5 py-1 bg-[#15803d] hover:bg-[#166534] text-white rounded-[5px] text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                        title="Xác nhận nhân sự hoàn thành đúng hạn (đặt ngày hoàn thành theo ngày hạn)"
+                      >
+                        <Zap className="w-3 h-3" />
+                        <span>{status === 'Hoàn thành' ? 'Chuyển sang đúng hạn' : 'Hoàn thành đúng hạn'}</span>
+                      </button>
+                    )}
+
+                    {/* Nút tuỳ chỉnh ngày hoàn thành */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultDate = currentDiscipline.completionDate || task?.dueDate.slice(0, 10) || getTodayDateString();
+                        setAdminDateInput(defaultDate);
+                        setAdminTimeInput('17:30');
+                        setAdminResultLinkInput(resultLink || workLink || '');
+                        setAdminNoteInput('');
+                        setShowAdminDateDialog(true);
+                      }}
+                      className="px-2.5 py-1 bg-white hover:bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[5px] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Chọn ngày hoàn thành thực tế tùy chỉnh"
+                    >
+                      <Clock className="w-3 h-3 text-[#64748b]" />
+                      <span>Đổi ngày hoàn thành</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -850,6 +1031,67 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Drawer Body - TAB 2: LOGS & HISTORY */}
         {activeDrawerTab === 'history' && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm font-body bg-[#fafafa]">
+            {/* Cảnh báo kỷ luật & Xử lý Admin trên Tab Lịch sử */}
+            {isAdmin && currentDiscipline && (status !== 'Hoàn thành' || !currentDiscipline.isOnTime) && (
+              <div className="bg-[#fffbeb] border border-[#fde68a] rounded-[8px] p-3.5 space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#b45309]">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-[#b45309]" />
+                      <span>
+                        {status === 'Hoàn thành'
+                          ? `Ghi nhận: Hoàn thành sau hạn (+${currentDiscipline.daysDiff} ngày)`
+                          : `Công việc ${currentDiscipline.discipline === 'currently_overdue' ? `đang quá hạn ${currentDiscipline.daysDiff} ngày` : 'chưa hoàn thành'}`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#78350f]">
+                      {status === 'Hoàn thành' ? (
+                        <>Thời điểm bấm: <strong className="text-[#451a03]">{formatLogTimestamp(completedAt || task?.completedAt, true)}</strong> (Hạn: {formatDateWithEnDay(dueDate)})</>
+                      ) : (
+                        <>Hạn công việc: <strong className="text-[#451a03]">{formatDateWithEnDay(dueDate)}</strong>. Admin có thể xác nhận đã hoàn thành từ trước.</>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleAdminConfirmOnTime}
+                      className="px-2.5 py-1 bg-[#15803d] hover:bg-[#166534] text-white rounded-[5px] text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                      title="Xác nhận nhân sự hoàn thành đúng hạn (đặt ngày hoàn thành theo ngày hạn)"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>{status === 'Hoàn thành' ? 'Xác nhận đúng hạn' : 'Hoàn thành đúng hạn'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultDate = currentDiscipline.completionDate || task?.dueDate.slice(0, 10) || getTodayDateString();
+                        setAdminDateInput(defaultDate);
+                        setAdminTimeInput('17:30');
+                        setAdminResultLinkInput(resultLink || workLink || '');
+                        setAdminNoteInput('');
+                        setShowAdminDateDialog(true);
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[5px] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Điều chỉnh ngày hoàn thành cụ thể"
+                    >
+                      <Clock className="w-3 h-3 text-[#64748b]" />
+                      <span>Đổi ngày</span>
+                    </button>
+                  </div>
+                </div>
+
+                {adminSuccessMsg && (
+                  <div className="p-2 bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] text-xs font-bold rounded-[6px] flex items-center gap-1.5 animate-fade-in">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>{adminSuccessMsg}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Add Manual Progress Note Box */}
             <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-2xs space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -1041,6 +1283,116 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             )}
           </div>
         </div>
+
+        {/* Modal Admin điều chỉnh ngày hoàn thành */}
+        {showAdminDateDialog && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
+            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#963861]" />
+                  <h3 className="font-bold text-sm text-[#202020]">Điều chỉnh thời điểm hoàn thành</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminDateDialog(false)}
+                  className="p-1 text-[#71717a] hover:text-[#202020] rounded-[6px] hover:bg-[#f4f4f5] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Ngày hoàn thành thực tế:
+                  </label>
+                  <input
+                    type="date"
+                    value={adminDateInput}
+                    onChange={(e) => setAdminDateInput(e.target.value)}
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                  />
+                  {adminDateInput && (
+                    <p className="text-[11px] text-[#71717a] pt-0.5">
+                      Hiển thị: <strong>{formatDateWithEnDay(adminDateInput)}</strong>
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Giờ hoàn thành:
+                  </label>
+                  <input
+                    type="time"
+                    value={adminTimeInput}
+                    onChange={(e) => setAdminTimeInput(e.target.value)}
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                  />
+                </div>
+
+                {/* Ô nhập Link kết quả */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-[#5f5f5f] block">
+                      Link kết quả hoàn thành:
+                    </label>
+                    {workLink && !adminResultLinkInput && (
+                      <button
+                        type="button"
+                        onClick={() => setAdminResultLinkInput(workLink)}
+                        className="text-[11px] text-[#963861] hover:underline cursor-pointer"
+                      >
+                        Dùng link làm việc
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={adminResultLinkInput}
+                    onChange={(e) => setAdminResultLinkInput(e.target.value)}
+                    placeholder="https://figma.com/... hoặc vnexpress.net/..."
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                  />
+                  <p className="text-[10px] text-[#963861]">
+                    * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Ghi chú xác nhận của Admin:
+                  </label>
+                  <input
+                    type="text"
+                    value={adminNoteInput}
+                    onChange={(e) => setAdminNoteInput(e.target.value)}
+                    placeholder="Lý do xác nhận (ví dụ: Thành viên xong hôm trước nhưng quên bấm)"
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+                <button
+                  type="button"
+                  onClick={() => setShowAdminDateDialog(false)}
+                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdminSaveCustomDate}
+                  className="px-3.5 py-1.5 bg-[#963861] hover:bg-[#802f52] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                >
+                  Lưu & Cập nhật kỷ luật
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
           </motion.div>
         </div>
       )}

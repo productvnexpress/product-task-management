@@ -220,6 +220,35 @@ export function getTimePeriodDateRange(
 }
 
 /**
+ * Chuyển đổi chuỗi ngày định dạng tiếng Anh ("Tue, 22 Sep 2026 • 01:00" hoặc "22 Sep 2026") sang ISO YYYY-MM-DD
+ */
+export function parseFormattedEnDate(str?: string): string | undefined {
+  if (!str || typeof str !== 'string') return undefined;
+  const isoMatch = str.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  if (isoMatch) return isoMatch[0];
+
+  const monthMap: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+  };
+
+  const match = str.match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const month = monthMap[match[2].toLowerCase()];
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return normalizeDateString(d.toISOString());
+  }
+
+  return undefined;
+}
+
+/**
  * Trích xuất ngày hoàn thành thực tế của công việc
  */
 export function getTaskCompletionDate(task: TaskItem): string | undefined {
@@ -229,6 +258,25 @@ export function getTaskCompletionDate(task: TaskItem): string | undefined {
 
   // Tìm trong audit logs
   if (task.logs && task.logs.length > 0) {
+    // 1. Ưu tiên tìm log điều chỉnh thời điểm hoàn thành của Admin gần nhất
+    const adjustLog = task.logs.find(
+      (l) =>
+        l.changes?.some((c) => c.field === 'Thời điểm hoàn thành') ||
+        l.action?.includes('Điều chỉnh thời điểm hoàn thành') ||
+        l.action?.includes('Xác nhận hoàn thành đúng hạn')
+    );
+    if (adjustLog) {
+      const change = adjustLog.changes?.find((c) => c.field === 'Thời điểm hoàn thành');
+      if (change && change.newValue) {
+        const parsed = parseFormattedEnDate(change.newValue);
+        if (parsed) return parsed;
+      }
+      if (adjustLog.timestamp) {
+        return normalizeDateString(adjustLog.timestamp);
+      }
+    }
+
+    // 2. Tìm log hoàn thành thông thường
     const completionLog = task.logs.find(
       (l) =>
         l.changes?.some(

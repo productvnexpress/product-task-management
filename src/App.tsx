@@ -61,7 +61,7 @@ import { formatDateWithEnDay } from './utils/formatters';
 import { extractMentions, getTaskThreadParticipants } from './utils/mentionUtils';
 import { isValidUrl, normalizeUrl } from './utils/urlValidator';
 import { deduplicateNotifications } from './utils/notificationDeduplication';
-import { recordTaskChanges, createCreationLog } from './utils/taskLogUtils';
+import { recordTaskChanges, createCreationLog, deduplicateTaskLogs } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
 import { normalizeProjectStatus } from './utils/projectSortingUtils';
@@ -1430,18 +1430,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             completedAt: isComp ? (updatedTask.completedAt || t.completedAt || new Date().toISOString()) : undefined,
           };
           const rawLogged = recordTaskChanges(t, taskWithCompletedAt, actor || updatedTask.assignee, customNote);
-          // Lọc bỏ trùng lặp nếu có trong danh sách nhật ký
-          const cleanLogs: TaskLogItem[] = [];
-          (rawLogged.logs || []).forEach((l) => {
-            const isDup = cleanLogs.some(
-              (prev) =>
-                prev.author === l.author &&
-                prev.note &&
-                prev.note.trim() === (l.note || '').trim() &&
-                Math.abs(new Date(prev.timestamp).getTime() - new Date(l.timestamp).getTime()) < 60000
-            );
-            if (!isDup) cleanLogs.push(l);
-          });
+          const cleanLogs: TaskLogItem[] = deduplicateTaskLogs(rawLogged.logs || []);
           const logged: TaskItem = { ...rawLogged, logs: cleanLogs };
           if (selectedTask?.id === updatedTask.id) {
             setSelectedTask(logged);

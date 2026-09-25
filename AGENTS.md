@@ -72,6 +72,12 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
    - Trong giao diện chi tiết `TaskDetailDrawer`: Bắt buộc nhập `Link hoàn thành` đúng định dạng URL khi trạng thái là `'Hoàn thành'`. Đồng thời nếu nhập `Link làm việc` (`workLink`) cũng phải tuân thủ chuẩn URL hợp lệ. Hệ thống chặn lưu và hiển thị cảnh báo đỏ trực quan nếu link không hợp lệ.
    - Khi chọn trạng thái `'Đang làm'`: **Không bắt buộc** nhập Link làm việc (`workLink`).
 7. **Sắp xếp Khối Việc Đã hoàn thành (Completed Tasks Ordering)**: Danh sách công việc thuộc khối "Đã hoàn thành" trên trang Công việc bắt buộc được sắp xếp theo thời gian từ mới nhất đến cũ nhất (descending) dựa trên ngày hạn hoàn thành (`dueDate`) và thời điểm hoàn thành (`completedAt`). Các công việc có hạn hoặc hoàn thành gần đây nhất luôn được hiển thị ở vị trí đầu tiên.
+8. **Quyền Admin Xử lý & Xác nhận Hoàn thành Đúng hạn cho Tất cả Công việc (Admin On-Time Resolution for All Tasks)**:
+   - **Bối cảnh nghiệp vụ**: Thành viên thực tế đã hoàn thành công việc từ hôm trước nhưng quên nộp link kết quả và quên bấm 'Hoàn thành' khiến công việc bị ghi nhận là 'Hoàn thành sau hạn (+N ngày)' hoặc bị quá hạn.
+   - **Đặc quyền Admin (`getUserRole === 'Admin'`)**: Cho phép Admin chuyển một công việc từ Hoàn thành quá hạn (hoặc bất kỳ trạng thái nào: Chưa làm, Đang làm, Bị nghẽn, Quá hạn) sang **Hoàn thành đúng hạn**:
+     - **Nút bấm 1-click `⚡ Hoàn thành đúng hạn` / `⚡ Chuyển sang đúng hạn`**: Đặt `completedAt` về ngày hạn hoàn thành (`${dueDate}T17:30:00`), tự động chuyển `status = 'Hoàn thành'` và `progress = 100%`. Nếu chưa có `resultLink`, hệ thống yêu cầu Admin nhập link kết quả (hoặc dùng nhanh `workLink` nếu có) để bảo đảm tuân thủ quy chuẩn link kết quả hợp lệ.
+     - **Nút `🕒 Đổi ngày hoàn thành`**: Mở modal cho phép Admin chọn ngày hoàn thành thực tế trong quá khứ, giờ hoàn thành, link kết quả và ghi chú giải trình.
+     - **Chống trùng lặp nhật ký kiểm toán (Log Deduplication)**: Hệ thống sử dụng hàm chuẩn hóa `deduplicateTaskLogs`, tuyệt đối không ghi bản ghi nhật ký nếu `oldValue === newValue`, tự động loại bỏ các bản ghi trùng người tạo, trùng hành động, trùng chi tiết thay đổi và thời điểm trong vòng 3 phút trên toàn bộ hệ thống (Drawer, Supabase và LocalStorage).
 
 ### 1.4. Giao diện Chi tiết Công việc (TaskDetailDrawer)
 - Giao diện dạng **Right Sidebar Drawer** trượt từ bên phải sang (chiều rộng tối ưu ~500-550px).
