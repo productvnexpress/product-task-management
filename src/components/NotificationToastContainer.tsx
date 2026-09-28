@@ -67,7 +67,7 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-16 right-5 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed top-16 right-5 z-[70] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
       <AnimatePresence>
         {toasts.map((toast) => (
           <motion.div

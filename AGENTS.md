@@ -701,6 +701,12 @@ Cung cấp bộ khung sườn tiêu chuẩn hóa 5 giai đoạn cho toàn bộ t
     - `exit={{ opacity: 0, height: 0 }}`
     - `transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}`.
 
+#### 5. Nguồn Tham chiếu Chi tiết & Rào chắn Kỹ thuật (Reference Skill & Guardrails)
+- **Skill tham chiếu**: Mọi quy tắc easing, duration, spring, hiệu năng và khả năng tiếp cận ở Mục 4.8 được đúc kết từ bộ tài liệu chi tiết tại [`.claude/skills/emil-design-engineering/`](.claude/skills/emil-design-engineering/SKILL.md) (đăng ký chuẩn dưới dạng Claude Code Skill, tự động được nạp bởi Claude Code khi làm việc liên quan đến UI/animation; các công cụ đọc `AGENTS.md` khác như Antigravity tham chiếu trực tiếp mục này). Khi cần chi tiết sâu hơn (form/control, touch/a11y, component API, marketing page, performance), tra cứu các file `.md` tương ứng trong cùng thư mục.
+- **`prefers-reduced-motion` (bắt buộc, áp dụng toàn cục)**: Root App (`src/main.tsx`) được bọc trong `<MotionConfig reducedMotion="user">` — tự động tắt mọi hoạt họa Framer Motion khi hệ điều hành bật "Reduce Motion", không cần kiểm tra `useReducedMotion()` thủ công ở từng component.
+- **Thang `z-index` cố định (Fixed Scale)**: `z-40` (dropdown/submenu lồng trong Drawer) → `z-50` (Drawer, Modal chuẩn) → `z-60` (Modal xác nhận lồng trên Drawer/Modal khác) → `z-[70]` (Toast thông báo hệ thống, luôn nổi trên cùng). Tuyệt đối không dùng giá trị tuỳ tiện kiểu `z-[9999]`.
+- **Nợ kỹ thuật đã ghi nhận (Known Debt — chưa xử lý toàn bộ)**: Codebase hiện còn dùng `transition-all` (Tailwind) rải rác ở nhiều component thay vì khai báo đúng thuộc tính cần chuyển động (`transition-colors`, `transition-transform`...). Không hồi tố toàn bộ trong 1 lần vì phạm vi đổi quá lớn/rủi ro cao; **bắt buộc khi sửa hoặc tạo mới component có dùng `transition-all`, phải thay bằng thuộc tính cụ thể** theo đúng khuyến nghị của skill tham chiếu ở trên.
+
 ---
 
 ### 4.9. Quy chuẩn Hệ thống Phân quyền Truy cập (Role-Based Access Control - RBAC)
