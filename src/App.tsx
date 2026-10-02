@@ -40,7 +40,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { StandupModal } from './components/StandupModal';
 import { LoginView } from './components/LoginView';
 import { ProfileModal } from './components/ProfileModal';
-import { getCurrentAuthUser, logout, syncPasswordsFromSupabase } from './utils/authService';
+import { ForceChangePasswordModal } from './components/ForceChangePasswordModal';
+import { AdminSendMessageModal } from './components/AdminSendMessageModal';
+import { getCurrentAuthUser, logout, syncPasswordsFromSupabase, isUserUsingDefaultPassword, checkAndLogoutIfDefaultPassword } from './utils/authService';
 import { DailyCompletionAlert } from './components/DailyCompletionAlert';
 import { DailyLeaveNotice, useProductLeaves } from './components/DailyLeaveNotice';
 import { getDailyDueTaskStats } from './utils/dailyAccountability';
@@ -206,10 +208,38 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   }
 };
 
-  // Authentication state for Product group
-  const [currentAuthUser, setCurrentAuthUser] = useState<MemberItem | null>(() => {
-    return getCurrentAuthUser(members);
+  // Login notice message (ví dụ khi bị logout do chưa đổi mật khẩu mặc định)
+  const [loginNoticeMessage, setLoginNoticeMessage] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('vne_auth_user');
+      if (saved) {
+        const u = saved.trim().toLowerCase();
+        if (isUserUsingDefaultPassword(u)) {
+          return 'Tài khoản chưa đổi mật khẩu mặc định. Vui lòng đăng nhập lại để cập nhật mật khẩu mới.';
+        }
+      }
+    } catch {}
+    return null;
   });
+
+  // Authentication state for Product group (Tự động đăng xuất nếu chưa đổi mật khẩu mặc định)
+  const [currentAuthUser, setCurrentAuthUser] = useState<MemberItem | null>(() => {
+    const user = getCurrentAuthUser(members);
+    if (user) {
+      const u = (user.username || user.id).toLowerCase();
+      if (isUserUsingDefaultPassword(u)) {
+        logout();
+        return null;
+      }
+    }
+    return user;
+  });
+
+  // Modal bắt buộc đổi mật khẩu khi đăng nhập bằng mật khẩu mặc định
+  const [forceChangePasswordUser, setForceChangePasswordUser] = useState<MemberItem | null>(null);
+
+  // Modal gửi thông điệp Quản trị (mở từ NotificationDrawer hoặc MembersManager)
+  const [isAdminBroadcastModalOpen, setIsAdminBroadcastModalOpen] = useState(false);
 
   // Profile & Change Password Modal state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -223,8 +253,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setIsProfileModalOpen(true);
   };
 
-  const handleLoginSuccess = (user: MemberItem) => {
+  const handleLoginSuccess = (user: MemberItem, mustChangePassword?: boolean) => {
+    setLoginNoticeMessage(null);
     setCurrentAuthUser(user);
+    if (mustChangePassword) {
+      setForceChangePasswordUser(user);
+    }
     const def = getDefaultPerspectiveForUser(user);
     setActiveProductMember(def.activeMember);
     setFilterState((prev) => ({
@@ -242,6 +276,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   const handleLogout = () => {
     logout();
     setCurrentAuthUser(null);
+    setForceChangePasswordUser(null);
     setActiveProductMember(null);
     setFilterState((prev) => ({
       ...prev,
@@ -596,7 +631,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     const loadSupabaseData = async () => {
       try {
         // Đồng bộ mật khẩu người dùng
-        syncPasswordsFromSupabase();
+        await syncPasswordsFromSupabase();
+        if (currentAuthUser) {
+          const u = (currentAuthUser.username || currentAuthUser.id).toLowerCase();
+          if (isUserUsingDefaultPassword(u)) {
+            handleLogout();
+            setLoginNoticeMessage('Tài khoản chưa đổi mật khẩu mặc định. Vui lòng đăng nhập lại để cập nhật mật khẩu mới.');
+          }
+        }
 
         const [mems, projs, tsks, trsh, notifs] = await Promise.all([
           wmsDataService.fetchMembers(),
@@ -1274,6 +1316,19 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const handleDeleteNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleSendAdminBroadcast = async (newNotifs: NotificationItem[]) => {
+    if (!newNotifs || newNotifs.length === 0) return;
+    try {
+      for (const n of newNotifs) {
+        await wmsDataService.saveNotification(n);
+        dispatchNotificationWebPush(n);
+      }
+      setNotifications((prev) => deduplicateNotifications([...newNotifs, ...prev]));
+    } catch (err) {
+      console.error('Lỗi khi gửi thông báo Admin broadcast:', err);
+    }
   };
 
   // Task Operations
@@ -1958,6 +2013,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       <LoginView
         members={members}
         onLoginSuccess={handleLoginSuccess}
+        noticeMessage={loginNoticeMessage || undefined}
       />
     );
   }
@@ -2603,6 +2659,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               activeProductMember={activeProductMember}
               currentAuthUser={currentAuthUser}
               onSelectProductMember={handleSelectProductMember}
+              onSendAdminBroadcast={handleSendAdminBroadcast}
             />
           )}
 
@@ -2713,6 +2770,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         onMarkAllAsRead={handleMarkAllNotificationsAsRead}
         onDeleteNotification={handleDeleteNotification}
         onSendTestNotification={handleSendTestNotification}
+        onOpenAdminBroadcast={
+          getUserRole(currentAuthUser || activeProductMember) === 'Admin'
+            ? () => setIsAdminBroadcastModalOpen(true)
+            : undefined
+        }
       />
 
       {/* Standup Report Modal */}
@@ -2747,6 +2809,34 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           isOpen={Boolean(taskToCompleteModal)}
           onClose={() => setTaskToCompleteModal(null)}
           onConfirm={handleConfirmCompleteWithLink}
+        />
+      )}
+
+      {/* Modal bắt buộc đổi mật khẩu khi đăng nhập bằng mật khẩu mặc định */}
+      {forceChangePasswordUser && (
+        <ForceChangePasswordModal
+          isOpen={Boolean(forceChangePasswordUser)}
+          member={forceChangePasswordUser}
+          onSuccess={() => {
+            setForceChangePasswordUser(null);
+          }}
+          onLogout={() => {
+            setForceChangePasswordUser(null);
+            handleLogout();
+          }}
+        />
+      )}
+
+      {/* Modal Admin gửi thông điệp Quản trị trực tiếp từ Notification Drawer */}
+      {isAdminBroadcastModalOpen && (currentAuthUser || activeProductMember) && (
+        <AdminSendMessageModal
+          isOpen={isAdminBroadcastModalOpen}
+          members={members}
+          currentUser={currentAuthUser || activeProductMember!}
+          onClose={() => setIsAdminBroadcastModalOpen(false)}
+          onSend={async (notifs) => {
+            await handleSendAdminBroadcast(notifs);
+          }}
         />
       )}
     </div>

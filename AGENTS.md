@@ -471,22 +471,25 @@ Cung cấp bộ khung sườn tiêu chuẩn hóa 5 giai đoạn cho toàn bộ t
 
 ---
 
-### 3.4. Quy chuẩn Xác thực, Quản lý Hồ sơ & Đổi mật khẩu (Authentication & Password Specification)
+### 3.4. Quy chuẩn Xác thực, Bảo mật Mật khẩu & Quản lý Tài khoản (Authentication & Security Specification)
 1. **Lớp Xác thực Đăng nhập (Authentication Layer)**:
-   - Áp dụng độc quyền cho 12 nhân sự thuộc **Ban Sản phẩm - Công nghệ (Nhóm Product)**.
+   - Áp dụng cho nhân sự thuộc **Ban Sản phẩm - Công nghệ (Nhóm Product)**.
    - Định danh đăng nhập: Sử dụng trường `username` (ví dụ: `tienngoc`, `huyanh`, `duytung`, `quangvinh`, `binhminh`, `dinhtrung`, `ngocson`, `huunam`, `haidat`, `huutrung`, `vantien`, `nguyenhieu`).
-   - Mật khẩu mặc định hệ thống: `@26022001!`.
-   - Giao diện đăng nhập (`LoginView`): Bắt buộc kiểm tra chính xác tài khoản và mật khẩu trước khi cho phép truy cập hệ thống WMS. Hỗ trợ tính năng gợi ý nhanh danh sách 12 nhân sự Product và ẩn/hiện mật khẩu.
-2. **Quản lý Hồ sơ Cá nhân (Profile Management)**:
+   - **Tuyệt đối không hiển thị mật khẩu mặc định hoặc gợi ý mật khẩu**: Giao diện đăng nhập (`LoginView`) không hiển thị thông tin mật khẩu mặc định, không hiển thị chip danh sách gợi ý 12 nhân sự. Người dùng chủ động nhập username và mật khẩu.
+2. **Cơ chế Mã hoá Mật khẩu Một chiều (One-Way Password Hashing)**:
+   - Mật khẩu lưu trữ trong cơ sở dữ liệu (`member_credentials`) và cache trình duyệt bắt buộc mã hóa một chiều chuẩn **SHA-256 kèm chuỗi Salt hệ thống bí mật** (`vne_wms_secure_salt_2026_`).
+   - Tuyệt đối không lưu trữ, không truyền tải và không để lộ mật khẩu dạng Plaintext trên Supabase và LocalStorage.
+   - Hỗ trợ cơ chế tự động nâng cấp mã hóa (Auto Hash Migration): Khi tài khoản đăng nhập thành công với mật khẩu cũ, hệ thống tự động băm mã SHA-256 và ghi đè cập nhật vào cơ sở dữ liệu.
+3. **Bắt buộc Đổi Mật khẩu Mới khi Đăng nhập (Mandatory Password Change Enforcement)**:
+   - **Tự động đăng xuất tài khoản chưa đổi mật khẩu**: Hệ thống tự động kiểm tra và đăng xuất mọi tài khoản đang dùng mật khẩu mặc định, yêu cầu đăng nhập lại.
+   - **Hộp thoại cưỡng chế đổi mật khẩu (`ForceChangePasswordModal`)**: Khi người dùng đăng nhập bằng mật khẩu mặc định (hoặc tài khoản vừa được Admin reset), hệ thống chặn truy cập và hiển thị modal bắt buộc thiết lập mật khẩu mới (tối thiểu 6 ký tự, xác nhận trùng khớp, không được trùng mật khẩu mặc định). Người dùng không thể tắt modal nếu chưa đổi mật khẩu hoặc bấm Đăng xuất.
+   - Sau khi cập nhật mật khẩu mới thành công, cờ `is_default_password` chuyển sang `false` và người dùng được chuyển vào hệ thống làm việc bình thường.
+4. **Quản lý Hồ sơ & Tự đổi Mật khẩu (Profile & Change Password)**:
    - Truy cập qua Avatar/Profile Menu trên Header thanh điều hướng.
-   - **Chỉ cho phép thay đổi mật khẩu (Password-only modification)**: Toàn bộ thông tin định danh cá nhân (Họ tên, Username, Chức vụ, Nhóm chuyên môn, Phòng ban, Vùng, IP Phone, Email) được hiển thị dạng chỉ đọc (Read-only badge/card) để bảo đảm tính toàn vẹn dữ liệu SSOT.
-- **Quy tắc Đổi mật khẩu (Change Password Rules)**:
-   - Yêu cầu nhập đúng Mật khẩu hiện tại trước khi thiết lập mật khẩu mới.
-   - Mật khẩu mới có độ dài tối thiểu 6 ký tự và không được trùng với mật khẩu hiện tại.
-   - Xác nhận mật khẩu mới phải khớp 100% với mật khẩu mới.
-   - Mật khẩu mới được lưu trữ tại `localStorage` (`vne_user_passwords_v1`) và có hiệu lực ngay lập tức cho các lần đăng nhập kế tiếp.
-4. **Cơ chế Đăng xuất (Logout)**:
-   - Xóa phiên làm việc hiện tại (`vne_auth_username_v1`), đưa người dùng quay trở lại màn hình đăng nhập an toàn.
+   - Thông tin cá nhân hiển thị dạng chỉ đọc (Read-only) bảo đảm tính toàn vẹn dữ liệu SSOT.
+   - Hỗ trợ đổi mật khẩu chủ động: Yêu cầu mật khẩu hiện tại chính xác, mật khẩu mới tối thiểu 6 ký tự.
+5. **Cơ chế Đăng xuất (Logout)**:
+   - Xóa phiên làm việc hiện tại (`vne_auth_user`), đưa người dùng quay lại màn hình đăng nhập an toàn.
 
 ---
 
@@ -752,6 +755,19 @@ Hệ thống hoạt động trên nguyên tắc **Mặt phẳng chung (Unified W
 2. **Quyền sở hữu Dự án**: Xác định qua trường `createdBy` (hoặc người phụ trách Lead, PM của dự án).
 3. **Quyền chỉnh sửa Liên kết Dự án**: Cả Lead, PM và nhân sự UX/UI Designer đều có quyền cập nhật nhanh các đường dẫn làm việc/kết quả tại Section 3 của Chi tiết Dự án.
 4. **Quyền khôi phục Thùng rác**: Xác định qua trường `deletedBy` tự động lưu lại danh tính tài khoản tại thời điểm xoá.
+
+#### 5. Đặc quyền Quản trị Nâng cao dành riêng cho Admin (Advanced Admin Privileges)
+1. **Reset Mật khẩu Nhân sự (`AdminResetPasswordModal`)**:
+   - Admin có quyền đặt lại mật khẩu cho bất kỳ thành viên nào trong Ban Sản phẩm (truy cập qua icon `KeyRound` trên thẻ nhân sự).
+   - Hỗ trợ 2 chế độ:
+     - *Mật khẩu mặc định hệ thống*: Khôi phục về mật khẩu chuẩn và kích hoạt cờ yêu cầu đổi mật khẩu.
+     - *Mật khẩu tạm thời tự chọn*: Cấp mật khẩu mới (tối thiểu 6 ký tự).
+   - Tự động mã hóa SHA-256 một chiều và đồng bộ lên Supabase (`member_credentials`). Cờ `is_default_password` tự động gán `true` để ép buộc người dùng phải thiết lập mật khẩu mới ngay khi đăng nhập.
+2. **Gửi Thông điệp Điều hành tới Nhân sự (`AdminSendMessageModal`)**:
+   - Admin có quyền gửi thông điệp riêng hoặc thông báo toàn thể tới 1 hoặc nhiều thành viên Ban Sản phẩm (loại `admin_broadcast`).
+   - Giao diện hỗ trợ chọn nhanh theo Nhóm chuyên môn (Tất cả, PM, UX/UI, SEO, Data) hoặc tìm kiếm và tick chọn từng cá nhân.
+   - Nội dung thông điệp gửi đi được tự động lưu vào bảng `notifications` trên Supabase, đồng bộ tức thì qua Realtime, phát sinh âm thanh/toast thông báo và kích hoạt Web Push trên trình duyệt người nhận.
+   - Vị trí truy cập: Nút `[Gửi thông điệp]` trên Header Drawer Thông báo, Banner điều hành trên trang Nhân sự, và nút `Megaphone` trên từng thẻ nhân sự.
 
 ---
 

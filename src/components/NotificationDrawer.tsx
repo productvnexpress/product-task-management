@@ -23,6 +23,7 @@ import {
   Flag,
   MessageSquare,
   AtSign,
+  Megaphone,
 } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { NotificationItem, NotificationType, MemberItem } from '../types';
@@ -46,6 +47,7 @@ interface NotificationDrawerProps {
   onMarkAllAsRead: () => void;
   onDeleteNotification?: (id: string) => void;
   onSendTestNotification?: () => void;
+  onOpenAdminBroadcast?: () => void;
 }
 
 function formatNotificationTime(isoStr: string): string {
@@ -81,6 +83,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onMarkAllAsRead,
   onDeleteNotification,
   onSendTestNotification,
+  onOpenAdminBroadcast,
 }) => {
   const role = getUserRole(currentUser);
   const isManagerOrAdmin = role === 'Admin' || role === 'Manager';
@@ -176,6 +179,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         return (
           <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] flex items-center justify-center shrink-0">
             <Calendar className="w-4 h-4" />
+          </div>
+        );
+      case 'admin_broadcast':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#f3e8ff] text-[#7e22ce] border border-[#d8b4fe] flex items-center justify-center shrink-0">
+            <Megaphone className="w-4 h-4" />
           </div>
         );
       case 'task_updated':
@@ -311,6 +320,18 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {role === 'Admin' && onOpenAdminBroadcast && (
+                    <button
+                      type="button"
+                      onClick={onOpenAdminBroadcast}
+                      className="text-[11px] font-ui font-bold text-[#7e22ce] bg-[#f3e8ff] hover:bg-[#e9d5ff] px-2 py-0.5 rounded-[4px] flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Admin gửi thông điệp riêng cho một hoặc nhiều nhân sự"
+                    >
+                      <Megaphone className="w-3 h-3" />
+                      <span className="hidden sm:inline">Gửi thông điệp</span>
+                    </button>
+                  )}
+
                   {onSendTestNotification && (
                     <button
                       type="button"

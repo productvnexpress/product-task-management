@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MemberItem } from '../types';
-import { login, DEFAULT_PRODUCT_PASSWORD, isProductMember } from '../utils/authService';
+import { login } from '../utils/authService';
 import {
   Lock,
   User,
@@ -14,28 +14,27 @@ import {
   EyeOff,
   LogIn,
   AlertCircle,
-  Sparkles,
-  ChevronRight,
-  ShieldCheck,
+  Info,
 } from 'lucide-react';
 
 interface LoginViewProps {
   members: MemberItem[];
-  onLoginSuccess: (user: MemberItem) => void;
+  onLoginSuccess: (user: MemberItem, mustChangePassword?: boolean) => void;
+  noticeMessage?: string;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({
+  members,
+  onLoginSuccess,
+  noticeMessage,
+}) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showQuickSelect, setShowQuickSelect] = useState(false);
 
-  // Lọc 12 nhân sự nhóm Product
-  const productMembers = members.filter(isProductMember);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -49,23 +48,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(username, password, members);
+    try {
+      const res = await login(username, password, members);
       setIsLoading(false);
 
       if (res.success && res.user) {
-        onLoginSuccess(res.user);
+        onLoginSuccess(res.user, res.mustChangePassword);
       } else {
         setError(res.error || 'Đăng nhập không thành công.');
       }
-    }, 250);
-  };
-
-  const handleSelectMemberChip = (mem: MemberItem) => {
-    setUsername(mem.username || mem.id);
-    setPassword(DEFAULT_PRODUCT_PASSWORD);
-    setError('');
-    setShowQuickSelect(false);
+    } catch {
+      setIsLoading(false);
+      setError('Lỗi kết nối máy chủ. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -79,7 +74,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
         initial={{ opacity: 0, y: 18, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-[440px] bg-white rounded-[16px] border border-[#e2e8f0] shadow-xl p-6 sm:p-8 relative z-10"
+        className="w-full max-w-[420px] bg-white rounded-[16px] border border-[#e2e8f0] shadow-xl p-6 sm:p-8 relative z-10"
       >
         {/* Header Branding */}
         <div className="text-center mb-6">
@@ -93,6 +88,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
             Hệ thống Quản lý Công việc & Dự án (WMS)
           </p>
         </div>
+
+        {/* Notice from session logout */}
+        {noticeMessage && (
+          <div className="mb-4 p-3 bg-[#eff6ff] border border-[#bfdbfe] rounded-[8px] flex items-start gap-2.5 text-xs text-[#1e40af]">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#2563eb]" />
+            <span className="font-medium leading-relaxed">{noticeMessage}</span>
+          </div>
+        )}
 
         {/* Error Notification */}
         <AnimatePresence>
@@ -114,19 +117,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username Input */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="block font-ui text-xs font-bold text-[#475569]">
-                Tên tài khoản (Account)
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowQuickSelect(!showQuickSelect)}
-                className="text-[11px] font-bold text-[#963861] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Gợi ý 12 nhân sự</span>
-              </button>
-            </div>
+            <label className="block font-ui text-xs font-bold text-[#475569]">
+              Tên tài khoản (Account)
+            </label>
 
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#94a3b8]">
@@ -139,45 +132,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
                   setUsername(e.target.value);
                   if (error) setError('');
                 }}
-                placeholder="Ví dụ: tienngoc, huyanh, duytung..."
+                placeholder="Nhập tên tài khoản..."
                 className="w-full pl-9 pr-3 py-2.5 bg-white border border-[#cbd5e1] focus:border-[#963861] focus:ring-2 focus:ring-[#963861]/10 rounded-[8px] text-xs font-medium text-[#1e293b] placeholder-[#94a3b8] transition-all outline-hidden"
                 autoFocus
+                autoComplete="username"
               />
             </div>
-
-            {/* Quick Member Selector Drawer/Dropdown */}
-            <AnimatePresence>
-              {showQuickSelect && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden border border-[#e2e8f0] rounded-[8px] bg-[#f8fafc] p-2 mt-2"
-                >
-                  <p className="text-[10px] text-[#64748b] font-bold mb-1.5 px-1 uppercase tracking-wider">
-                    Nhấp chọn tài khoản Product:
-                  </p>
-                  <div className="grid grid-cols-2 gap-1 max-h-44 overflow-y-auto pr-1">
-                    {productMembers.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => handleSelectMemberChip(m)}
-                        className="text-left px-2 py-1.5 rounded-[6px] hover:bg-white hover:border-[#cbd5e1] border border-transparent text-xs transition-colors flex flex-col cursor-pointer"
-                      >
-                        <span className="font-bold text-[#1e293b] truncate text-[11px]">
-                          {m.name}
-                        </span>
-                        <span className="text-[10px] text-[#963861] font-mono">
-                          @{m.username}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
           {/* Password Input */}
@@ -198,6 +158,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
                 }}
                 placeholder="Nhập mật khẩu..."
                 className="w-full pl-9 pr-10 py-2.5 bg-white border border-[#cbd5e1] focus:border-[#963861] focus:ring-2 focus:ring-[#963861]/10 rounded-[8px] text-xs font-medium text-[#1e293b] placeholder-[#94a3b8] transition-all outline-hidden font-mono"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -231,26 +192,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ members, onLoginSuccess })
             )}
           </motion.button>
         </form>
-
-        {/* Default Password Helper Card */}
-        <div className="mt-5 p-3 rounded-[8px] bg-[#fffbfd] border border-[#f3c2d4] text-[11px] text-[#64748b] flex items-start gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#963861] shrink-0 mt-0.5" />
-          <div className="leading-relaxed">
-            <span className="font-bold text-[#963861]">Mật khẩu mặc định ban đầu:</span>{' '}
-            <code className="font-mono font-bold text-[#1e293b] bg-white px-1.5 py-0.5 rounded border border-[#e2e8f0]">
-              {DEFAULT_PRODUCT_PASSWORD}
-            </code>
-            <p className="text-[10px] text-[#64748b] mt-0.5">
-              Bạn có thể đổi mật khẩu mới trong mục Quản lý Hồ sơ cá nhân sau khi đăng nhập.
-            </p>
-          </div>
-        </div>
       </motion.div>
 
       {/* Footer copyright */}
-      <div className="mt-6 text-center text-xs text-[#94a3b8] font-ui">
-        © 2026 Ban Sản phẩm - Công nghệ VnExpress. Single Source of Truth (SSOT).
-      </div>
+      <p className="mt-8 text-[11px] font-ui text-[#94a3b8] text-center">
+        &copy; {new Date().getFullYear()} Ban Sản phẩm - Công nghệ VnExpress
+      </p>
     </div>
   );
 };

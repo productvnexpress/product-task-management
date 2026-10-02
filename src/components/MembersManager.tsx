@@ -27,10 +27,14 @@ import {
   Award,
   Tag,
   Copy,
-  Check
+  Check,
+  KeyRound,
+  Megaphone
 } from 'lucide-react';
 import { canCreateMember, canEditMember, canDeleteMember, getUserRole } from '../utils/rbac';
 import { workingTimeService } from '../services/workingTimeService';
+import { AdminResetPasswordModal } from './AdminResetPasswordModal';
+import { AdminSendMessageModal } from './AdminSendMessageModal';
 
 /**
  * Sắp xếp nhân sự theo thứ tự ABC tiếng Việt:
@@ -61,6 +65,7 @@ interface MembersManagerProps {
   activeProductMember?: MemberItem | null;
   currentAuthUser?: MemberItem | null;
   onSelectProductMember?: (member: MemberItem | null) => void;
+  onSendAdminBroadcast?: (notifs: import('../types').NotificationItem[]) => Promise<void> | void;
 }
 
 const PRODUCT_TEAMS: TeamType[] = ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'];
@@ -78,9 +83,17 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
   activeProductMember,
   currentAuthUser,
   onSelectProductMember,
+  onSendAdminBroadcast,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
+  const isAdmin = getUserRole(effectiveUser) === 'Admin';
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+  // Admin Features State
+  const [resetPasswordMember, setResetPasswordMember] = useState<MemberItem | null>(null);
+  const [isSendMessageOpen, setIsSendMessageOpen] = useState(false);
+  const [selectedRecipientForMessage, setSelectedRecipientForMessage] = useState<MemberItem | null>(null);
+  const [adminActionNotice, setAdminActionNotice] = useState<string | null>(null);
 
   const handleCopyEmail = (email: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -374,6 +387,49 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
         </button>
       </div>
 
+      {/* Admin Broadcast Bar */}
+      {isAdmin && (
+        <div className="bg-gradient-to-r from-[#faf5ff] to-[#f3e8ff] border border-[#d8b4fe] rounded-[10px] p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#7e22ce] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Megaphone className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-ui font-bold text-[#581c87]">Thông điệp Quản trị</h4>
+              <p className="text-[11px] text-[#7e22ce]/80">Gửi thông báo trực tiếp đến một hoặc nhiều thành viên Ban Sản phẩm</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedRecipientForMessage(null);
+              setIsSendMessageOpen(true);
+            }}
+            className="px-3 py-1.5 bg-[#7e22ce] hover:bg-[#6b21a8] text-white text-xs font-ui font-bold rounded-[6px] transition-colors flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            <span>Gửi thông điệp</span>
+          </button>
+        </div>
+      )}
+
+      {/* Admin Action Notice */}
+      {adminActionNotice && (
+        <div className="bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] px-3.5 py-2.5 rounded-[8px] text-xs flex items-center justify-between animate-fade-in font-ui font-medium">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-[#16a34a]" />
+            <span>{adminActionNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAdminActionNotice(null)}
+            className="text-[#15803d] hover:text-[#14532d] cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB 1: PRODUCT MANAGEMENT VIEW */}
       {/* ========================================================================= */}
@@ -640,6 +696,29 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                   title={isActiveAccount ? 'Nhấp để bỏ chọn' : `Chuyển làm tài khoản chính: ${mem.name}`}
                                 >
                                   {isActiveAccount ? 'Đang chọn' : 'Đăng nhập'}
+                                </button>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => setResetPasswordMember(mem)}
+                                  className="p-1 text-[#7f7f7f] hover:text-[#b45309] hover:bg-[#fef3c7] rounded-[4px] cursor-pointer transition-colors"
+                                  title={`Reset mật khẩu cho @${mem.username || mem.name}`}
+                                >
+                                  <KeyRound className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRecipientForMessage(mem);
+                                    setIsSendMessageOpen(true);
+                                  }}
+                                  className="p-1 text-[#7f7f7f] hover:text-[#7e22ce] hover:bg-[#faf5ff] rounded-[4px] cursor-pointer transition-colors"
+                                  title={`Gửi thông điệp riêng cho @${mem.username || mem.name}`}
+                                >
+                                  <Megaphone className="w-3.5 h-3.5" />
                                 </button>
                               )}
                               {canEditMember(effectiveUser, mem) && (
@@ -1291,6 +1370,39 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Admin Reset Password Modal */}
+      {isAdmin && resetPasswordMember && (
+        <AdminResetPasswordModal
+          isOpen={Boolean(resetPasswordMember)}
+          member={resetPasswordMember}
+          onClose={() => setResetPasswordMember(null)}
+          onSuccess={(msg) => {
+            setResetPasswordMember(null);
+            setAdminActionNotice(msg);
+          }}
+        />
+      )}
+
+      {/* Admin Send Message Modal */}
+      {isAdmin && effectiveUser && (
+        <AdminSendMessageModal
+          isOpen={isSendMessageOpen}
+          members={members}
+          currentUser={effectiveUser}
+          initialRecipientName={selectedRecipientForMessage?.name}
+          onClose={() => {
+            setIsSendMessageOpen(false);
+            setSelectedRecipientForMessage(null);
+          }}
+          onSend={async (notifs) => {
+            if (onSendAdminBroadcast) {
+              await onSendAdminBroadcast(notifs);
+            }
+            setAdminActionNotice(`Đã gửi thông điệp tới ${notifs.length} nhân sự.`);
+          }}
+        />
       )}
     </div>
   );

@@ -96,7 +96,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const handleChangePasswordSubmit = (e: React.FormEvent) => {
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -119,9 +119,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
       const username = member.username || member.id;
-      const res = changePassword(username, currentPassword, newPassword);
+      const res = await changePassword(username, currentPassword, newPassword);
       setIsSubmitting(false);
 
       if (res.success) {
@@ -135,7 +135,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       } else {
         setErrorMsg(res.error || 'Không thể đổi mật khẩu. Vui lòng thử lại.');
       }
-    }, 200);
+    } catch {
+      setIsSubmitting(false);
+      setErrorMsg('Không thể đổi mật khẩu. Vui lòng thử lại.');
+    }
   };
 
   const teamCol = getTeamColor(member.team);

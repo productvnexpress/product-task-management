@@ -582,16 +582,32 @@ export const wmsDataService = {
     return data.password_hash;
   },
 
-  async updatePassword(username: string, newPassword: string): Promise<void> {
+  async updatePassword(username: string, passwordHash: string, isDefaultPassword = false): Promise<void> {
     const normalized = username.trim().toLowerCase();
     const { error } = await supabase.from('member_credentials').upsert({
       username: normalized,
-      password_hash: newPassword,
-      is_default_password: false,
+      password_hash: passwordHash,
+      is_default_password: Boolean(isDefaultPassword),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'username' });
 
     if (error) throw error;
+  },
+
+  async fetchMemberCredentials(): Promise<Array<{ username: string; password_hash: string; is_default_password?: boolean }>> {
+    try {
+      const { data, error } = await supabase
+        .from('member_credentials')
+        .select('username, password_hash, is_default_password');
+      if (error) {
+        console.warn('Lỗi khi fetchMemberCredentials:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.warn('Exception khi fetchMemberCredentials:', e);
+      return [];
+    }
   },
 
   // ==========================================
