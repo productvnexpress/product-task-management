@@ -233,6 +233,31 @@ async function checkDaily1630Reminder() {
     const storage = await chrome.storage.local.get([reminderKey, 'wms_user']);
 
     if (!storage[reminderKey] && storage.wms_user) {
+      // Kiểm tra danh sách task dở dang từ Supabase: Nếu đã đóng hết hoặc không có task đến hạn/quá hạn -> không nhắc
+      try {
+        const tasksUrl = `${SUPABASE_URL}/rest/v1/tasks?assignee=eq.${encodeURIComponent(
+          storage.wms_user.name
+        )}&status=neq.${encodeURIComponent('Hoàn thành')}&due_date=lte.${todayStr}`;
+        const res = await fetch(tasksUrl, {
+          method: 'GET',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (res.ok) {
+          const openTasks = await res.json();
+          if (!Array.isArray(openTasks) || openTasks.length === 0) {
+            // Đã đóng hết task -> ghi nhận và không gửi thông báo
+            await chrome.storage.local.set({ [reminderKey]: true });
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('[WMS Background] Lỗi kiểm tra task mở 16:30:', e);
+      }
+
       const appUrl = await getEffectiveAppUrl();
       const reminderNotif = {
         id: `1630-${todayStr}`,

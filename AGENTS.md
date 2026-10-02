@@ -126,6 +126,9 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - **Vùng 1 (Tên dự án & Mã dự án)**: Bấm vào để **lọc danh sách công việc theo dự án** đó (bấm lại để bỏ lọc và xem tất cả).
      - **Vùng 2 ("Thông tin dự án →")**: Thay thế text cũ `"Chi tiết"`, bấm vào để **mở Right Sidebar Drawer** hiển thị toàn bộ thông tin chi tiết dự án.
    - **Cột Phải (Task List Card - Flex-1)**: Khối card công việc màu trắng chuẩn nguyên bản (`bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0]`), chứa đầy đủ các hàng công việc (`TaskItemRow`) với trải nghiệm rộng thoáng, giải phóng hoàn toàn các thanh bar ngang cắt vụn giao diện.
+6. **Quy chuẩn Tag Tên Dự án & Lọc Nhanh theo Nhân sự (Project Tag & Assignee Quick Filter)**:
+   - **Tag tên dự án trong khối Đã hoàn thành**: Khối việc đã hoàn thành bắt buộc hiển thị tag tên dự án (`showProjectBadge = true`) dưới dạng pill xám nhẹ nhã nhặn (`bg-[#f1f5f9] text-[#475569] border-[#e2e8f0] font-medium`), có thể bấm vào để xem chi tiết dự án tại Right Sidebar.
+   - **Lọc nhanh theo nhân sự**: Trên hàng công việc (`TaskItemRow`) và trong giao diện chi tiết (`TaskDetailDrawer`), cho phép bấm trực tiếp vào tên của nhân sự phụ trách (`assignee`) để lọc tức thì toàn bộ danh sách công việc của nhân sự đó, tự động chuyển về góc nhìn việc cá nhân (`my_tasks`) và cuộn mượt lên đầu danh sách.
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
 1. **Tự động ánh xạ Nhóm (No Team Selector)**: Bỏ hoàn toàn ô chọn Nhóm (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`). Nhóm chuyên môn (`team`) được hệ thống tự động suy ra dựa trên Nhân sự được chọn (`assignee`).
@@ -191,15 +194,25 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - Hôm nay: `[Tên Họ] (sáng)` hoặc `[Tên Họ]`
      - 3 ngày tới: `[Tên Họ] (sáng Mon, 14 Sep 2026)` hoặc `[Tên Họ] (Mon, 14 Sep 2026)`
 
-### 1.8. Tự động Nhắc việc Lúc 08:30 Sáng Ngày Làm việc (Daily Morning Task Alert Specification)
-- **Mốc thời gian**: 08:30 sáng các ngày làm việc (workday, loại trừ Thứ 7, Chủ Nhật và ngày lễ).
-- **Đối tượng**: Toàn bộ nhân sự thuộc bộ phận Product (PM, Designer, SEO, Data).
-- **Điều kiện phát thông báo**: Nhân sự chưa có bất kỳ task nào có hạn hoàn thành trong ngày hôm nay (`tasksDueToday.length === 0`).
-- **Miễn trừ**: Nhân sự có lịch nghỉ phép đã duyệt trong ngày tự động được miễn trừ hoàn toàn.
-- **Biên tập theo EDITOR.md (Facts first, súc tích)**:
-  - Tiêu đề: `Nhắc việc trong ngày (08:30)`
-  - Nội dung: `Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.`
-- **Chống trùng lặp**: Lưu cache theo ngày `vne_daily_morning_task_notif_YYYY-MM-DD`, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày. Khi bấm vào thông báo, hệ thống tự động chuyển sang trang Công việc.
+### 1.8. Tự động Nhắc việc 08:30 Sáng & Nhắc Đóng Task 16:30 Chiều (Daily Morning & Close Task Alerts Specification)
+1. **Nhắc việc 08:30 Sáng Ngày Làm việc (Daily Morning Task Alert)**:
+   - **Mốc thời gian**: 08:30 sáng các ngày làm việc (workday, loại trừ Thứ 7, Chủ Nhật và ngày lễ).
+   - **Đối tượng**: Toàn bộ nhân sự thuộc bộ phận Product (PM, Designer, SEO, Data).
+   - **Điều kiện phát thông báo**: Chỉ nhắc khi nhân sự **chưa có bất kỳ công việc nào trong ngày hôm nay**. Nếu nhân sự đã có ít nhất 1 task (task có hạn hôm nay, task đang thực hiện `Đang làm`, task dở dang tồn từ hôm trước, hoặc task đã hoàn thành hôm nay) -> **tuyệt đối KHÔNG thông báo**.
+   - **Miễn trừ**: Nhân sự có lịch nghỉ phép đã duyệt trong ngày tự động được miễn trừ hoàn toàn.
+   - **Biên tập theo EDITOR.md (Facts first, súc tích)**:
+     - Tiêu đề: `Nhắc việc trong ngày (08:30)`
+     - Nội dung: `Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.`
+   - **Chống trùng lặp**: Kiểm tra cả cache ngày `vne_daily_morning_task_notif_YYYY-MM-DD` và danh sách thông báo đã tồn tại trong ngày, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày.
+
+2. **Nhắc Đóng Task 16:30 Chiều Ngày Làm việc (Daily Close Task Alert)**:
+   - **Mốc thời gian**: Từ 16:30 trở đi các ngày làm việc (workday, loại trừ Thứ 7, Chủ Nhật và ngày lễ).
+   - **Điều kiện phát thông báo**: Chỉ nhắc khi nhân sự **còn task dở dang đến hạn hôm nay hoặc quá hạn chưa đóng** (`openCount > 0`). Nếu nhân sự đã đóng/hoàn thành tất cả các task (`openCount === 0`) -> **tuyệt đối KHÔNG nhắc lại**.
+   - **Miễn trừ**: Nhân sự có lịch nghỉ phép đã duyệt trong ngày được miễn trừ.
+   - **Biên tập theo EDITOR.md (Facts first, súc tích)**:
+     - Tiêu đề: `Đóng task trong ngày (16:30)`
+     - Nội dung: `Còn {openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`
+   - **Chống trùng lặp**: Đồng bộ cache `vne_daily_close_task_notif_YYYY-MM-DD`, kiểm tra trùng lặp trên cả Web App và Chrome Extension.
 
 ### 1.9. Dòng Thông báo Nghỉ Lễ Sắp Tới (UpcomingHolidayBanner Specification)
 1. **Quy chuẩn Tách Dòng Độc lập & Màu sắc Nổi bật**:

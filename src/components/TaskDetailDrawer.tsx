@@ -37,6 +37,7 @@ import {
   RotateCw,
   AtSign,
   Zap,
+  Filter,
 } from 'lucide-react';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatFrequencyLabel } from '../services/recurringTaskService';
@@ -55,6 +56,7 @@ interface TaskDetailDrawerProps {
   activeProductMember?: MemberItem | null;
   currentAuthUser?: MemberItem | null;
   onOpenProjectDetail?: (projectId: string) => void;
+  onFilterByAssignee?: (assigneeName: string) => void;
 }
 
 const TEAMS: TeamType[] = ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'];
@@ -70,6 +72,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   activeProductMember,
   currentAuthUser,
   onOpenProjectDetail,
+  onFilterByAssignee,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
   const isAdmin = getUserRole(effectiveUser) === 'Admin';
@@ -836,10 +839,26 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               {/* 7. Phụ trách */}
               <div className="space-y-1.5">
-                <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-[#7f7f7f]" />
-                  Phụ trách:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                    Phụ trách:
+                  </label>
+                  {onFilterByAssignee && assignee && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onFilterByAssignee(assignee);
+                        onClose();
+                      }}
+                      className="text-[11px] font-ui text-[#963861] hover:underline cursor-pointer flex items-center gap-1"
+                      title={`Lọc nhanh công việc của ${assignee}`}
+                    >
+                      <Filter className="w-3 h-3" />
+                      <span>Lọc việc nhân sự này</span>
+                    </button>
+                  )}
+                </div>
                 <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}

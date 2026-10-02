@@ -5,7 +5,7 @@
 
 import { MemberItem, NotificationItem, TaskItem } from '../types';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
-import { isSamePersonName } from './memberPersonalization';
+import { isSamePersonName, isTaskForMember } from './memberPersonalization';
 import { workingTimeService } from '../services/workingTimeService';
 
 /**
@@ -14,15 +14,22 @@ import { workingTimeService } from '../services/workingTimeService';
  * - Mốc giờ: Từ 16:30 trở đi (hoặc preview param ?closeTaskAlert=1)
  * - Nhân sự đang nghỉ phép được miễn trừ
  * - Chống trùng lặp: Lưu mã ngày vào localStorage, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày
+ * - Quy chuẩn: Nếu nhân sự đã đóng/hoàn thành hết task (openCount === 0), tuyệt đối KHÔNG nhắc lại
  * - Biên tập chuẩn EDITOR.md: Ngắn gọn, súc tích, facts first, thể chủ động, cắt bỏ từ rườm rà
  */
 export function checkAndDispatchDailyCloseTaskNotifications(
   tasks: TaskItem[],
   allMembers: MemberItem[],
   onDispatchNotification: (notif: NotificationItem) => void,
-  refDate: Date = new Date()
+  refDate: Date = new Date(),
+  existingNotifications: NotificationItem[] = []
 ): number {
-  // 1. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày lễ)
+  // 1. Không quét nếu danh sách dữ liệu chưa nạp xong
+  if (tasks.length === 0 || allMembers.length === 0) {
+    return 0;
+  }
+
+  // 2. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày lễ)
   if (!workingTimeService.isWorkingDay(refDate)) {
     return 0;
   }
@@ -63,6 +70,19 @@ export function checkAndDispatchDailyCloseTaskNotifications(
   const sentSet = new Set(sentMemberKeys);
   let dispatchedCount = 0;
 
+  // Kiểm tra trùng lặp qua mảng thông báo đã tồn tại hôm nay
+  const isAlreadyNotifiedToday = (recipientName: string, recipientId?: string) => {
+    return existingNotifications.some((n) => {
+      if (n.type !== 'daily_close_reminder') return false;
+      const isRecipient =
+        (recipientId && n.recipientId === recipientId) ||
+        isSamePersonName(n.recipientName, recipientName);
+      if (!isRecipient) return false;
+      const createdDate = normalizeDateString(n.createdAt);
+      return createdDate === todayStr;
+    });
+  };
+
   // 3. Quét từng account trong hệ thống
   allMembers.forEach((member) => {
     if (!member.name || !member.name.trim()) return;
@@ -78,22 +98,29 @@ export function checkAndDispatchDailyCloseTaskNotifications(
       return;
     }
 
+    if (isAlreadyNotifiedToday(member.name, member.username || member.id)) {
+      sentSet.add(memberKey);
+      return;
+    }
+
     // Kiểm tra các task đến hạn hôm nay hoặc quá hạn của nhân sự chưa hoàn thành
     const openTasks = tasks.filter((t) => {
-      if (!isSamePersonName(t.assignee, member.name)) return false;
+      if (!isTaskForMember(t, member)) return false;
       if (t.status === 'Hoàn thành') return false;
       const due = normalizeDateString(t.dueDate);
-      return due === todayStr || due < todayStr;
+      return due === todayStr || (due !== '' && due < todayStr);
     });
 
     const openCount = openTasks.length;
 
+    // QUY CHUẨN: Nếu đã đóng hết các task (không còn task dở dang đến hạn hôm nay hoặc quá hạn), tuyệt đối KHÔNG nhắc lại nữa!
+    if (openCount === 0) {
+      return;
+    }
+
     // Biên tập nội dung chuẩn EDITOR.md: Facts first, ngắn gọn, súc tích, thể chủ động
     const title = 'Đóng task trong ngày (16:30)';
-    const content =
-      openCount > 0
-        ? `Còn ${openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`
-        : 'Rà soát và đóng toàn bộ công việc đến hạn hôm nay trước khi kết thúc ca làm việc.';
+    const content = `Còn ${openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`;
 
     const safeKey = (member.username || member.name).toLowerCase().replace(/[\s\/\\]+/g, '_');
     const notif: NotificationItem = {

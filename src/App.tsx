@@ -320,6 +320,25 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     }
   };
 
+  // Handler để lọc nhanh công việc theo nhân sự khi bấm vào tên ở TaskItemRow hoặc Drawer
+  const handleFilterByAssignee = (assigneeName: string) => {
+    if (!assigneeName) return;
+    const cleanAssignee = assigneeName.trim();
+    const foundMember = members.find((m) => isSamePersonName(m.name, cleanAssignee));
+    if (foundMember) {
+      handleSelectProductMember(foundMember);
+    } else {
+      setActiveProductMember(null);
+      setFilterState((prev) => ({
+        ...prev,
+        assignee: cleanAssignee,
+      }));
+      setTaskPersonalScope('my_tasks');
+    }
+    setActiveTab('tasks');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Filter states
   const [filterState, setFilterState] = useState<FilterState>(() => {
     const user = getCurrentAuthUser(members);
@@ -1129,7 +1148,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // 1. Lúc 08:30 sáng: Tự động kiểm tra và nhắc nhở nhân sự Product chưa có task đến hạn hôm nay
   // 2. Lúc 16:30 chiều: Tự động kiểm tra và nhắc đóng task trước khi kết thúc ca làm việc
   useEffect(() => {
-    if (members.length === 0) return;
+    if (members.length === 0 || tasks.length === 0) return;
 
     const runMorningTaskCheck = () => {
       checkAndDispatchDailyMorningTaskNotifications(
@@ -1154,7 +1173,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               setActiveTab('tasks');
             });
           }
-        }
+        },
+        new Date(),
+        notifications
       );
     };
 
@@ -1181,7 +1202,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               setActiveTab('tasks');
             });
           }
-        }
+        },
+        new Date(),
+        notifications
       );
     };
 
@@ -1200,7 +1223,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       clearTimeout(initialTimer);
       clearInterval(dailyTicker);
     };
-  }, [tasks, members, currentUserName, activeProductMember]);
+  }, [tasks, members, currentUserName, activeProductMember, notifications]);
 
   const handleSelectNotification = (item: NotificationItem) => {
     // 1. Đánh dấu đã đọc
@@ -2386,6 +2409,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         onUpdateStatus={handleUpdateTaskStatus}
                                         onDeleteTask={handleDeleteTask}
                                         onOpenProjectDetail={handleOpenProjectDetail}
+                                        onFilterByAssignee={handleFilterByAssignee}
                                       />
                                     ))}
                                   </div>
@@ -2482,6 +2506,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     onUpdateStatus={handleUpdateTaskStatus}
                                     onDeleteTask={handleDeleteTask}
                                     onOpenProjectDetail={handleOpenProjectDetail}
+                                    onFilterByAssignee={handleFilterByAssignee}
                                   />
                                 ))}
                               </div>
@@ -2530,6 +2555,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                 onUpdateStatus={handleUpdateTaskStatus}
                                 onDeleteTask={handleDeleteTask}
                                 onOpenProjectDetail={handleOpenProjectDetail}
+                                showProjectBadge={true}
+                                onFilterByAssignee={handleFilterByAssignee}
                               />
                             ))}
                           </div>
@@ -2649,6 +2676,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         activeProductMember={activeProductMember}
         currentAuthUser={currentAuthUser}
         onOpenProjectDetail={handleOpenProjectDetail}
+        onFilterByAssignee={handleFilterByAssignee}
       />
 
       {/* Project Details Drawer (Accessible from any view, including Tasks page) */}

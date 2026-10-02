@@ -39,6 +39,7 @@ interface TaskItemRowProps {
   showProjectBadge?: boolean;
   isMyTask?: boolean;
   onOpenProjectDetail?: (projectId: string) => void;
+  onFilterByAssignee?: (assigneeName: string) => void;
 }
 
 export const TaskItemRow: React.FC<TaskItemRowProps> = ({
@@ -53,6 +54,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
   showProjectBadge = false,
   isMyTask = false,
   onOpenProjectDetail,
+  onFilterByAssignee,
 }) => {
   const userCanEdit = canEditTask(currentAuthUser, task, projects);
   const userCanDelete = canDeleteTask(currentAuthUser, task, projects);
@@ -205,16 +207,16 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
                   e.stopPropagation();
                   onOpenProjectDetail(task.projectId);
                 }}
-                className="inline-flex items-center gap-1 text-[#52525b] hover:text-[#b13460] hover:underline cursor-pointer font-normal"
-                title={`Bấm để xem chi tiết dự án ${task.projectName} (Right Sidebar)`}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#475569] bg-[#f1f5f9] hover:bg-[#e2e8f0] hover:text-[#0f172a] px-2 py-0.5 rounded-[4px] border border-[#e2e8f0] transition-colors cursor-pointer"
+                title={`Bấm để xem chi tiết dự án ${task.projectName || 'Dự án'} (Right Sidebar)`}
               >
-                <Folder className="w-3 h-3 text-[#a1a1aa]" />
-                <span>{task.projectName}</span>
+                <Folder className="w-3 h-3 text-[#64748b]" />
+                <span className="truncate max-w-[200px]">{task.projectName || 'Dự án'}</span>
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[#52525b] font-normal">
-                <Folder className="w-3 h-3 text-[#a1a1aa]" />
-                <span>{task.projectName}</span>
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#475569] bg-[#f1f5f9] px-2 py-0.5 rounded-[4px] border border-[#e2e8f0]">
+                <Folder className="w-3 h-3 text-[#64748b]" />
+                <span className="truncate max-w-[200px]">{task.projectName || 'Dự án'}</span>
               </span>
             )}
             {(task.workLink || task.resultLink || task.phaseName || task.assignee) && (
@@ -283,20 +285,44 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
         {/* Nhân sự (Chỉ hiển thị tên, không có IP Phone) */}
         {task.assignee && (
           <>
-            <span
-              className={`inline-flex items-center gap-1 ${
-                isMyTask ? 'text-[#963861] font-semibold' : 'text-[#52525b]'
-              }`}
-              title={`Người phụ trách: ${formatMemberNameOnly(task.assignee, members)}${isMyTask ? ' (Bạn)' : ''}`}
-            >
-              <User className={`w-3 h-3 ${isMyTask ? 'text-[#963861]' : 'text-[#71717a]'}`} />
-              <span className="truncate max-w-[160px]">{formatMemberNameOnly(task.assignee, members)}</span>
-              {isMyTask && (
-                <span className="text-[10px] bg-[#963861]/10 text-[#963861] font-bold px-1.5 py-0.2 rounded-full">
-                  Tôi
-                </span>
-              )}
-            </span>
+            {onFilterByAssignee ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterByAssignee(task.assignee);
+                }}
+                className={`inline-flex items-center gap-1 cursor-pointer transition-colors hover:underline ${
+                  isMyTask
+                    ? 'text-[#963861] font-semibold hover:text-[#78264c]'
+                    : 'text-[#52525b] hover:text-[#963861]'
+                }`}
+                title={`Bấm để lọc nhanh công việc của ${formatMemberNameOnly(task.assignee, members)}`}
+              >
+                <User className={`w-3 h-3 ${isMyTask ? 'text-[#963861]' : 'text-[#71717a]'}`} />
+                <span className="truncate max-w-[160px]">{formatMemberNameOnly(task.assignee, members)}</span>
+                {isMyTask && (
+                  <span className="text-[10px] bg-[#963861]/10 text-[#963861] font-bold px-1.5 py-0.2 rounded-full">
+                    Tôi
+                  </span>
+                )}
+              </button>
+            ) : (
+              <span
+                className={`inline-flex items-center gap-1 ${
+                  isMyTask ? 'text-[#963861] font-semibold' : 'text-[#52525b]'
+                }`}
+                title={`Người phụ trách: ${formatMemberNameOnly(task.assignee, members)}${isMyTask ? ' (Bạn)' : ''}`}
+              >
+                <User className={`w-3 h-3 ${isMyTask ? 'text-[#963861]' : 'text-[#71717a]'}`} />
+                <span className="truncate max-w-[160px]">{formatMemberNameOnly(task.assignee, members)}</span>
+                {isMyTask && (
+                  <span className="text-[10px] bg-[#963861]/10 text-[#963861] font-bold px-1.5 py-0.2 rounded-full">
+                    Tôi
+                  </span>
+                )}
+              </span>
+            )}
             <span className="text-[#d4d4d8]">•</span>
           </>
         )}

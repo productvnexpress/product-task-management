@@ -5,7 +5,7 @@
 
 import { MemberItem, NotificationItem, TaskItem } from '../types';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
-import { isSamePersonName, getProductMembers } from './memberPersonalization';
+import { isSamePersonName, getProductMembers, isTaskForMember } from './memberPersonalization';
 import { workingTimeService } from '../services/workingTimeService';
 
 /**
@@ -22,14 +22,20 @@ export function checkAndDispatchDailyMorningTaskNotifications(
   tasks: TaskItem[],
   allMembers: MemberItem[],
   onDispatchNotification: (notif: NotificationItem) => void,
-  refDate: Date = new Date()
+  refDate: Date = new Date(),
+  existingNotifications: NotificationItem[] = []
 ): number {
-  // 1. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày nghỉ lễ)
+  // 1. Không quét nếu danh sách dữ liệu chưa nạp xong
+  if (tasks.length === 0 || allMembers.length === 0) {
+    return 0;
+  }
+
+  // 2. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày nghỉ lễ)
   if (!workingTimeService.isWorkingDay(refDate)) {
     return 0;
   }
 
-  // 2. Kiểm tra khung giờ 08:30
+  // 3. Kiểm tra khung giờ 08:30
   const hours = refDate.getHours();
   const minutes = refDate.getMinutes();
   const timeInMinutes = hours * 60 + minutes;
@@ -65,7 +71,20 @@ export function checkAndDispatchDailyMorningTaskNotifications(
   const sentSet = new Set(sentMemberKeys);
   let dispatchedCount = 0;
 
-  // 3. Chỉ xét các nhân sự thuộc bộ phận Product
+  // Kiểm tra trùng lặp qua mảng thông báo đã tồn tại hôm nay
+  const isAlreadyNotifiedToday = (recipientName: string, recipientId?: string) => {
+    return existingNotifications.some((n) => {
+      if (n.type !== 'daily_task_reminder') return false;
+      const isRecipient =
+        (recipientId && n.recipientId === recipientId) ||
+        isSamePersonName(n.recipientName, recipientName);
+      if (!isRecipient) return false;
+      const createdDate = normalizeDateString(n.createdAt);
+      return createdDate === todayStr;
+    });
+  };
+
+  // 4. Chỉ xét các nhân sự thuộc bộ phận Product
   const productMembers = getProductMembers(allMembers);
   const leavesToday = workingTimeService.getLeavesForDate(todayStr);
 
@@ -82,15 +101,29 @@ export function checkAndDispatchDailyMorningTaskNotifications(
       return;
     }
 
-    // Kiểm tra nhân sự đã có task đến hạn hôm nay chưa
-    const memberTasks = tasks.filter((t) => isSamePersonName(t.assignee, member.name));
-    const tasksDueToday = memberTasks.filter((t) => {
+    if (isAlreadyNotifiedToday(member.name, member.username || member.id)) {
+      sentSet.add(memberKey);
+      return;
+    }
+
+    // Kiểm tra nhân sự đã có task cho ngày hôm nay chưa
+    const memberTasks = tasks.filter((t) => isTaskForMember(t, member));
+    const hasTaskForToday = memberTasks.some((t) => {
       const due = normalizeDateString(t.dueDate);
-      return due === todayStr;
+      const completedDate = normalizeDateString(t.completedAt);
+      // 1. Task có hạn hoàn thành là hôm nay (bất kể trạng thái)
+      if (due === todayStr) return true;
+      // 2. Task đang thực hiện dở dang trong ngày
+      if (t.status === 'Đang làm') return true;
+      // 3. Task đã hoàn thành hôm nay
+      if (t.status === 'Hoàn thành' && completedDate === todayStr) return true;
+      // 4. Task dở dang còn tồn từ hôm trước (quá hạn chưa hoàn thành mà đang xử lý)
+      if (t.status !== 'Hoàn thành' && due !== '' && due < todayStr) return true;
+      return false;
     });
 
-    // Nếu đã có ít nhất 1 task đến hạn hôm nay -> không cần nhắc
-    if (tasksDueToday.length > 0) {
+    // Nếu đã có task cho hôm nay -> tuyệt đối không thông báo
+    if (hasTaskForToday) {
       return;
     }
 
