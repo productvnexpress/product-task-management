@@ -157,6 +157,16 @@ export function App() {
     notificationsRef.current = notifications;
   }, [notifications]);
 
+  const tasksRef = useRef(tasks);
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  const trashRef = useRef(trash);
+  useEffect(() => {
+    trashRef.current = trash;
+  }, [trash]);
+
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
   // Active view tab state (Friendly URL synchronized)
@@ -1127,6 +1137,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             .catch((e) => console.error('Supabase recurring task save error:', e));
           createAndDispatchNotifications(newTask, 'created', 'Hệ thống (Theo chu kỳ)');
         },
+        tasksRef.current,
+        trashRef.current,
         new Date()
       );
     };
@@ -1445,6 +1457,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   const handleAddTask = (
     newTaskData: {
+      id?: string;
       title: string;
       projectId: string;
       projectName: string;
@@ -1462,8 +1475,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     authorName?: string
   ) => {
     const creator = authorName || currentAuthUser?.name || newTaskData.assignee;
+    const generatedId = newTaskData.id || (newTaskData.recurringRuleId
+      ? `task-rec-${newTaskData.recurringRuleId}-${newTaskData.dueDate}`
+      : 'task-' + Date.now());
+
     const rawTask: TaskItem = {
-      id: 'task-' + Date.now(),
+      id: generatedId,
       title: newTaskData.title,
       projectId: newTaskData.projectId,
       projectName: newTaskData.projectName,

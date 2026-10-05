@@ -31,6 +31,7 @@ interface QuickAddBarProps {
   tasks?: TaskItem[];
   members: MemberItem[];
   onAddTask: (task: {
+    id?: string;
     title: string;
     projectId: string;
     projectName: string;
@@ -171,6 +172,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     let recurringRuleId: string | undefined = undefined;
 
     // Lưu quy tắc lặp nếu là Admin và bật tính năng chu kỳ
+    const nowIso = new Date().toISOString();
     if (isRecurring && isAdmin) {
       recurringRuleId = `rec-${Date.now()}`;
       const nextRun = calculateNextCycleDate(initialDueDate, recurringFrequency);
@@ -190,8 +192,9 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
         endDate: recurringEndType === 'specific_date' && recurringEndDate ? recurringEndDate : undefined,
         nextRunDate: nextRun,
         nextRunTime: '08:00',
+        lastGeneratedAt: nowIso,
         status: 'active',
-        createdAt: new Date().toISOString(),
+        createdAt: nowIso,
         createdBy: currentUser?.name || 'Admin',
       };
 
@@ -199,6 +202,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     }
 
     onAddTask({
+      id: recurringRuleId ? `task-rec-${recurringRuleId}-${initialDueDate}` : undefined,
       title: title.trim(),
       projectId,
       projectName: projName,

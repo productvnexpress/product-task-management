@@ -38,9 +38,17 @@ import {
   AtSign,
   Zap,
   Filter,
+  Play,
+  Pause,
+  Edit2,
 } from 'lucide-react';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
-import { formatFrequencyLabel } from '../services/recurringTaskService';
+import {
+  recurringTaskService,
+  formatFrequencyLabel,
+  calculateNextCycleDate,
+} from '../services/recurringTaskService';
+import { RecurringRuleConfig, RecurrenceFrequency, RecurrenceEndType } from '../types';
 import { MentionCommentInput } from './MentionCommentInput';
 import { renderCommentWithMentions } from '../utils/mentionUtils';
 import { isValidUrl, normalizeUrl } from '../utils/urlValidator';
@@ -134,6 +142,15 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     });
   }, [task, status, completedAt, dueDate, resultLink, workLink]);
 
+  // Quy tắc lặp liên quan (nếu task là recurring task)
+  const [associatedRecurringRule, setAssociatedRecurringRule] = useState<RecurringRuleConfig | null>(null);
+  const [isEditingRuleModalOpen, setIsEditingRuleModalOpen] = useState(false);
+  const [isDeletingRuleConfirmOpen, setIsDeletingRuleConfirmOpen] = useState(false);
+  const [ruleModalFreq, setRuleModalFreq] = useState<RecurrenceFrequency>('weekly');
+  const [ruleModalNextRunDate, setRuleModalNextRunDate] = useState('');
+  const [ruleModalEndType, setRuleModalEndType] = useState<RecurrenceEndType>('never');
+  const [ruleModalEndDate, setRuleModalEndDate] = useState('');
+
   const sortedProjects = useMemo(() => sortProjectsAlphabetically(projects), [projects]);
 
   const minDueDate = useMemo(() => {
@@ -182,8 +199,80 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       const defaultAuthor = currentAuthUser?.name || activeProductMember?.name || task.assignee || (members[0]?.name || 'Hệ thống');
       setEditorAuthor(defaultAuthor);
       setNewLogAuthor(defaultAuthor);
+
+      // Load associated recurring rule
+      if (task.recurringRuleId) {
+        const foundRule = recurringTaskService.getRuleById(task.recurringRuleId);
+        setAssociatedRecurringRule(foundRule || null);
+        if (foundRule) {
+          setRuleModalFreq(foundRule.frequency);
+          setRuleModalNextRunDate(foundRule.nextRunDate);
+          setRuleModalEndType(foundRule.endType);
+          setRuleModalEndDate(foundRule.endDate || '');
+        }
+      } else {
+        setAssociatedRecurringRule(null);
+      }
     }
   }, [task, members, activeProductMember, currentAuthUser]);
+
+  // Handler tạm dừng / tiếp tục quy tắc lặp từ Task Detail Drawer
+  const handleTogglePauseRecurringRule = () => {
+    if (!associatedRecurringRule) return;
+    const updated = recurringTaskService.togglePauseRule(associatedRecurringRule.id);
+    if (updated) {
+      setAssociatedRecurringRule({ ...updated });
+    }
+  };
+
+  // Handler mở modal sửa quy tắc lặp
+  const handleOpenEditRecurringRule = () => {
+    if (!associatedRecurringRule) return;
+    setRuleModalFreq(associatedRecurringRule.frequency);
+    setRuleModalNextRunDate(associatedRecurringRule.nextRunDate);
+    setRuleModalEndType(associatedRecurringRule.endType);
+    setRuleModalEndDate(associatedRecurringRule.endDate || '');
+    setIsEditingRuleModalOpen(true);
+  };
+
+  // Handler lưu cập nhật quy tắc lặp
+  const handleSaveRecurringRuleUpdates = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!associatedRecurringRule) return;
+    const updated: RecurringRuleConfig = {
+      ...associatedRecurringRule,
+      frequency: ruleModalFreq,
+      nextRunDate: ruleModalNextRunDate || associatedRecurringRule.nextRunDate,
+      endType: ruleModalEndType,
+      endDate: ruleModalEndType === 'specific_date' && ruleModalEndDate ? ruleModalEndDate : undefined,
+    };
+    recurringTaskService.saveRule(updated);
+    setAssociatedRecurringRule(updated);
+    setIsEditingRuleModalOpen(false);
+  };
+
+  // Handler xác nhận xoá vĩnh viễn quy tắc lặp
+  const handleConfirmDeleteRecurringRule = () => {
+    if (!associatedRecurringRule) return;
+    recurringTaskService.deleteRule(associatedRecurringRule.id);
+    setAssociatedRecurringRule(null);
+    setIsDeletingRuleConfirmOpen(false);
+
+    // Cập nhật task hiện tại không còn gắn quy tắc lặp
+    if (task) {
+      const updatedCurrentTask: TaskItem = {
+        ...task,
+        isRecurring: false,
+        recurringRuleId: undefined,
+        recurringFrequency: undefined,
+      };
+      onSaveTask(
+        updatedCurrentTask,
+        currentAuthUser?.name || 'Admin',
+        'Đã huỷ quy tắc lặp chu kỳ gắn với công việc này'
+      );
+    }
+  };
 
   const handleToggleSameLink = (checked: boolean) => {
     setIsSameAsWorkLink(checked);
@@ -932,21 +1021,78 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               </label>
             </div>
 
-            {/* 9.1 Thông tin Chu kỳ lặp lại */}
+            {/* 9.1 Quản lý Chu kỳ lặp lại (Chỉnh sửa / Tạm dừng / Xoá quy tắc) */}
             {task.isRecurring && (
-              <div className="p-3 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] flex items-center justify-between gap-3 text-xs font-ui animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <RotateCw className="w-4 h-4 text-[#963861] shrink-0" />
-                  <div>
-                    <span className="font-bold text-[#963861]">Công việc định kỳ:</span>
-                    <p className="text-[11px] text-[#52525b] mt-0.5">
-                      Tự động tạo task mới lúc 08:00 AM ({task.recurringFrequency ? formatFrequencyLabel(task.recurringFrequency) : 'Theo chu kỳ'}).
-                    </p>
+              <div className="p-3 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] space-y-2.5 text-xs font-ui animate-fade-in">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <RotateCw className="w-4 h-4 text-[#963861] shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#963861]">Công việc định kỳ</span>
+                        <span className="text-[10px] bg-[#963861] text-white px-1.5 py-0.2 rounded font-bold">
+                          {task.recurringFrequency ? formatFrequencyLabel(task.recurringFrequency) : 'Chu kỳ'}
+                        </span>
+                        {associatedRecurringRule?.status === 'paused' && (
+                          <span className="text-[10px] bg-[#f4f4f5] text-[#71717a] border border-[#d4d4d8] px-1.5 py-0.2 rounded font-medium">
+                            Đang tạm dừng
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#52525b] mt-0.5 truncate">
+                        Tự động tạo lúc {associatedRecurringRule?.nextRunTime || '08:00'} · Chu kỳ tới: {associatedRecurringRule?.nextRunDate || 'Chưa định'}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Cụm nút thao tác quy tắc chu kỳ */}
+                  {associatedRecurringRule && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleTogglePauseRecurringRule}
+                        className={`p-1.5 rounded-[4px] border transition-colors cursor-pointer text-xs flex items-center gap-1 ${
+                          associatedRecurringRule.status === 'paused'
+                            ? 'border-[#bbf7d0] text-[#16a34a] hover:bg-[#f0fdf4]'
+                            : 'border-[#e4e4e7] text-[#52525b] hover:text-[#d97706] hover:bg-[#fffbeb]'
+                        }`}
+                        title={associatedRecurringRule.status === 'paused' ? 'Tiếp tục chạy quy tắc' : 'Tạm dừng quy tắc'}
+                      >
+                        {associatedRecurringRule.status === 'paused' ? (
+                          <>
+                            <Play className="w-3 h-3 fill-current" />
+                            <span className="text-[10px] font-semibold">Tiếp tục</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-3 h-3" />
+                            <span className="text-[10px] font-semibold">Tạm dừng</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenEditRecurringRule}
+                        className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#3b82f6] text-[#52525b] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                        title="Sửa chu kỳ hoặc ngày chạy"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span className="text-[10px] font-semibold">Sửa</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsDeletingRuleConfirmOpen(true)}
+                        className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#fda4af] text-[#52525b] hover:text-[#e11d48] hover:bg-[#fff1f2] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                        title="Xoá bỏ quy tắc lặp"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span className="text-[10px] font-semibold">Xoá chu kỳ</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[10px] bg-[#963861] text-white px-2 py-0.5 rounded font-bold shrink-0">
-                  Chu kỳ
-                </span>
               </div>
             )}
 
@@ -1407,6 +1553,140 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   className="px-3.5 py-1.5 bg-[#963861] hover:bg-[#802f52] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
                 >
                   Lưu & Cập nhật kỷ luật
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Chỉnh sửa Quy tắc Chu kỳ từ Task Drawer */}
+        {isEditingRuleModalOpen && associatedRecurringRule && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
+            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+                <div className="flex items-center gap-2">
+                  <RotateCw className="w-4 h-4 text-[#963861]" />
+                  <h3 className="font-bold text-sm text-[#202020]">Chỉnh sửa Quy tắc Chu kỳ</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingRuleModalOpen(false)}
+                  className="p-1 text-[#71717a] hover:text-[#202020] rounded-[6px] hover:bg-[#f4f4f5] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveRecurringRuleUpdates} className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Tần suất lặp lại:
+                  </label>
+                  <select
+                    value={ruleModalFreq}
+                    onChange={(e) => setRuleModalFreq(e.target.value as RecurrenceFrequency)}
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui bg-white font-semibold text-[#963861]"
+                  >
+                    <option value="weekly">Hàng tuần (Weekly)</option>
+                    <option value="biweekly">2 tuần một lần (Biweekly)</option>
+                    <option value="monthly">Hàng tháng (Monthly)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Ngày chạy chu kỳ tiếp theo:
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={ruleModalNextRunDate}
+                    onChange={(e) => setRuleModalNextRunDate(e.target.value)}
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                  />
+                  {ruleModalNextRunDate && (
+                    <p className="text-[11px] text-[#71717a] pt-0.5">
+                      Dự kiến tạo tiếp: <strong>{formatDateWithEnDay(ruleModalNextRunDate)}</strong> lúc {associatedRecurringRule.nextRunTime || '08:00'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-[#5f5f5f] block">
+                    Kết thúc lặp:
+                  </label>
+                  <select
+                    value={ruleModalEndType}
+                    onChange={(e) => setRuleModalEndType(e.target.value as RecurrenceEndType)}
+                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui bg-white"
+                  >
+                    <option value="never">Không bao giờ (Never)</option>
+                    <option value="specific_date">Chọn ngày kết thúc</option>
+                  </select>
+                </div>
+
+                {ruleModalEndType === 'specific_date' && (
+                  <div className="space-y-1 p-2.5 bg-[#fafafa] rounded-[6px] border border-[#e4e4e7]">
+                    <label className="font-bold text-[#5f5f5f] block">
+                      Ngày kết thúc:
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={ruleModalEndDate}
+                      onChange={(e) => setRuleModalEndDate(e.target.value)}
+                      className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingRuleModalOpen(false)}
+                    className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1.5 bg-[#963861] hover:bg-[#802f52] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                  >
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Xác nhận Xoá Quy tắc Chu kỳ từ Task Drawer */}
+        {isDeletingRuleConfirmOpen && associatedRecurringRule && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
+            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center gap-2 text-[#e11d48]">
+                <Trash2 className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold text-sm text-[#202020]">Xoá Quy tắc Lặp chu kỳ?</h3>
+              </div>
+
+              <p className="text-xs text-[#52525b] leading-relaxed">
+                Hệ thống sẽ dừng hoàn toàn và xoá vĩnh viễn quy tắc lặp <strong>"{associatedRecurringRule.title}"</strong>. Không tự động tạo thêm công việc mới trong tương lai.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+                <button
+                  type="button"
+                  onClick={() => setIsDeletingRuleConfirmOpen(false)}
+                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                >
+                  Huỷ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteRecurringRule}
+                  className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                >
+                  Xác nhận xoá
                 </button>
               </div>
             </div>

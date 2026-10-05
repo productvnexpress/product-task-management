@@ -32,6 +32,8 @@ const ESSENTIAL_STORAGE_KEYS = new Set([
   'vne_notifications_v1',
   'vne_checklist_template_v1',
   'vne_recurring_rules_v1',
+  'vne_deleted_recurring_rule_ids',
+  'vne_recurring_engine_lock_timestamp',
   'vne_web_push_dismissed',
   'vne_task_filter_state_v1',
   STORAGE_KEY_LAST_CLEAR,

@@ -167,6 +167,9 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   const [recFrequency, setRecFrequency] = useState<RecurrenceFrequency>('weekly');
   const [recEndType, setRecEndType] = useState<RecurrenceEndType>('never');
   const [recEndDate, setRecEndDate] = useState('');
+  const [recNextRunDate, setRecNextRunDate] = useState('');
+  const [recNextRunTime, setRecNextRunTime] = useState('08:00');
+  const [deletingRecurringRule, setDeletingRecurringRule] = useState<RecurringRuleConfig | null>(null);
   const [recToast, setRecToast] = useState<string | null>(null);
 
   // 8. Phân quyền (Admin only)
@@ -188,6 +191,9 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     setRecFrequency('weekly');
     setRecEndType('never');
     setRecEndDate('');
+    const todayStr = getTodayDateString();
+    setRecNextRunDate(calculateNextCycleDate(todayStr, 'weekly'));
+    setRecNextRunTime('08:00');
     setIsRecurringModalOpen(true);
   };
 
@@ -201,6 +207,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     setRecFrequency(rule.frequency);
     setRecEndType(rule.endType);
     setRecEndDate(rule.endDate || '');
+    setRecNextRunDate(rule.nextRunDate || '');
+    setRecNextRunTime(rule.nextRunTime || '08:00');
     setIsRecurringModalOpen(true);
   };
 
@@ -227,6 +235,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         frequency: recFrequency,
         endType: recEndType,
         endDate: recEndType === 'specific_date' && recEndDate ? recEndDate : undefined,
+        nextRunDate: recNextRunDate || editingRecurringRule.nextRunDate,
+        nextRunTime: recNextRunTime || editingRecurringRule.nextRunTime || '08:00',
       };
       recurringTaskService.saveRule(updated);
       setRecToast('Đã cập nhật quy tắc chu kỳ!');
@@ -243,8 +253,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         frequency: recFrequency,
         endType: recEndType,
         endDate: recEndType === 'specific_date' && recEndDate ? recEndDate : undefined,
-        nextRunDate: nextRun,
-        nextRunTime: '08:00',
+        nextRunDate: recNextRunDate || nextRun,
+        nextRunTime: recNextRunTime || '08:00',
         status: 'active',
         createdAt: new Date().toISOString(),
         createdBy: currentAuthUser?.name || 'Admin',
@@ -265,13 +275,13 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
     setTimeout(() => setRecToast(null), 3000);
   };
 
-  const handleDeleteRecurring = (id: string) => {
-    if (confirm('Bạn chắc chắn muốn xoá quy tắc việc chu kỳ này?')) {
-      recurringTaskService.deleteRule(id);
-      setRecurringRules(recurringTaskService.getRules());
-      setRecToast('Đã xoá quy tắc việc chu kỳ!');
-      setTimeout(() => setRecToast(null), 3000);
-    }
+  const handleConfirmDeleteRecurring = () => {
+    if (!deletingRecurringRule) return;
+    recurringTaskService.deleteRule(deletingRecurringRule.id);
+    setRecurringRules(recurringTaskService.getRules());
+    setDeletingRecurringRule(null);
+    setRecToast('Đã xoá quy tắc việc chu kỳ!');
+    setTimeout(() => setRecToast(null), 3000);
   };
 
   const handleTriggerRunNow = (id: string) => {
@@ -1729,7 +1739,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                             {/* Delete */}
                             <button
                               type="button"
-                              onClick={() => handleDeleteRecurring(rule.id)}
+                              onClick={() => setDeletingRecurringRule(rule)}
                               className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#fda4af] text-[#52525b] hover:text-[#e11d48] hover:bg-[#fff1f2] transition-colors cursor-pointer"
                               title="Xoá quy tắc"
                             >
@@ -2453,8 +2463,42 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                 </div>
               )}
 
+              {/* Mốc thời gian chạy tiếp theo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#f0f0f0]">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Ngày chạy tiếp theo (Next Run Date):
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={recNextRunDate}
+                    onChange={(e) => setRecNextRunDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  />
+                  {recNextRunDate && (
+                    <span className="block text-[11px] text-[#71717a] font-ui">
+                      {formatDateWithEnDay(recNextRunDate)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-ui font-bold text-[#3f3f46]">
+                    Giờ chạy trong ngày:
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={recNextRunTime}
+                    onChange={(e) => setRecNextRunTime(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-ui border border-[#d4d4d8] rounded-[6px] bg-white focus:outline-none focus:border-[#963861]"
+                  />
+                </div>
+              </div>
+
               <div className="text-[11px] text-[#71717a] font-ui bg-[#fcf0f5] p-2.5 rounded-[6px] border border-[#f3c2d4]">
-                ℹ️ Hệ thống sẽ tự động tạo task mới lúc <strong>08:00 AM</strong> vào ngày chu kỳ tiếp theo với trạng thái <em>Chưa làm</em> và gửi thông báo cho nhân sự.
+                ℹ️ Hệ thống sẽ tự động tạo task mới lúc <strong>{recNextRunTime || '08:00'}</strong> vào ngày chu kỳ tiếp theo với trạng thái <em>Chưa làm</em> và gửi thông báo cho nhân sự.
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#f0f0f0]">
@@ -2473,6 +2517,39 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XOÁ QUY TẮC CHU KỲ (THAY THẾ CONFIRM NATIVE) */}
+      {deletingRecurringRule && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in font-ui">
+          <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center gap-2 text-[#e11d48]">
+              <Trash2 className="w-5 h-5 shrink-0" />
+              <h3 className="font-bold text-sm text-[#202020]">Xoá Quy tắc Lặp chu kỳ?</h3>
+            </div>
+
+            <p className="text-xs text-[#52525b] leading-relaxed">
+              Bạn có chắc chắn muốn xoá vĩnh viễn quy tắc việc chu kỳ <strong>"{deletingRecurringRule.title}"</strong> ({formatFrequencyLabel(deletingRecurringRule.frequency)})? Hệ thống sẽ ngừng tạo công việc mới theo quy tắc này.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <button
+                type="button"
+                onClick={() => setDeletingRecurringRule(null)}
+                className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteRecurring}
+                className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+              >
+                Xác nhận xoá
+              </button>
+            </div>
           </div>
         </div>
       )}

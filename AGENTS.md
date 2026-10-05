@@ -964,11 +964,21 @@ Tại danh sách dự án thuộc Left Sidebar:
    - **Cơ chế Lưu trữ Supabase**: Dữ liệu Master Checklist Template được lưu trữ vĩnh viễn và tập trung tại bảng `system_settings` (khóa `master_checklist_template`), tự động nạp khi khởi động ứng dụng và màn hình Thiết lập, giải quyết triệt để lỗi hoàn nguyên về mặc định.
    - Khi Master Checklist thay đổi, hệ thống phát tín hiệu `wms_checklist_template_updated` để tự động cập nhật ngay trên các màn hình mở việc và chi tiết dự án.
 
-7. **Quản trị Công việc Lặp lại Chu kỳ (Automated Recurring Tasks Engine)**:
-   - Tích hợp tab **`Việc chu kỳ ({count})`** dành riêng cho Admin trong mục Thiết lập hệ thống (`SettingsManager`).
-   - Quy tắc lặp được lưu trữ tập trung tại bảng `recurring_rules` trên Supabase, hỗ trợ nạp tự động qua `initFromSupabase()`.
-   - Mỗi task sinh ra mang đầy đủ các trường `isRecurring`, `recurringRuleId`, `recurringFrequency` được lưu giữ trên bảng `tasks` của Supabase.
-   - Khi công việc chu kỳ được đánh dấu Hoàn thành, hệ thống tự động tính toán và cập nhật `nextRunDate` của quy tắc sang chu kỳ kế tiếp.
+7. **Quản trị Công việc Lặp lại Chu kỳ (Automated Recurring Tasks Engine - Commercial Ready)**:
+   - **Cơ chế Chống trùng lặp Tuyệt đối (Zero-Duplicate Engine)**:
+     - **Khoá đa tab phân tán (Cross-Tab Lock)**: Sử dụng khóa nguyên tử có thời hạn (`vne_recurring_engine_lock_timestamp`, timeout 15 giây), ngăn chặn hoàn toàn việc mở nhiều tab đồng thời sinh trùng lặp task trong cùng một phút.
+     - **Định danh tất định (Idempotent Deterministic ID)**: Task sinh ra cho mỗi chu kỳ sử dụng ID quy ước cố định `task-rec-${rule.id}-${cycleDate}` thay vì sinh chuỗi ngẫu nhiên.
+     - **Kiểm tra 3 lớp (Triple Deduplication)**: Kiểm tra đồng thời cả 3 nguồn: (1) `tasks` hiện hành, (2) `trash` (thùng rác), (3) `lastGeneratedAt`. Nếu task đã tồn tại hoặc người dùng đã chủ động xóa bỏ task chu kỳ của ngày đó vào thùng rác, hệ thống tuyệt đối không sinh lại mà tự động tịnh tiến chu kỳ sang mốc tiếp theo.
+     - **Tua nhanh chu kỳ quá khứ (Fast-Forward Next Cycle)**: Nếu quy tắc bị lỡ nhiều chu kỳ, hệ thống tự động tua thẳng tới chu kỳ tiếp theo trong tương lai thay vì sinh dồn dập hàng loạt task quá khứ.
+     - **Lưu vết xóa vĩnh viễn (Rule Deletion Tombstones)**: Ghi nhận danh sách ID quy tắc đã xóa (`vne_deleted_recurring_rule_ids`), ngăn cơ chế đồng bộ Supabase hồi sinh lại các quy tắc đã xóa.
+   - **Tương tác Quản lý Quy tắc Trực tiếp từ Giao diện Chi tiết Task (`TaskDetailDrawer`)**:
+     - Cho phép xem chu kỳ, mốc ngày giờ chạy tiếp theo ngay trên Drawer công việc.
+     - Nút **`Tạm dừng` / `Tiếp tục`**: Chuyển đổi trạng thái hoạt động của quy tắc ngay tại chỗ.
+     - Nút **`Sửa`**: Mở modal điều chỉnh tần suất lặp, ngày chạy chu kỳ tiếp theo và thời điểm kết thúc.
+     - Nút **`Xoá chu kỳ`**: Modal xác nhận xoá vĩnh viễn quy tắc lặp và gỡ liên kết lặp khỏi task hiện hành.
+   - **Quản trị Toàn diện tại Cài đặt (`SettingsManager`)**:
+     - Bổ sung ô nhập trực tiếp `Ngày chạy tiếp theo (Next Run Date)` và `Giờ chạy trong ngày (Next Run Time)` trong modal tạo/sửa quy tắc.
+     - Nút **`Xoá`** quy tắc sử dụng modal xác nhận trực quan chuyên dụng, loại bỏ hoàn toàn hàm `confirm()` gốc của trình duyệt.
 
 ---
 
