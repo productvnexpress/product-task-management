@@ -66,6 +66,8 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
   const [isConfirmEmptyOpen, setIsConfirmEmptyOpen] = useState(false);
   const [itemToDeletePermanently, setItemToDeletePermanently] = useState<TrashItem | null>(null);
   const [selectedDetailItem, setSelectedDetailItem] = useState<TrashItem | null>(null);
+  const [selectedTrashIds, setSelectedTrashIds] = useState<Set<string>>(new Set());
+  const [isConfirmBulkPermanentOpen, setIsConfirmBulkPermanentOpen] = useState(false);
 
   // Close drawer on ESC
   useEffect(() => {
@@ -127,7 +129,67 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
   const handleConfirmEmpty = () => {
     if (!isTienNgoc) return;
     onEmptyTrash();
+    setSelectedTrashIds(new Set());
     setIsConfirmEmptyOpen(false);
+  };
+
+  const isAllFilteredSelected = useMemo(() => {
+    if (filteredTrash.length === 0) return false;
+    return filteredTrash.every((item) => selectedTrashIds.has(item.id));
+  }, [filteredTrash, selectedTrashIds]);
+
+  const handleToggleSelectAll = () => {
+    if (isAllFilteredSelected) {
+      setSelectedTrashIds((prev) => {
+        const next = new Set(prev);
+        filteredTrash.forEach((item) => next.delete(item.id));
+        return next;
+      });
+    } else {
+      setSelectedTrashIds((prev) => {
+        const next = new Set(prev);
+        filteredTrash.forEach((item) => next.add(item.id));
+        return next;
+      });
+    }
+  };
+
+  const handleToggleSelectItem = (id: string) => {
+    setSelectedTrashIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkPermanentDelete = () => {
+    if (!isTienNgoc) {
+      alert('Quyền hạn bị từ chối: Chỉ tài khoản của Đặng Tiến Ngọc (tienngoc) mới có quyền xoá vĩnh viễn.');
+      return;
+    }
+    setIsConfirmBulkPermanentOpen(true);
+  };
+
+  const handleConfirmBulkPermanent = () => {
+    selectedTrashIds.forEach((id) => {
+      onPermanentDeleteItem(id);
+    });
+    setSelectedTrashIds(new Set());
+    setIsConfirmBulkPermanentOpen(false);
+  };
+
+  const handleBulkRestore = () => {
+    selectedTrashIds.forEach((id) => {
+      const item = trash.find((t) => t.id === id);
+      if (item && canRestoreTrashItem(effectiveUser, item)) {
+        onRestoreItem(id);
+      }
+    });
+    setSelectedTrashIds(new Set());
   };
 
   const getTypeBadge = (type?: TrashItemType | string) => {
@@ -307,6 +369,58 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
 
       {/* 3. ITEMS LIST */}
       <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden">
+        {filteredTrash.length > 0 && (
+          <div className="p-3 bg-[#fafafa] border-b border-[#e4e4e7] flex items-center justify-between gap-3 flex-wrap text-xs font-ui">
+            <div className="flex items-center gap-2.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isAllFilteredSelected}
+                  onChange={handleToggleSelectAll}
+                  className="w-4 h-4 rounded text-[#963861] border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                />
+                <span className="font-bold text-[#202020]">
+                  {selectedTrashIds.size > 0
+                    ? `Đã chọn ${selectedTrashIds.size} mục`
+                    : 'Chọn tất cả'}
+                </span>
+              </label>
+              {selectedTrashIds.size > 0 && (
+                <button
+                  onClick={() => setSelectedTrashIds(new Set())}
+                  className="text-[11px] text-[#71717a] hover:text-[#202020] underline cursor-pointer"
+                >
+                  Bỏ chọn
+                </button>
+              )}
+            </div>
+
+            {selectedTrashIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBulkRestore}
+                  className="px-3 py-1.5 rounded-[6px] bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  title="Khôi phục các mục đã chọn"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Khôi phục ({selectedTrashIds.size})</span>
+                </button>
+
+                {isTienNgoc && (
+                  <button
+                    onClick={handleBulkPermanentDelete}
+                    className="px-3 py-1.5 rounded-[6px] bg-[#fff1f2] text-[#be123c] border border-[#fecdd3] hover:bg-[#ffe4e6] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    title="Xoá vĩnh viễn các mục đã chọn"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xoá vĩnh viễn ({selectedTrashIds.size})</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {filteredTrash.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <div className="w-12 h-12 rounded-full bg-[#f4f4f5] text-[#a1a1aa] flex items-center justify-center mx-auto">
@@ -325,13 +439,25 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
           <div className="divide-y divide-[#f0f0f0]">
             {filteredTrash.map((item) => {
               const badge = getTypeBadge(item.type);
+              const isSelected = selectedTrashIds.has(item.id);
               return (
                 <div
                   key={item.id}
-                  className="p-4 hover:bg-[#fafafa] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                  className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+                    isSelected ? 'bg-[#fffbfd]' : 'hover:bg-[#fafafa]'
+                  }`}
                 >
-                  {/* Left: Type Badge + Title + Subtitle + Deletion Log */}
+                  {/* Left: Checkbox + Type Badge + Title + Subtitle + Deletion Log */}
                   <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="mt-1 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectItem(item.id)}
+                        className="w-4 h-4 rounded text-[#963861] border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                      />
+                    </div>
+
                     <div className="mt-0.5 shrink-0">
                       <span
                         className={`inline-flex items-center gap-1 text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px] border ${badge.style}`}
@@ -588,6 +714,43 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Xoá vĩnh viễn</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. CONFIRM BULK PERMANENT DELETE MODAL */}
+      {isConfirmBulkPermanentOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-md w-full p-6 shadow-xl space-y-4 font-ui">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center text-[#be123c] shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-title text-base font-bold text-[#202020]">
+                  Xoá vĩnh viễn {selectedTrashIds.size} mục đã chọn?
+                </h3>
+                <p className="text-xs text-[#52525b] leading-relaxed">
+                  Bạn có chắc chắn muốn xoá vĩnh viễn <strong>{selectedTrashIds.size} mục</strong> đã chọn khỏi hệ thống? Các mục này sẽ <strong>không thể khôi phục lại</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <button
+                onClick={() => setIsConfirmBulkPermanentOpen(false)}
+                className="px-4 py-2 rounded-[6px] text-xs font-ui font-medium text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleConfirmBulkPermanent}
+                className="px-4 py-2 rounded-[6px] bg-[#be123c] hover:bg-[#9f1239] text-white text-xs font-ui font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xác nhận xoá vĩnh viễn</span>
               </button>
             </div>
           </div>

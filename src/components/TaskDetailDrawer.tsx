@@ -60,7 +60,7 @@ interface TaskDetailDrawerProps {
   projects: ProjectItem[];
   members: MemberItem[];
   onSaveTask: (updatedTask: TaskItem, authorName?: string, customNote?: string) => void;
-  onDeleteTask: (id: string) => void;
+  onDeleteTask: (id: string, isPermanent?: boolean) => void;
   activeProductMember?: MemberItem | null;
   currentAuthUser?: MemberItem | null;
   onOpenProjectDetail?: (projectId: string) => void;
@@ -120,6 +120,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     Boolean(task?.workLink && task?.resultLink && task.workLink.trim() === task.resultLink.trim())
   );
   const [validationError, setValidationError] = useState('');
+  const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
+  const [isPermanentDeleteTask, setIsPermanentDeleteTask] = useState(false);
 
   // States dành riêng cho Admin xử lý kỷ luật hoàn thành
   const [showAdminDateDialog, setShowAdminDateDialog] = useState(false);
@@ -1411,10 +1413,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             {userCanDelete && (
               <button
                 onClick={() => {
-                  if (confirm('Bạn chắc chắn muốn xóa công việc này?')) {
-                    onDeleteTask(task.id);
-                    onClose();
-                  }
+                  setIsPermanentDeleteTask(false);
+                  setIsDeleteTaskModalOpen(true);
                 }}
                 className="text-xs font-ui font-bold text-[#da1e28] hover:bg-[#fff0f1] px-3 py-2 rounded-[6px] transition-colors flex items-center gap-1.5 cursor-pointer"
               >
@@ -1687,6 +1687,58 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
                 >
                   Xác nhận xoá
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Xác nhận Xoá Task kèm tùy chọn Xoá vĩnh viễn */}
+        {isDeleteTaskModalOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
+            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center gap-2 text-[#e11d48]">
+                <Trash2 className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold text-sm text-[#202020]">Xác nhận xoá công việc</h3>
+              </div>
+
+              <p className="text-xs text-[#52525b] leading-relaxed">
+                Bạn có chắc chắn muốn xoá công việc <strong>"{task.title}"</strong>?
+              </p>
+
+              <label className="flex items-start gap-2.5 p-2.5 rounded-[8px] bg-[#fff1f2]/60 border border-[#fecdd3] cursor-pointer hover:bg-[#fff1f2] transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={isPermanentDeleteTask}
+                  onChange={(e) => setIsPermanentDeleteTask(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-[#e11d48] border-[#f43f5e] focus:ring-[#e11d48] cursor-pointer"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-[#be123c] block">Xoá vĩnh viễn</span>
+                  <span className="text-[11px] text-[#71717a] block leading-tight">
+                    Xoá thẳng khỏi hệ thống, không lưu vào Thùng rác
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteTaskModalOpen(false)}
+                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                >
+                  Huỷ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteTask(task.id, isPermanentDeleteTask);
+                    setIsDeleteTaskModalOpen(false);
+                    onClose();
+                  }}
+                  className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                >
+                  {isPermanentDeleteTask ? 'Xoá vĩnh viễn' : 'Xoá công việc'}
                 </button>
               </div>
             </div>

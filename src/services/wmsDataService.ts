@@ -501,6 +501,11 @@ export const wmsDataService = {
     if (error) throw error;
   },
 
+  async deleteTaskPermanently(taskId: string): Promise<void> {
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) throw error;
+  },
+
   // ==========================================
   // 4. THÙNG RÁC (TRASH & RESTORE)
   // ==========================================

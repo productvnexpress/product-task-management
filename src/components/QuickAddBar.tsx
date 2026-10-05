@@ -304,23 +304,8 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 </select>
               </div>
 
-              {/* Checklist quick button */}
-              {selectedProj && !isOthersProject(selectedProj.id) && (
-                <button
-                  type="button"
-                  onClick={() => setIsChecklistModalOpen(true)}
-                  className="flex items-center gap-1.5 bg-[#fcf0f5] hover:bg-[#fae6ef] text-[#b13460] px-2.5 py-1.5 rounded-[6px] border border-[#f3c2d4] text-xs font-ui font-semibold transition-colors cursor-pointer shadow-2xs"
-                  title="Xem nhanh Checklist dự án & chọn tiêu chuẩn để tạo task"
-                >
-                  <ListChecks className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Checklist</span>
-                  {checklistStats && (
-                    <span className="text-[10px] font-bold bg-[#b13460] text-white px-1.5 py-0.2 rounded-full">
-                      {checklistStats.completed}/{checklistStats.total - checklistStats.skipped}
-                    </span>
-                  )}
-                </button>
-              )}
+              {/* Checklist quick button (Tạm thời ẩn với người dùng, vẫn giữ trong phần Thiết lập) */}
+              {/* {selectedProj && !isOthersProject(selectedProj.id) && ( ... )} */}
 
               {/* Phase selector if available */}
               {availablePhases.length > 0 && (

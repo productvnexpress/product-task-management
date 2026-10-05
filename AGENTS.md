@@ -659,7 +659,15 @@ Cung cấp bộ khung sườn tiêu chuẩn hóa 5 giai đoạn cho toàn bộ t
   - **Nút điều hướng "Thùng rác"** tại Sidebar bên trái, kèm huy hiệu đếm số lượng mục đang lưu trữ.
   - Bộ lọc nhanh theo loại: *Tất cả*, *Công việc*, *Dự án*, *Nhân sự*.
   - Ô tìm kiếm thời gian thực theo tiêu đề và mô tả.
-  - Hộp thoại xác nhận an toàn (Confirmation Modal) trước khi dọn sạch thùng rác.
+  - **Tùy chọn Xoá Vĩnh viễn Nhanh (Permanent Delete Option)**:
+    - Khi xoá công việc từ `TaskDetailDrawer` hoặc `TaskItemRow`: Cung cấp hộp thoại xác nhận kèm checkbox `[ ] Xoá vĩnh viễn (Không lưu vào Thùng rác)`. Khi tick chọn, công việc được xoá trực tiếp khỏi hệ thống (`tasks`), không tạo bản ghi trong Thùng rác.
+    - Trong phân hệ **Thùng rác (`TrashManager`)**: Bổ sung checkbox chọn từng mục và nút `Chọn tất cả`. Khi chọn nhiều mục, hiển thị thanh tác vụ nhanh với các nút:
+      - `Khôi phục (N mục đã chọn)`: Khôi phục hàng loạt.
+      - `Xoá vĩnh viễn (N mục đã chọn)`: Admin có thể tick chọn nhiều mục và xác nhận xoá vĩnh viễn hàng loạt nhanh chóng mà không cần thao tác từng mục đơn lẻ.
+  - **Quy chuẩn Ẩn Phân hệ Checklist Dự án khỏi Giao diện Người dùng**:
+    - Tạm thời ẩn nút điều hướng Checklist và Section danh sách đầu việc checklist trong giao diện chi tiết dự án (`ProjectDetailsDrawer`) cũng như nút Checklist nhanh trên thanh `QuickAddBar`.
+    - Bảo lưu nguyên vẹn tab "Checklist" trong `SettingsManager` (Quản trị viên) để phục vụ biên tập cấu hình.
+  - Hộp thoại xác nhận an toàn (Confirmation Modal) trước khi dọn sạch thùng rác hoặc xoá vĩnh viễn.
 
 ---
 

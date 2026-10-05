@@ -243,7 +243,6 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
         'project-drawer-section-phases',
         'project-drawer-section-links',
         'project-drawer-section-notes',
-        'project-drawer-section-checklist',
       ];
       const containerTop = container.getBoundingClientRect().top;
 
@@ -1330,19 +1329,6 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             >
               {notes.length}
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => scrollToSection('project-drawer-section-checklist')}
-            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-              activeNav === 'project-drawer-section-checklist'
-                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
-                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
-            }`}
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            <span>Checklist</span>
           </button>
         </div>
 
@@ -2520,20 +2506,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             </div>
           </div>
 
-          {/* ==================== SECTION 5: CHECKLIST DỰ ÁN ==================== */}
-          <div id="project-drawer-section-checklist" className="scroll-mt-2">
-            <ProjectChecklistSection
-              checklist={checklist}
-              onUpdateChecklist={handleUpdateChecklist}
-              canEdit={canEdit}
-              currentUser={effectiveUser}
-              onCreateTaskFromItem={(itemText) => {
-                if (project) {
-                  onSelectProjectTasks(project.id);
-                }
-              }}
-            />
-          </div>
+          {/* ==================== SECTION 5: CHECKLIST DỰ ÁN (TẠM ẨN VỚI NGƯỜI DÙNG, GIỮ TRONG THIẾT LẬP) ==================== */}
+          {/* Tạm thời ẩn phần checklist không hiển thị với user theo yêu cầu */}
 
         </div>
 

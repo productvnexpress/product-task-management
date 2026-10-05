@@ -1563,36 +1563,40 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     );
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = (taskId: string, isPermanent = false) => {
     const taskToDelete = tasks.find((t) => t.id === taskId);
     if (taskToDelete) {
-      const now = new Date();
-      const deletionAuthor = currentAuthUser?.name || activeProductMember?.name || 'Hệ thống';
-      const deletionLog: TaskLogItem = {
-        id: 'log-' + Date.now(),
-        author: deletionAuthor,
-        timestamp: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-        action: 'Chuyển vào Thùng rác',
-        changes: [{ field: 'Trạng thái', oldValue: taskToDelete.status, newValue: 'Thùng rác' }],
-        note: `Công việc được xoá bởi ${deletionAuthor}`,
-      };
-      const taskWithLog: TaskItem = {
-        ...taskToDelete,
-        logs: [deletionLog, ...(taskToDelete.logs || [])],
-      };
+      if (isPermanent) {
+        wmsDataService.deleteTaskPermanently(taskId).catch((e) => console.error('Supabase error:', e));
+      } else {
+        const now = new Date();
+        const deletionAuthor = currentAuthUser?.name || activeProductMember?.name || 'Hệ thống';
+        const deletionLog: TaskLogItem = {
+          id: 'log-' + Date.now(),
+          author: deletionAuthor,
+          timestamp: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+          action: 'Chuyển vào Thùng rác',
+          changes: [{ field: 'Trạng thái', oldValue: taskToDelete.status, newValue: 'Thùng rác' }],
+          note: `Công việc được xoá bởi ${deletionAuthor}`,
+        };
+        const taskWithLog: TaskItem = {
+          ...taskToDelete,
+          logs: [deletionLog, ...(taskToDelete.logs || [])],
+        };
 
-      const trashItem: TrashItem = {
-        id: 'trash-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-        originalId: taskToDelete.id,
-        type: 'task',
-        title: taskToDelete.title,
-        subtitle: `${taskToDelete.projectName} • ${taskToDelete.assignee}`,
-        deletedAt: now.toISOString(),
-        deletedBy: deletionAuthor,
-        data: taskWithLog,
-      };
-      setTrash((prev) => [trashItem, ...prev]);
-      wmsDataService.deleteTask(taskId, trashItem).catch((e) => console.error('Supabase error:', e));
+        const trashItem: TrashItem = {
+          id: 'trash-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+          originalId: taskToDelete.id,
+          type: 'task',
+          title: taskToDelete.title,
+          subtitle: `${taskToDelete.projectName} • ${taskToDelete.assignee}`,
+          deletedAt: now.toISOString(),
+          deletedBy: deletionAuthor,
+          data: taskWithLog,
+        };
+        setTrash((prev) => [trashItem, ...prev]);
+        wmsDataService.deleteTask(taskId, trashItem).catch((e) => console.error('Supabase error:', e));
+      }
     }
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     if (selectedTask?.id === taskId) {
