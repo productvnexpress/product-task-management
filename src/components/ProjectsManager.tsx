@@ -863,110 +863,116 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                 </div>
 
                 {/* PHẦN 3: LIÊN KẾT DỰ ÁN (PROJECT LINKS CHUẨN AGENTS.MD) */}
-                {Boolean(
-                  proj.linkOrderTech ||
-                  proj.linkChat ||
-                  proj.linkDashboard ||
-                  proj.linkReport ||
-                  proj.linkBeta ||
-                  proj.linkProduction ||
-                  (proj.customLinks && proj.customLinks.length > 0)
-                ) && (
-                  <div className="pt-2.5 border-t border-[#f0f0f0] space-y-1.5">
-                    <div className="text-[11px] font-ui font-bold text-[#5f5f5f] flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3 text-[#b13460]" />
-                        <span>Liên kết vận hành & nghiệm thu:</span>
-                      </span>
+                {(() => {
+                  const techLink = proj.links?.orderTech || proj.linkOrderTech;
+                  const chatLink = proj.links?.chat || proj.linkChat;
+                  const dashLink = proj.links?.dashboard || proj.linkDashboard;
+                  const reportLink = proj.links?.report || proj.linkReport;
+                  const betaLink = proj.links?.beta || proj.linkBeta;
+                  const prodLink = proj.links?.production || proj.linkProduction;
+                  const cLinks = proj.links?.custom || proj.customLinks || [];
+
+                  if (!techLink && !chatLink && !dashLink && !reportLink && !betaLink && !prodLink && cLinks.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="pt-2.5 border-t border-[#f0f0f0] space-y-1.5">
+                      <div className="text-[11px] font-ui font-bold text-[#5f5f5f] flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3 text-[#b13460]" />
+                          <span>Liên kết vận hành & nghiệm thu:</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {techLink && (
+                          <a
+                            href={techLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#b13460] hover:text-[#b13460] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Yêu cầu kỹ thuật / Ticket Jira"
+                          >
+                            <FileText className="w-3 h-3 text-[#b13460]" />
+                            <span>Tech</span>
+                          </a>
+                        )}
+                        {chatLink && (
+                          <a
+                            href={chatLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#24a148] hover:text-[#24a148] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Nhóm trao đổi trực tuyến"
+                          >
+                            <MessageSquare className="w-3 h-3 text-[#24a148]" />
+                            <span>Chat</span>
+                          </a>
+                        )}
+                        {dashLink && (
+                          <a
+                            href={dashLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#b26b00] hover:text-[#b26b00] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Bảng theo dõi chỉ số đo lường hiệu quả"
+                          >
+                            <LayoutDashboard className="w-3 h-3 text-[#b26b00]" />
+                            <span>Dashboard</span>
+                          </a>
+                        )}
+                        {reportLink && (
+                          <a
+                            href={reportLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#1d508d] hover:text-[#1d508d] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Báo cáo tổng kết / nghiệm thu"
+                          >
+                            <TrendingUp className="w-3 h-3 text-[#1d508d]" />
+                            <span>Report</span>
+                          </a>
+                        )}
+                        {betaLink && (
+                          <a
+                            href={betaLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#ca8a04] hover:text-[#ca8a04] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Môi trường thử nghiệm Beta"
+                          >
+                            <FlaskConical className="w-3 h-3 text-[#ca8a04]" />
+                            <span>Beta</span>
+                          </a>
+                        )}
+                        {prodLink && (
+                          <a
+                            href={prodLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#24a148] hover:text-[#24a148] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                            title="Phiên bản chính thức trên VnExpress"
+                          >
+                            <Globe className="w-3 h-3 text-[#24a148]" />
+                            <span>Prod</span>
+                          </a>
+                        )}
+                        {cLinks.map((cl) => (
+                          <a
+                            key={cl.id}
+                            href={cl.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#466fa1] hover:text-[#466fa1] text-[#5f5f5f] text-[11px] font-medium transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3 text-[#466fa1]" />
+                            <span>{cl.title}</span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {proj.linkOrderTech && (
-                        <a
-                          href={proj.linkOrderTech}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#b13460] hover:text-[#b13460] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Yêu cầu kỹ thuật / Ticket Jira"
-                        >
-                          <FileText className="w-3 h-3 text-[#b13460]" />
-                          <span>Tech</span>
-                        </a>
-                      )}
-                      {proj.linkChat && (
-                        <a
-                          href={proj.linkChat}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#24a148] hover:text-[#24a148] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Nhóm trao đổi trực tuyến"
-                        >
-                          <MessageSquare className="w-3 h-3 text-[#24a148]" />
-                          <span>Chat</span>
-                        </a>
-                      )}
-                      {proj.linkDashboard && (
-                        <a
-                          href={proj.linkDashboard}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#b26b00] hover:text-[#b26b00] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Bảng theo dõi chỉ số đo lường hiệu quả"
-                        >
-                          <LayoutDashboard className="w-3 h-3 text-[#b26b00]" />
-                          <span>Dashboard</span>
-                        </a>
-                      )}
-                      {proj.linkReport && (
-                        <a
-                          href={proj.linkReport}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#1d508d] hover:text-[#1d508d] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Báo cáo tổng kết / nghiệm thu"
-                        >
-                          <TrendingUp className="w-3 h-3 text-[#1d508d]" />
-                          <span>Report</span>
-                        </a>
-                      )}
-                      {proj.linkBeta && (
-                        <a
-                          href={proj.linkBeta}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#ca8a04] hover:text-[#ca8a04] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Môi trường thử nghiệm Beta"
-                        >
-                          <FlaskConical className="w-3 h-3 text-[#ca8a04]" />
-                          <span>Beta</span>
-                        </a>
-                      )}
-                      {proj.linkProduction && (
-                        <a
-                          href={proj.linkProduction}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#24a148] hover:text-[#24a148] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                          title="Phiên bản chính thức trên VnExpress"
-                        >
-                          <Globe className="w-3 h-3 text-[#24a148]" />
-                          <span>Prod</span>
-                        </a>
-                      )}
-                      {proj.customLinks?.map((cl) => (
-                        <a
-                          key={cl.id}
-                          href={cl.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-[#fafafa] border border-[#d6d6d6] hover:bg-[#fcf0f5] hover:border-[#466fa1] hover:text-[#466fa1] text-[#5f5f5f] text-[11px] font-medium transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3 text-[#466fa1]" />
-                          <span>{cl.title}</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* PHẦN 4: GHI CHÚ ĐIỀU HÀNH & BIÊN BẢN HỌP CHUẨN AGENTS.MD */}
                 {proj.notes && proj.notes.length > 0 && (

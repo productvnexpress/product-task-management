@@ -86,10 +86,30 @@ export function App() {
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
     const saved = localStorage.getItem('vne_projects_v9');
     const rawList: ProjectItem[] = saved ? JSON.parse(saved) : INITIAL_PROJECTS;
-    return rawList.map((p) => ({
-      ...p,
-      status: normalizeProjectStatus(p.status),
-    }));
+    return rawList.map((p) => {
+      const customLinks = p.links?.custom || p.customLinks || [];
+      const hasLinksObj = p.links !== undefined;
+      return {
+        ...p,
+        status: normalizeProjectStatus(p.status),
+        linkOrderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
+        linkChat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
+        linkDashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
+        linkReport: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
+        linkBeta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
+        linkProduction: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
+        links: {
+          orderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
+          chat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
+          dashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
+          report: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
+          beta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
+          production: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
+          custom: customLinks,
+        },
+        customLinks,
+      };
+    });
   });
 
   const [members, setMembers] = useState<MemberItem[]>(() => {

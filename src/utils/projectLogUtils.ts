@@ -135,6 +135,39 @@ export function recordProjectOverviewChanges(
     changes.push({ field: 'Data Specialist', oldValue: oldData || 'Chưa gán', newValue: newData || 'Chưa gán' });
   }
 
+  // Compare standard links
+  const linkDefs = [
+    { key: 'orderTech', prop: 'linkOrderTech', label: 'Liên kết Order Tech' },
+    { key: 'chat', prop: 'linkChat', label: 'Liên kết Chat Group' },
+    { key: 'dashboard', prop: 'linkDashboard', label: 'Liên kết Dashboard' },
+    { key: 'report', prop: 'linkReport', label: 'Liên kết Báo cáo' },
+    { key: 'beta', prop: 'linkBeta', label: 'Liên kết Beta' },
+    { key: 'production', prop: 'linkProduction', label: 'Liên kết Production' },
+  ] as const;
+
+  for (const def of linkDefs) {
+    const oldVal = (oldProject.links?.[def.key] ?? (oldProject as any)[def.prop] ?? '').trim();
+    const newVal = (updatedProject.links?.[def.key] ?? (updatedProject as any)[def.prop] ?? '').trim();
+    if (oldVal !== newVal) {
+      changes.push({
+        field: def.label,
+        oldValue: oldVal || 'Chưa có',
+        newValue: newVal || 'Đã xóa',
+      });
+    }
+  }
+
+  // Compare custom links
+  const oldCustomCount = oldProject.links?.custom?.length ?? oldProject.customLinks?.length ?? 0;
+  const newCustomCount = updatedProject.links?.custom?.length ?? updatedProject.customLinks?.length ?? 0;
+  if (oldCustomCount !== newCustomCount) {
+    changes.push({
+      field: 'Số lượng liên kết tùy chọn',
+      oldValue: `${oldCustomCount} liên kết`,
+      newValue: `${newCustomCount} liên kết`,
+    });
+  }
+
   if (changes.length === 0) return null;
 
   const author = authorName || updatedProject.roles?.pm?.[0] || 'Hệ thống';

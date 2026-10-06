@@ -310,6 +310,11 @@ Mỗi dự án được cấu trúc nhất quán theo 4 khối chức năng:
   5. `Beta`: Đường dẫn môi trường chạy thử nghiệm nội bộ (Staging).
   6. `Production`: Đường dẫn sản phẩm chạy chính thức trên VnExpress.
 - **Liên kết bổ sung (Custom Links)**: Tự do thêm không giới hạn liên kết với Tiêu đề và URL tùy biến.
+- **Quy chuẩn Lưu trữ & Xóa Liên kết (Link Persistence & Clearing)**:
+  - Đồng bộ hóa 2 chiều tuyệt đối giữa thuộc tính cấp cao (`linkOrderTech`, `linkChat`,...) và đối tượng gom nhóm `links`.
+  - Nút bấm `X` 1-click cạnh từng ô nhập liệu trong chế độ Chỉnh sửa liên kết cho phép xóa trắng nhanh đường dẫn.
+  - Khi người dùng xóa liên kết, hệ thống gửi `null` về Supabase để xóa sạch dữ liệu trên cơ sở dữ liệu và LocalStorage, tuyệt đối không phục hồi lại liên kết cũ.
+  - Tự động ghi nhận nhật ký kiểm toán (Audit History Log) chi tiết khi liên kết được thêm mới, cập nhật hoặc xóa bỏ.
 
 #### Phần 4: Ghi chú Dự án (Project Notes)
 - Dùng lưu vết các biên bản cuộc họp, thỏa thuận nhanh, quyết định kỹ thuật:

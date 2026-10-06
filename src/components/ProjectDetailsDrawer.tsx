@@ -134,12 +134,24 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   const [dataMembers, setDataMembers] = useState<string[]>(project?.roles?.data || []);
 
   // Links State
-  const [linkOrderTech, setLinkOrderTech] = useState(project?.links?.orderTech || '');
-  const [linkChat, setLinkChat] = useState(project?.links?.chat || '');
-  const [linkDashboard, setLinkDashboard] = useState(project?.links?.dashboard || '');
-  const [linkReport, setLinkReport] = useState(project?.links?.report || '');
-  const [linkBeta, setLinkBeta] = useState(project?.links?.beta || '');
-  const [linkProduction, setLinkProduction] = useState(project?.links?.production || '');
+  const [linkOrderTech, setLinkOrderTech] = useState(
+    project?.links?.orderTech !== undefined ? (project.links.orderTech || '') : (project?.linkOrderTech || '')
+  );
+  const [linkChat, setLinkChat] = useState(
+    project?.links?.chat !== undefined ? (project.links.chat || '') : (project?.linkChat || '')
+  );
+  const [linkDashboard, setLinkDashboard] = useState(
+    project?.links?.dashboard !== undefined ? (project.links.dashboard || '') : (project?.linkDashboard || '')
+  );
+  const [linkReport, setLinkReport] = useState(
+    project?.links?.report !== undefined ? (project.links.report || '') : (project?.linkReport || '')
+  );
+  const [linkBeta, setLinkBeta] = useState(
+    project?.links?.beta !== undefined ? (project.links.beta || '') : (project?.linkBeta || '')
+  );
+  const [linkProduction, setLinkProduction] = useState(
+    project?.links?.production !== undefined ? (project.links.production || '') : (project?.linkProduction || '')
+  );
   const [customLinks, setCustomLinks] = useState<ProjectCustomLink[]>(
     project?.links?.custom || project?.customLinks || []
   );
@@ -362,12 +374,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setSeoMembers(project.roles?.seo || []);
       setDataMembers(project.roles?.data || []);
 
-      setLinkOrderTech(project.links?.orderTech || '');
-      setLinkChat(project.links?.chat || '');
-      setLinkDashboard(project.links?.dashboard || '');
-      setLinkReport(project.links?.report || '');
-      setLinkBeta(project.links?.beta || '');
-      setLinkProduction(project.links?.production || '');
+      setLinkOrderTech(project.links?.orderTech !== undefined ? (project.links.orderTech || '') : (project.linkOrderTech || ''));
+      setLinkChat(project.links?.chat !== undefined ? (project.links.chat || '') : (project.linkChat || ''));
+      setLinkDashboard(project.links?.dashboard !== undefined ? (project.links.dashboard || '') : (project.linkDashboard || ''));
+      setLinkReport(project.links?.report !== undefined ? (project.links.report || '') : (project.linkReport || ''));
+      setLinkBeta(project.links?.beta !== undefined ? (project.links.beta || '') : (project.linkBeta || ''));
+      setLinkProduction(project.links?.production !== undefined ? (project.links.production || '') : (project.linkProduction || ''));
       setCustomLinks(project.links?.custom || project.customLinks || []);
 
       // Normalize phases chronologically from near to far and auto-number
@@ -437,12 +449,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setSeoMembers(project.roles?.seo || []);
       setDataMembers(project.roles?.data || []);
 
-      setLinkOrderTech(project.links?.orderTech || '');
-      setLinkChat(project.links?.chat || '');
-      setLinkDashboard(project.links?.dashboard || '');
-      setLinkReport(project.links?.report || '');
-      setLinkBeta(project.links?.beta || '');
-      setLinkProduction(project.links?.production || '');
+      setLinkOrderTech(project.links?.orderTech !== undefined ? (project.links.orderTech || '') : (project.linkOrderTech || ''));
+      setLinkChat(project.links?.chat !== undefined ? (project.links.chat || '') : (project.linkChat || ''));
+      setLinkDashboard(project.links?.dashboard !== undefined ? (project.links.dashboard || '') : (project.linkDashboard || ''));
+      setLinkReport(project.links?.report !== undefined ? (project.links.report || '') : (project.linkReport || ''));
+      setLinkBeta(project.links?.beta !== undefined ? (project.links.beta || '') : (project.linkBeta || ''));
+      setLinkProduction(project.links?.production !== undefined ? (project.links.production || '') : (project.linkProduction || ''));
       setCustomLinks(project.links?.custom || project.customLinks || []);
 
       setPhases(project.phases || []);
@@ -691,7 +703,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const updatedHistory = [logItem, ...historyLogs];
     setHistoryLogs(updatedHistory);
 
-    if (!isEditing && project) {
+    if (!isEditing && !isEditingLinksSection && project) {
       const updatedProject: ProjectItem = {
         ...project,
         links: {
@@ -720,7 +732,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const updatedHistory = [logItem, ...historyLogs];
     setHistoryLogs(updatedHistory);
 
-    if (!isEditing && project) {
+    if (!isEditing && !isEditingLinksSection && project) {
       const updatedProject: ProjectItem = {
         ...project,
         links: {
@@ -924,6 +936,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       leadName: leadNameSummary,
       roles,
       phases,
+      linkOrderTech: links.orderTech,
+      linkChat: links.chat,
+      linkDashboard: links.dashboard,
+      linkReport: links.report,
+      linkBeta: links.beta,
+      linkProduction: links.production,
       links,
       customLinks: validCustomLinks,
       notes,
@@ -973,6 +991,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
     const preliminaryProject: ProjectItem = {
       ...project,
+      linkOrderTech: links.orderTech,
+      linkChat: links.chat,
+      linkDashboard: links.dashboard,
+      linkReport: links.report,
+      linkBeta: links.beta,
+      linkProduction: links.production,
       links,
       customLinks: validCustomLinks,
     };
@@ -1000,12 +1024,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   };
 
   const handleCancelEditLinksSection = () => {
-    setLinkOrderTech(project?.links?.orderTech || '');
-    setLinkChat(project?.links?.chat || '');
-    setLinkDashboard(project?.links?.dashboard || '');
-    setLinkReport(project?.links?.report || '');
-    setLinkBeta(project?.links?.beta || '');
-    setLinkProduction(project?.links?.production || '');
+    setLinkOrderTech(project?.links?.orderTech !== undefined ? (project.links.orderTech || '') : (project?.linkOrderTech || ''));
+    setLinkChat(project?.links?.chat !== undefined ? (project.links.chat || '') : (project?.linkChat || ''));
+    setLinkDashboard(project?.links?.dashboard !== undefined ? (project.links.dashboard || '') : (project?.linkDashboard || ''));
+    setLinkReport(project?.links?.report !== undefined ? (project.links.report || '') : (project?.linkReport || ''));
+    setLinkBeta(project?.links?.beta !== undefined ? (project.links.beta || '') : (project?.linkBeta || ''));
+    setLinkProduction(project?.links?.production !== undefined ? (project.links.production || '') : (project?.linkProduction || ''));
     setCustomLinks(project?.links?.custom || project?.customLinks || []);
     setIsAddingCustomLink(false);
     setIsEditingLinksSection(false);
@@ -2192,6 +2216,16 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           placeholder={item.placeholder}
                           className="flex-1 px-2 py-1 border border-[#d0d0d0] rounded-[4px] text-xs text-[#202020] bg-white"
                         />
+                        {item.url && (
+                          <button
+                            type="button"
+                            onClick={() => item.setUrl('')}
+                            className="p-1 text-[#8f8f8f] hover:text-[#da1e28] hover:bg-[#fff0f1] border border-[#e0e0e0] rounded-[4px] transition-colors cursor-pointer"
+                            title="Xóa liên kết này"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {item.url && (
                           <a
                             href={item.url}

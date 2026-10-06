@@ -30,6 +30,17 @@ export const INITIAL_PROJECTS: ProjectItem[] = [
     linkReport: 'https://docs.google.com/spreadsheets/d/vne-ykien-kpi',
     linkBeta: 'https://beta.vnexpress.net/y-kien',
     linkProduction: 'https://vnexpress.net/y-kien',
+    links: {
+      orderTech: 'https://jira.vne.internal/browse/YKIEN-101',
+      chat: 'https://chat.vne.internal/room/vne-ykien',
+      dashboard: 'https://lookerstudio.google.com/reporting/vne-ykien',
+      report: 'https://docs.google.com/spreadsheets/d/vne-ykien-kpi',
+      beta: 'https://beta.vnexpress.net/y-kien',
+      production: 'https://vnexpress.net/y-kien',
+      custom: [
+        { id: 'cl-ykien-1', title: 'Tài liệu nghiệp vụ kiểm duyệt', url: 'https://docs.google.com/document/d/ykien-moderation' }
+      ],
+    },
     phases: [
       { id: 'p-1-1', name: 'Giai đoạn 1: Khảo sát & Đóng góp PRD', dueDate: '2026-09-15', status: 'Đã hoàn thành', description: 'Nghiên cứu hành vi gửi bài viết độc giả & đề xuất luồng kiểm duyệt mới.' },
       { id: 'p-1-2', name: 'Giai đoạn 2: Thiết kế UI/UX bài viết & bình luận', dueDate: '2026-10-01', status: 'Đang triển khai', description: 'Hoàn thiện bản vẽ Figma giao diện chi tiết bài viết và khung trao đổi.' },

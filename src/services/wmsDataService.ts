@@ -208,6 +208,23 @@ export const wmsDataService = {
       ? project.code.trim().toUpperCase()
       : `VNE-${Date.now().toString().slice(-4)}`;
 
+    const resolveLink = (nestedLink?: string, topLink?: string): string | null => {
+      if (project.links !== undefined) {
+        return nestedLink && nestedLink.trim() ? nestedLink.trim() : null;
+      }
+      return topLink && topLink.trim() ? topLink.trim() : null;
+    };
+
+    const resolveCustomLinks = (): any[] => {
+      if (project.links !== undefined && project.links.custom !== undefined) {
+        return Array.isArray(project.links.custom) ? project.links.custom : [];
+      }
+      if (Array.isArray(project.customLinks)) {
+        return project.customLinks;
+      }
+      return [];
+    };
+
     // 1. Lưu thông tin dự án
     const projectPayload: any = {
       id: project.id,
@@ -222,13 +239,13 @@ export const wmsDataService = {
       status: normalizeProjectStatus(project.status),
       is_strategic: Boolean(project.isStrategic),
       roles: project.roles || { pm: [], designer: [], seo: [], data: [] },
-      link_order_tech: project.linkOrderTech || project.links?.orderTech || null,
-      link_chat: project.linkChat || project.links?.chat || null,
-      link_dashboard: project.linkDashboard || project.links?.dashboard || null,
-      link_report: project.linkReport || project.links?.report || null,
-      link_beta: project.linkBeta || project.links?.beta || null,
-      link_production: project.linkProduction || project.links?.production || null,
-      custom_links: project.customLinks || project.links?.custom || [],
+      link_order_tech: resolveLink(project.links?.orderTech, project.linkOrderTech),
+      link_chat: resolveLink(project.links?.chat, project.linkChat),
+      link_dashboard: resolveLink(project.links?.dashboard, project.linkDashboard),
+      link_report: resolveLink(project.links?.report, project.linkReport),
+      link_beta: resolveLink(project.links?.beta, project.linkBeta),
+      link_production: resolveLink(project.links?.production, project.linkProduction),
+      custom_links: resolveCustomLinks(),
       checklist: project.checklist || [],
       created_by: project.createdBy || null,
       updated_at: new Date().toISOString(),
