@@ -25,6 +25,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { ActiveFiltersBar } from './components/ActiveFiltersBar';
 import { QuickAddBar } from './components/QuickAddBar';
+import { MobileQuickAddDrawer } from './components/MobileQuickAddDrawer';
 import { TaskItemRow } from './components/TaskItemRow';
 import { TaskDetailDrawer } from './components/TaskDetailDrawer';
 import { ProjectDetailsDrawer } from './components/ProjectDetailsDrawer';
@@ -265,6 +266,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     return user;
   });
 
+  const currentAuthUserRef = useRef(currentAuthUser);
+  useEffect(() => {
+    currentAuthUserRef.current = currentAuthUser;
+  }, [currentAuthUser]);
+
   // Modal bắt buộc đổi mật khẩu khi đăng nhập bằng mật khẩu mặc định
   const [forceChangePasswordUser, setForceChangePasswordUser] = useState<MemberItem | null>(null);
 
@@ -277,6 +283,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Modal bắt buộc nhập Link hoàn thành
   const [taskToCompleteModal, setTaskToCompleteModal] = useState<TaskItem | null>(null);
+
+  // Mobile dedicated quick add drawer state (FAB or header trigger)
+  const [isMobileQuickAddOpen, setIsMobileQuickAddOpen] = useState(false);
+
+  // Mobile sidebar drawer state (Hamburger menu)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const handleOpenProfile = (tab: 'profile' | 'password' = 'profile') => {
     setProfileModalInitialTab(tab);
@@ -303,7 +315,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setTaskPersonalScope(def.scope);
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     setCurrentAuthUser(null);
     setForceChangePasswordUser(null);
@@ -313,7 +325,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       assignee: 'Tất cả',
     }));
     localStorage.removeItem('vne_active_product_member_id');
-  };
+  }, []);
 
   // Active Product member account for perspective filtering: null means 'Toàn bộ phận'
   const [activeProductMember, setActiveProductMember] = useState<MemberItem | null>(() => {
@@ -655,93 +667,90 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   }, [currentAuthUser, tasks]);
 
   // Load and sync data with Supabase on mount + Realtime collaboration
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadSupabaseData = async () => {
-      try {
-        // Đồng bộ mật khẩu người dùng
-        await syncPasswordsFromSupabase();
-        if (currentAuthUser) {
-          const u = (currentAuthUser.username || currentAuthUser.id).toLowerCase();
-          if (isUserUsingDefaultPassword(u)) {
-            handleLogout();
-            setLoginNoticeMessage('Tài khoản chưa đổi mật khẩu mặc định. Vui lòng đăng nhập lại để cập nhật mật khẩu mới.');
-          }
+  const loadSupabaseData = useCallback(async () => {
+    try {
+      // Đồng bộ mật khẩu người dùng
+      await syncPasswordsFromSupabase();
+      const authUser = currentAuthUserRef.current;
+      if (authUser) {
+        const u = (authUser.username || authUser.id).toLowerCase();
+        if (isUserUsingDefaultPassword(u)) {
+          handleLogout();
+          setLoginNoticeMessage('Tài khoản chưa đổi mật khẩu mặc định. Vui lòng đăng nhập lại để cập nhật mật khẩu mới.');
         }
+      }
 
-        const [mems, projs, tsks, trsh, notifs] = await Promise.all([
-          wmsDataService.fetchMembers(),
-          wmsDataService.fetchProjects(),
-          wmsDataService.fetchTasks(),
-          wmsDataService.fetchTrash(),
-          wmsDataService.fetchNotifications(),
-          workingTimeService.initFromSupabase().catch((e) => {
-            console.warn('[workingTimeService] Supabase init warning:', e);
-            return null;
-          }),
-          recurringTaskService.initFromSupabase().catch((e) => {
-            console.warn('[recurringTaskService] Supabase init warning:', e);
-            return null;
-          }),
-          fetchMasterChecklistTemplateFromSupabase().catch((e) => {
-            console.warn('[defaultProjectChecklist] Supabase init warning:', e);
-            return null;
-          }),
-        ]);
+      const [mems, projs, tsks, trsh, notifs] = await Promise.all([
+        wmsDataService.fetchMembers(),
+        wmsDataService.fetchProjects(),
+        wmsDataService.fetchTasks(),
+        wmsDataService.fetchTrash(),
+        wmsDataService.fetchNotifications(),
+        workingTimeService.initFromSupabase().catch((e) => {
+          console.warn('[workingTimeService] Supabase init warning:', e);
+          return null;
+        }),
+        recurringTaskService.initFromSupabase().catch((e) => {
+          console.warn('[recurringTaskService] Supabase init warning:', e);
+          return null;
+        }),
+        fetchMasterChecklistTemplateFromSupabase().catch((e) => {
+          console.warn('[defaultProjectChecklist] Supabase init warning:', e);
+          return null;
+        }),
+      ]);
 
-        if (!isMounted) return;
+      if (projs && projs.length > 0) {
+        // Tự động kiểm tra và đồng bộ các dự án được tạo ở local cache chưa kịp lưu vào Supabase
+        const dbProjIds = new Set(projs.map((p) => p.id));
+        const dbProjCodes = new Set(projs.map((p) => (p.code || '').toUpperCase()));
+        const localSaved = localStorage.getItem('vne_projects_v9');
+        let localList: ProjectItem[] = [];
+        if (localSaved) {
+          try {
+            localList = JSON.parse(localSaved);
+          } catch (e) {}
+        }
+        const unsynced = localList.filter(
+          (lp) => !dbProjIds.has(lp.id) && !dbProjCodes.has((lp.code || '').toUpperCase()) && lp.id !== 'proj-others'
+        );
 
-        if (projs && projs.length > 0) {
-          // Tự động kiểm tra và đồng bộ các dự án được tạo ở local cache chưa kịp lưu vào Supabase
-          const dbProjIds = new Set(projs.map((p) => p.id));
-          const dbProjCodes = new Set(projs.map((p) => (p.code || '').toUpperCase()));
-          const localSaved = localStorage.getItem('vne_projects_v9');
-          let localList: ProjectItem[] = [];
-          if (localSaved) {
+        if (unsynced.length > 0) {
+          console.log(`[Supabase WMS] Phát hiện ${unsynced.length} dự án cục bộ chưa có trên Supabase. Đang tự động đẩy lên...`);
+          for (const up of unsynced) {
             try {
-              localList = JSON.parse(localSaved);
-            } catch (e) {}
+              await wmsDataService.saveProject(up);
+              console.log(`[Supabase WMS] ✅ Đã đẩy dự án "${up.name}" lên Supabase thành công!`);
+            } catch (e) {
+              console.warn('[Supabase WMS] Lỗi khi đồng bộ dự án cục bộ:', up.name, e);
+            }
           }
-          const unsynced = localList.filter(
-            (lp) => !dbProjIds.has(lp.id) && !dbProjCodes.has((lp.code || '').toUpperCase()) && lp.id !== 'proj-others'
-          );
-
-          if (unsynced.length > 0) {
-            console.log(`[Supabase WMS] Phát hiện ${unsynced.length} dự án cục bộ chưa có trên Supabase. Đang tự động đẩy lên...`);
-            for (const up of unsynced) {
-              try {
-                await wmsDataService.saveProject(up);
-                console.log(`[Supabase WMS] ✅ Đã đẩy dự án "${up.name}" lên Supabase thành công!`);
-              } catch (e) {
-                console.warn('[Supabase WMS] Lỗi khi đồng bộ dự án cục bộ:', up.name, e);
-              }
-            }
-            const refreshed = await wmsDataService.fetchProjects();
-            if (refreshed && refreshed.length > 0) {
-              setProjects(refreshed.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
-            } else {
-              setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
-            }
+          const refreshed = await wmsDataService.fetchProjects();
+          if (refreshed && refreshed.length > 0) {
+            setProjects(refreshed.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
           } else {
             setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
           }
+        } else {
+          setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
         }
-        if (tsks) setTasks(tsks);
-        if (trsh) setTrash(trsh);
-        if (notifs && notifs.length > 0) setNotifications(notifs);
-
-        setIsDbConnected(true);
-        console.log(
-          `%c[Supabase WMS] ✅ Đã kết nối Live Database: ${tsks?.length || 0} công việc, ${projs?.length || 0} dự án, ${mems?.length || 0} nhân sự.`,
-          'color: #059669; font-weight: bold;'
-        );
-      } catch (err) {
-        setIsDbConnected(false);
-        console.warn('[Supabase WMS] ⚠️ Đang chạy ở chế độ offline / local cache:', err);
       }
-    };
+      if (tsks) setTasks(tsks);
+      if (trsh) setTrash(trsh);
+      if (notifs && notifs.length > 0) setNotifications(notifs);
 
+      setIsDbConnected(true);
+      console.log(
+        `%c[Supabase WMS] ✅ Đã kết nối Live Database: ${tsks?.length || 0} công việc, ${projs?.length || 0} dự án, ${mems?.length || 0} nhân sự.`,
+        'color: #059669; font-weight: bold;'
+      );
+    } catch (err) {
+      setIsDbConnected(false);
+      console.warn('[Supabase WMS] ⚠️ Đang chạy ở chế độ offline / local cache:', err);
+    }
+  }, [handleLogout]);
+
+  useEffect(() => {
     loadSupabaseData();
 
     // Lắng nghe cập nhật Realtime từ Supabase (hỗ trợ nhiều máy làm việc đồng thời)
@@ -775,10 +784,50 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     });
 
     return () => {
-      isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [loadSupabaseData]);
+
+  // Cơ chế tự động refresh hệ thống sau mỗi 3 giờ (chu kỳ 3h/lần theo quy chuẩn)
+  useEffect(() => {
+    const AUTO_REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3 giờ
+
+    // 1. Tự động tải lại dữ liệu mới từ Supabase mỗi 3 giờ
+    const refreshTimer = setInterval(() => {
+      console.log('[App] ⏰ Chu kỳ 3h: Tự động refresh dữ liệu và đồng bộ hệ thống...');
+      loadSupabaseData();
+    }, AUTO_REFRESH_INTERVAL_MS);
+
+    // 2. Lắng nghe sự kiện kích hoạt auto-refresh từ autoCacheService
+    const handleAutoRefreshEvent = () => {
+      console.log('[App] 🔄 Nhận tín hiệu tự động refresh (chu kỳ 3h) từ AutoCacheService...');
+      loadSupabaseData();
+
+      // Kiểm tra an toàn trước khi reload toàn bộ trang:
+      // Không reload nếu người dùng đang mở ngăn chỉnh sửa, tạo dự án, thêm nhân sự hoặc đang gõ phím
+      const isDrawerActive = isDrawerOpen || isProjectDrawerOpen || isAddMemberOpen || isCreateProjectDrawer;
+      const isInputActive = Boolean(
+        document.activeElement &&
+        (document.activeElement.tagName === 'INPUT' ||
+         document.activeElement.tagName === 'TEXTAREA' ||
+         document.activeElement.getAttribute('contenteditable') === 'true')
+      );
+
+      if (!isDrawerActive && !isInputActive) {
+        console.log('[App] Người dùng đang ở trạng thái rảnh rỗi. Thực hiện làm mới trang web...');
+        window.location.reload();
+      } else {
+        console.log('[App] Người dùng đang tương tác hoặc mở ngăn tác vụ. Đã làm mới dữ liệu ngầm, hoãn tải lại trang.');
+      }
+    };
+
+    window.addEventListener('vne_trigger_auto_refresh', handleAutoRefreshEvent);
+
+    return () => {
+      clearInterval(refreshTimer);
+      window.removeEventListener('vne_trigger_auto_refresh', handleAutoRefreshEvent);
+    };
+  }, [loadSupabaseData, isDrawerOpen, isProjectDrawerOpen, isAddMemberOpen, isCreateProjectDrawer]);
 
   // Reset to initial data
   const handleResetData = () => {
@@ -1249,7 +1298,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
         },
         new Date(),
-        notifications
+        notificationsRef.current
       );
     };
 
@@ -1278,7 +1327,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
         },
         new Date(),
-        notifications
+        notificationsRef.current
       );
     };
 
@@ -1297,7 +1346,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       clearTimeout(initialTimer);
       clearInterval(dailyTicker);
     };
-  }, [tasks, members, currentUserName, activeProductMember, notifications]);
+  }, [tasks, members, currentUserName, activeProductMember]);
 
   const handleSelectNotification = (item: NotificationItem) => {
     // 1. Đánh dấu đã đọc
@@ -2060,7 +2109,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#202020] flex flex-row antialiased font-body">
+    <div className="min-h-screen bg-[#f8f9fa] text-[#202020] flex flex-row antialiased font-body w-full max-w-full overflow-x-hidden">
       {/* 1. LEFT SIDEBAR (Contains Logo, Navigation, & All Filters) */}
       <Sidebar
         activeTab={activeTab}
@@ -2099,29 +2148,40 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         blockedCount={taskStats.blocked}
         onOpenQuickAdd={() => {
           setActiveTab('tasks');
-          setTimeout(() => {
-            document.getElementById('quick-add-input')?.focus();
-          }, 100);
+          if (window.innerWidth < 768) {
+            setIsMobileQuickAddOpen(true);
+          } else {
+            setTimeout(() => {
+              document.getElementById('quick-add-input')?.focus();
+            }, 100);
+          }
         }}
         onOpenAddProject={handleOpenAddProject}
         onOpenAddMember={handleOpenAddMember}
         onResetData={handleResetData}
         onLogoClick={handleLogoClick}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* 2. MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen w-full">
         {/* Sticky Header & Active Filters Bar Container (Luôn được ghim ở đầu trang khi cuộn) */}
         <div className="sticky top-0 z-20 bg-white shadow-2xs">
           {/* Header Bar */}
           <Header
             currentDate={currentDate}
+            onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
             onOpenStandup={() => setIsStandupOpen(true)}
             onOpenQuickAdd={() => {
               setActiveTab('tasks');
-              setTimeout(() => {
-                document.getElementById('quick-add-input')?.focus();
-              }, 100);
+              if (window.innerWidth < 768) {
+                setIsMobileQuickAddOpen(true);
+              } else {
+                setTimeout(() => {
+                  document.getElementById('quick-add-input')?.focus();
+                }, 100);
+              }
             }}
             onOpenAddProject={handleOpenAddProject}
             onOpenAddMember={handleOpenAddMember}
@@ -2427,8 +2487,53 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                               className={idx > 0 ? 'border-t border-[#e5e7eb] pt-6 md:pt-8' : ''}
                             >
                               <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                                {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                                <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
+                                {/* Mobile: 1 dòng duy nhất cho phần dự án */}
+                                <div className="flex md:hidden items-center justify-between w-full py-1.5 px-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (targetProj) {
+                                        setFilterState((prev) => ({
+                                          ...prev,
+                                          projectId: prev.projectId === targetProj.id ? 'all' : targetProj.id,
+                                        }));
+                                      }
+                                    }}
+                                    className="group/title flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                                    title={`Bấm để lọc công việc theo dự án: ${projName}`}
+                                  >
+                                    <Folder className="w-4 h-4 text-[#71717a] group-hover/title:text-[#1e609c] shrink-0" />
+                                    <span className="font-title text-[14px] font-semibold text-[#202020] group-hover/title:text-[#1e609c] truncate">
+                                      {projName}
+                                    </span>
+                                    {targetProj?.isStrategic && (
+                                      <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                    )}
+                                    {targetProj?.code && (
+                                      <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                        {targetProj.code}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] font-ui text-[#64748b] shrink-0">
+                                      ({projTasks.length})
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (targetProj) handleOpenProjectDetail(targetProj.id);
+                                    }}
+                                    className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
+                                    title={`Xem thông tin dự án ${projName}`}
+                                  >
+                                    <span className="text-base font-bold leading-none">→</span>
+                                  </button>
+                                </div>
+
+                                {/* Desktop: Cột trái Tên dự án pin theo khi cuộn */}
+                                <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                                   <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
                                     {/* Vùng 1: Bấm vào tên dự án sẽ lọc công việc theo dự án */}
                                     <button
@@ -2524,8 +2629,50 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         const curProj = projects.find((p) => p.id === filterState.projectId);
                         return (
                           <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                            {/* Cột trái: Tên dự án nằm ngoài bên trái, pin theo khi cuộn */}
-                            <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
+                            {/* Mobile: 1 dòng duy nhất cho dự án đơn lẻ */}
+                            {curProj && (
+                              <div className="flex md:hidden items-center justify-between w-full py-1.5 px-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFilterState((prev) => ({ ...prev, projectId: 'all' }));
+                                  }}
+                                  className="group/title flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                                  title={`Đang lọc: ${curProj.name}. Bấm để xem tất cả dự án`}
+                                >
+                                  <Folder className="w-4 h-4 text-[#1e609c] shrink-0" />
+                                  <span className="font-title text-[14px] font-semibold text-[#1e609c] truncate">
+                                    {curProj.name}
+                                  </span>
+                                  {curProj.code && (
+                                    <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                      {curProj.code}
+                                    </span>
+                                  )}
+                                  <span className="text-[11px] font-ui text-[#64748b] shrink-0">
+                                    ({activeTasks.length})
+                                  </span>
+                                  <span className="text-[10px] font-ui text-[#963861] shrink-0 font-medium">
+                                    ✕ Bỏ lọc
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenProjectDetail(curProj.id);
+                                  }}
+                                  className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
+                                  title={`Xem thông tin dự án ${curProj.name}`}
+                                >
+                                  <span className="text-base font-bold leading-none">→</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Desktop: Cột trái Tên dự án pin theo khi cuộn */}
+                            <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                               {curProj ? (
                                 <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
                                   {/* Vùng 1: Bấm vào tên dự án sẽ bỏ lọc dự án (xem tất cả) */}
@@ -2618,8 +2765,19 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                   {completedTasks.length > 0 && (
                     <div className="border-t border-[#e5e7eb] pt-6 md:pt-8">
                       <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                        {/* Left Column: Anchor (Pinned) */}
-                        <div className="w-full md:w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
+                        {/* Mobile: 1 dòng duy nhất cho Đã hoàn thành */}
+                        <div className="flex md:hidden items-center gap-2 w-full py-1.5 px-0.5 text-[#24a148]">
+                          <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
+                          <span className="font-title text-[14px] font-semibold text-[#24a148]">
+                            Đã hoàn thành
+                          </span>
+                          <span className="text-[11px] font-ui text-[#64748b]">
+                            ({completedTasks.length})
+                          </span>
+                        </div>
+
+                        {/* Desktop: Anchor (Pinned) */}
+                        <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                           <div className="p-2 -ml-2 space-y-1">
                             <div className="flex items-center gap-2 text-[#24a148]">
                               <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
@@ -2880,6 +3038,33 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }}
         />
       )}
+
+      {/* Mobile Floating Action Button (FAB) - Ghim góc dưới phải trên màn hình di động khi ở tab Công việc */}
+      {activeTab === 'tasks' && (
+        <div className="fixed bottom-6 right-5 z-40 block md:hidden">
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => setIsMobileQuickAddOpen(true)}
+            className="w-14 h-14 rounded-full bg-[#963861] text-white shadow-xl flex items-center justify-center cursor-pointer hover:bg-[#80284f] transition-colors border-2 border-white ring-4 ring-[#963861]/20"
+            title="Thêm công việc mới nhanh"
+          >
+            <Plus className="w-7 h-7 stroke-[2.5]" />
+          </motion.button>
+        </div>
+      )}
+
+      {/* Dedicated Mobile Quick Add Sheet Drawer */}
+      <MobileQuickAddDrawer
+        isOpen={isMobileQuickAddOpen}
+        onClose={() => setIsMobileQuickAddOpen(false)}
+        projects={projects}
+        tasks={tasks}
+        members={members}
+        onAddTask={handleAddTask}
+        defaultProjectId={filterState.projectId !== 'all' ? filterState.projectId : undefined}
+        defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
+        currentUser={currentAuthUser || activeProductMember}
+      />
     </div>
   );
 }

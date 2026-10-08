@@ -6,7 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { autoCacheService } from './services/autoCacheService';
 import './index.css';
 
-// Kích hoạt cơ chế tự động dọn dẹp bộ nhớ đệm mỗi 6 giờ và phát hiện bản release mới
+// Kích hoạt cơ chế tự động refresh hệ thống và dọn dẹp bộ nhớ đệm mỗi 3 giờ
 autoCacheService.init();
 
 createRoot(document.getElementById('root')!).render(

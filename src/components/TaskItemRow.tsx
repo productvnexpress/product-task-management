@@ -79,10 +79,10 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
         isCompleted ? 'opacity-65' : ''
       } ${isMyTask && !isCompleted ? 'border-l-4 border-l-[#963861] bg-[#fffbfd]' : ''}`}
     >
-      {/* 1. TOP ROW: Checkbox + Title (Left) and Status + Quick Actions (Right) */}
-      <div className="flex items-start justify-between gap-3">
-        {/* Left: Checkbox + Title + Details + Blocker */}
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+      {/* 1. TOP ROW: Checkbox + Title (Full width on Mobile) + Chevron on mobile */}
+      <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+        {/* Left: Checkbox + Title + Recurring Badge */}
+        <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
           <motion.button
             whileHover={userCanEdit ? { scale: 1.15 } : undefined}
             whileTap={userCanEdit ? { scale: 0.85 } : undefined}
@@ -114,14 +114,14 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
 
           <div
             onClick={() => onSelectTask(task)}
-            className="flex-1 min-w-0 cursor-pointer space-y-1"
+            className="flex-1 min-w-0 cursor-pointer"
           >
             <h3
-              className={`font-title text-[15px] font-bold leading-snug transition-colors ${
+              className={`font-title text-[14px] sm:text-[15px] font-semibold leading-normal break-words transition-colors ${
                 isCompleted ? 'line-through text-[#a1a1aa]' : 'text-[#18181b] group-hover:text-[#963861]'
               }`}
             >
-              {task.title}
+              <span>{task.title}</span>
               {task.isRecurring && (
                 <span
                   className="inline-flex items-center gap-1 text-[11px] font-ui font-medium px-1.5 py-0.2 rounded-[4px] bg-[#fdf2f7] text-[#963861] border border-[#f3c2d4] shrink-0 ml-2 align-middle"
@@ -132,19 +132,11 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
                 </span>
               )}
             </h3>
-
-            {isBlocked && task.blockerReason && (
-              <div className="inline-flex items-center gap-1.5 bg-[#fff1f2] text-[#be123c] text-xs font-ui px-2.5 py-1 rounded-[5px] border border-[#fecdd3]">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-[#be123c]" />
-                <span className="font-bold shrink-0">Lý do nghẽn:</span>
-                <span className="truncate">{task.blockerReason}</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right: Status Dropdown & Action buttons */}
-        <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
+        {/* Desktop-only: Status Dropdown & Action buttons */}
+        <div className="hidden sm:flex shrink-0 items-center gap-1 sm:gap-1.5 pt-0.5">
           <select
             value={task.status}
             disabled={!userCanEdit}
@@ -153,7 +145,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
               if (userCanEdit) onUpdateStatus(task.id, e.target.value as TaskStatus);
             }}
             onClick={(e) => e.stopPropagation()}
-            className={`text-xs font-ui font-semibold rounded-[6px] px-2.5 py-1 border transition-colors focus:outline-hidden ${
+            className={`text-xs font-ui font-semibold rounded-[6px] px-2 py-1 border transition-colors focus:outline-hidden ${
               !userCanEdit ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'
             } ${statusStyles[task.status]}`}
             title={
@@ -177,10 +169,10 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
                 setIsPermanentDelete(false);
                 setIsDeleteModalOpen(true);
               }}
-              className="p-1.5 text-[#a1a1aa] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[6px] transition-colors cursor-pointer"
+              className="p-1 sm:p-1.5 text-[#a1a1aa] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[6px] transition-colors cursor-pointer"
               title="Xóa công việc"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </motion.button>
           )}
 
@@ -188,16 +180,65 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
             whileHover={{ scale: 1.12 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => onSelectTask(task)}
-            className="p-1.5 text-[#a1a1aa] hover:text-[#18181b] hover:bg-[#f4f4f5] rounded-[6px] transition-colors cursor-pointer"
+            className="p-1 sm:p-1.5 text-[#a1a1aa] hover:text-[#18181b] hover:bg-[#f4f4f5] rounded-[6px] transition-colors cursor-pointer"
             title="Xem chi tiết"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </motion.button>
         </div>
+
+        {/* Mobile-only: Chevron arrow for details */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => onSelectTask(task)}
+          className="sm:hidden p-1 text-[#a1a1aa] hover:text-[#18181b] shrink-0 mt-0.5 cursor-pointer"
+          title="Xem chi tiết"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </motion.button>
       </div>
 
-      {/* 2. BOTTOM ROW: Clean Metadata Bar (Indented to match title, left-aligned) */}
-      <div className="pl-8 flex flex-wrap items-center justify-start gap-x-2 gap-y-1.5 text-xs font-ui text-[#71717a] pt-0.5">
+      {/* Blocker reason (if blocked) - indented under title */}
+      {isBlocked && task.blockerReason && (
+        <div className="pl-7.5 sm:pl-8 -mt-0.5">
+          <div className="inline-flex items-start gap-1.5 bg-[#fff1f2] text-[#be123c] text-xs font-ui px-2.5 py-1 rounded-[5px] border border-[#fecdd3] max-w-full">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-[#be123c] mt-0.5" />
+            <div className="leading-snug">
+              <span className="font-bold mr-1">Lý do nghẽn:</span>
+              <span className="break-words">{task.blockerReason}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. BOTTOM ROW: Metadata Bar + Mobile Status selector & Delete */}
+      <div className="pl-7.5 sm:pl-8 flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5 text-xs font-ui text-[#71717a] pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+          {/* Mobile-only Status Dropdown */}
+          <div className="sm:hidden shrink-0">
+            <select
+              value={task.status}
+              disabled={!userCanEdit}
+              onChange={(e) => {
+                e.stopPropagation();
+                if (userCanEdit) onUpdateStatus(task.id, e.target.value as TaskStatus);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className={`text-[11px] font-ui font-semibold rounded-[5px] px-2 py-0.5 border transition-colors focus:outline-hidden ${
+                !userCanEdit ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'
+              } ${statusStyles[task.status]}`}
+              title={
+                !userCanEdit
+                  ? 'Chỉ người tạo việc hoặc Quản trị viên mới có quyền đổi trạng thái'
+                  : 'Thao tác đổi trạng thái'
+              }
+            >
+              <option value="Chưa làm">Chưa làm</option>
+              <option value="Đang làm">Đang làm</option>
+              <option value="Bị nghẽn">Bị nghẽn ⚠️</option>
+              <option value="Hoàn thành">Hoàn thành ✓</option>
+            </select>
+          </div>
         {/* Project Name */}
         {showProjectBadge && (
           <>
@@ -371,6 +412,23 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
               ⚡ Ưu tiên cao
             </span>
           </>
+        )}
+        </div>
+
+        {/* Mobile-only Delete button */}
+        {userCanDelete && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPermanentDelete(false);
+              setIsDeleteModalOpen(true);
+            }}
+            className="sm:hidden p-1 text-[#a1a1aa] hover:text-[#dc2626] rounded-[4px] ml-auto shrink-0 transition-colors cursor-pointer"
+            title="Xóa công việc"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </motion.button>
         )}
       </div>
 

@@ -20,6 +20,7 @@
    - [4.14. Quy chuẩn Thời gian làm việc & Mục Thiết lập trong Workspace (Working Time & Admin Settings)](#414-quy-chuẩn-thời-gian-làm-việc--mục-thiết-lập-trong-workspace-working-time--admin-settings-specification)
    - [4.15. Quy chuẩn Friendly URL & Deep Linking (Semantic Routing Specification)](#415-quy-chuẩn-friendly-url--deep-linking-semantic-routing-specification)
    - [4.16. Quy chuẩn Cảnh báo Giai đoạn & Deadline Dự án trước 3 ngày (Project & Phase Deadline Alerts)](#416-quy-chuẩn-cảnh-báo-giai-đoạn--deadline-dự-án-trước-3-ngày-project--phase-deadline-alerts-specification)
+   - [4.17. Quy chuẩn Tự động Refresh Hệ thống sau mỗi 3 Giờ (Auto-Refresh System Specification)](#417-quy-chuẩn-tự-động-refresh-hệ-thống-sau-mỗi-3-giờ-auto-refresh-system-specification)
 
 ---
 
@@ -126,9 +127,14 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
      - **Vùng 1 (Tên dự án & Mã dự án)**: Bấm vào để **lọc danh sách công việc theo dự án** đó (bấm lại để bỏ lọc và xem tất cả).
      - **Vùng 2 ("Thông tin dự án →")**: Thay thế text cũ `"Chi tiết"`, bấm vào để **mở Right Sidebar Drawer** hiển thị toàn bộ thông tin chi tiết dự án.
    - **Cột Phải (Task List Card - Flex-1)**: Khối card công việc màu trắng chuẩn nguyên bản (`bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0]`), chứa đầy đủ các hàng công việc (`TaskItemRow`) với trải nghiệm rộng thoáng, giải phóng hoàn toàn các thanh bar ngang cắt vụn giao diện.
-6. **Quy chuẩn Tag Tên Dự án & Lọc Nhanh theo Nhân sự (Project Tag & Assignee Quick Filter)**:
-   - **Tag tên dự án trong khối Đã hoàn thành**: Khối việc đã hoàn thành bắt buộc hiển thị tag tên dự án (`showProjectBadge = true`) dưới dạng pill xám nhẹ nhã nhặn (`bg-[#f1f5f9] text-[#475569] border-[#e2e8f0] font-medium`), có thể bấm vào để xem chi tiết dự án tại Right Sidebar.
-   - **Lọc nhanh theo nhân sự**: Trên hàng công việc (`TaskItemRow`) và trong giao diện chi tiết (`TaskDetailDrawer`), cho phép bấm trực tiếp vào tên của nhân sự phụ trách (`assignee`) để lọc tức thì toàn bộ danh sách công việc của nhân sự đó, tự động chuyển về góc nhìn việc cá nhân (`my_tasks`) và cuộn mượt lên đầu danh sách.
+7. **Quy chuẩn Trình bày Dự án 1 Dòng trên Mobile (Mobile 1-Line Project Header)**:
+   - Trên thiết bị di động (`< 768px`), khối tiêu đề dự án bắt buộc rút gọn thành **1 dòng ngang duy nhất** (`flex items-center justify-between`):
+     - *Bên trái*: Biểu tượng `Folder` thanh mảnh, Tên dự án (`font-semibold text-[#202020]`), Mã dự án (`code` - chip nhỏ), và Số lượng việc `(xx)`. Bấm vào vùng này để lọc công việc theo dự án (bấm lại để bỏ lọc).
+     - *Bên phải*: Mũi tên `→` sắc nét, bấm vào để mở Right Sidebar Drawer thông tin dự án. Cắt bỏ hoàn toàn text dài dòng `"Thông tin dự án"`.
+8. **Quy chuẩn Trình bày Hàng Công việc Thoáng đãng trên Mobile (Spacious Mobile Task Row)**:
+   - *Tầng 1 (Hàng tiêu đề)*: Checkbox tròn bên trái, Tiêu đề công việc chiếm **trọn vẹn 100% chiều ngang còn lại** (`font-semibold leading-normal break-words`), không bị bất kỳ dropdown nào chèn ép gây vỡ vụn từ ngữ; góc phải chỉ giữ nút chevron `›` mở chi tiết.
+   - *Lý do nghẽn*: Hiển thị đầy đủ nội dung bọc tự nhiên bên dưới tiêu đề (`pl-8`), không cắt cụt (no truncate).
+   - *Tầng 2 (Thanh tác nghiệp thẳng hàng `pl-8`)*: Dropdown trạng thái nhỏ gọn nằm ở đầu hàng (thuận tiện bấm bằng ngón cái), kế tiếp là Nhân sự, Hạn hoàn thành, Link tài liệu, và Nút xoá `Trash2` ở góc phải.
 
 ### 1.6. Quy chuẩn Box Thêm công việc mới (QuickAddBar Specification)
 1. **Tự động ánh xạ Nhóm (No Team Selector)**: Bỏ hoàn toàn ô chọn Nhóm (`Product Manager`, `UX/UI Designer`, `SEO`, `Data`). Nhóm chuyên môn (`team`) được hệ thống tự động suy ra dựa trên Nhân sự được chọn (`assignee`).
@@ -145,6 +151,24 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 6. **Thiết kế Nền & Khung trung tính (Clean & Neutral Styling)**:
    - Toàn hệ thống không sử dụng các ô background màu quá nổi bật hoặc tương phản mạnh gây rác thị giác.
    - Sử dụng các khung chứa trung tính, phớt xám nhẹ (`bg-[#ffffff]`, `bg-[#f9f9f9]`, `border-[#e0e0e0]`).
+
+### 1.6.1. Quy chuẩn Nhập việc Nhanh trên Thiết bị Di động (Mobile Quick Add Specification)
+1. **Mục tiêu Trải nghiệm Người dùng (Mobile-First Ergonomics)**:
+   - Tối ưu hóa đặc thù cho người dùng truy cập bằng điện thoại di động: Thao tác bằng một tay dễ dàng, vùng chạm ngón tay cái rộng rãi (touch target $\ge$ 40px), không bị cuộn lệch hoặc đè bàn phím ảo.
+   - Tập trung 100% vào các trường thông tin tác nghiệp cốt lõi cần thiết nhất để tạo việc ngay: **Tiêu đề công việc**, **Hạn hoàn thành**, **Dự án**, **Người phụ trách**, **Khẩn cấp**.
+   - Tự động ẩn các trường cấu hình nâng cao trên mobile (chu kỳ tự động, checklist chi tiết...) để tránh làm rối mắt và cản trở luồng nhập việc nhanh.
+2. **Nút Hành động Nổi Di động (Mobile Floating Action Button - FAB)**:
+   - Trên màn hình thiết bị di động (`< 768px`), khi ở tab Công việc (`activeTab === 'tasks'`), hiển thị nút FAB tròn màu mận VnExpress (`bg-[#963861] text-white w-14 h-14 shadow-xl`) neo cố định ở góc dưới bên phải (`fixed bottom-6 right-5 z-40`).
+   - Bấm FAB lập tức bung mở ngăn kéo nhập việc `MobileQuickAddDrawer` mà không cần người dùng phải cuộn ngược lên đầu danh sách dài.
+3. **Thanh Chạm Mở Nhanh tại Đầu Danh sách (Mobile Quick Add Tap Pill)**:
+   - Trên mobile, thanh nhập việc trên cùng hiển thị dạng thẻ chạm nhẹ nhàng (`Chạm để thêm công việc mới...` kèm nút `+ Thêm việc`), bấm vào là mở ngay Bottom Sheet Drawer. Giữ nguyên giao diện inline form đầy đủ cho Desktop (`>= 768px`).
+4. **Ngăn kéo Đáy Trượt Nhập việc (MobileQuickAddDrawer - Bottom Sheet)**:
+   - Thiết kế trượt từ đáy màn hình lên (Bottom Sheet) với tay nắm vuốt (`grab handle`), tự động focus vào ô nhập tên công việc.
+   - **Chọn Hạn hoàn thành 1-chạm (Quick Date Chips)**: Cung cấp 3 nút bấm nhanh: `Hôm nay` (Mặc định), `Ngày mai`, `Ngày khác` (mở nhanh lịch native). Giúp 90% thao tác chọn hạn chỉ tốn đúng 1 chạm duy nhất.
+   - **Tự động gán người phụ trách**: Mặc định là tài khoản đang đăng nhập (`currentUser`/`Tôi`), cho phép đổi nhanh chỉ với 1 thao tác.
+   - **Dự án phân nhóm thông minh**: Ưu tiên hiển thị nhóm Dự án đang tham gia lên đầu.
+   - **Mức độ khẩn cấp 1-chạm**: Nút chuyển đổi `🚨 Khẩn cấp` / `Bình thường` to rõ, dễ bấm.
+   - **Nút gửi việc chân trang to bản**: Nút `Tạo công việc ngay` màu mận VnExpress chiếm trọn chiều ngang, bấm là tạo việc và đóng drawer tức thì.
 
 ### 1.7. Quy chuẩn Kiểm soát & Cảnh báo Task Đến hạn Trong Ngày (Daily Due Tasks Accountability Specification)
    - **Quy tắc miễn trừ khi Nghỉ phép & Ngày nghỉ/Ngày lễ**:
@@ -1052,6 +1076,25 @@ Tại danh sách dự án thuộc Left Sidebar:
    - Tự động quét khi mở ứng dụng và định kỳ mỗi 10 phút.
    - Gửi thông báo đến đúng các nhân sự thuộc dự án với loại `phase_due_soon` hoặc `project_due_soon`.
    - **Chống spam**: Mỗi mốc hạn chót chỉ gửi tối đa 1 thông báo/ngày cho cùng 1 nhân sự. Bấm vào thông báo sẽ mở ngay drawer chi tiết của dự án.
+
+---
+
+### 4.17. Quy chuẩn Tự động Refresh Hệ thống sau mỗi 3 Giờ (Auto-Refresh System Specification)
+1. **Mục đích Nghiệp vụ & Chu kỳ Hoạt động**:
+   - Duy trì tính toàn vẹn và cập nhật dữ liệu liên tục cho các máy trạm làm việc bật tab liên tục trong ngày.
+   - Chu kỳ tự động: **Định kỳ 3 giờ một lần** (`3 * 60 * 60 * 1000` ms).
+2. **Quy tắc Thực thi & Cơ chế Kép (Dual-Mechanism)**:
+   - **Tầng Dịch vụ Hệ thống (`AutoCacheService`)**:
+     - Định kỳ quét mỗi 5 phút và kiểm tra ngay khi mở ứng dụng, khi chuyển tab từ ẩn sang hiện (`visibilitychange`) hoặc khi thiết bị kết nối mạng trở lại (`online`).
+     - Tự động dọn dẹp CacheStorage trình duyệt, các key cache cũ deprecated và kiểm tra bản build mới nhất từ server.
+     - Nếu tab đang chạy ngầm (`document.visibilityState === 'hidden'`), tự động làm mới trang ngay để sẵn sàng phiên bản mới khi người dùng kích hoạt tab.
+     - Phát sự kiện `vne_trigger_auto_refresh` đến toàn hệ thống.
+   - **Tầng Trải nghiệm Ứng dụng (`App.tsx`)**:
+     - Đồng bộ lại toàn bộ dữ liệu mới nhất từ Supabase (Công việc, Dự án, Nhân sự, Thông báo, Lịch làm việc, Task định kỳ).
+     - **Cơ chế bảo vệ tác nghiệp (Zero Work Disruption)**: Không thực hiện reload toàn trang nếu người dùng đang mở ngăn chỉnh sửa (`isDrawerOpen`, `isProjectDrawerOpen`, `isAddMemberOpen`, `isCreateProjectDrawer`) hoặc đang có ô nhập liệu được kích hoạt (`activeElement` là input/textarea). Trong trường hợp này, hệ thống ưu tiên cập nhật dữ liệu ngầm và hoãn việc tải lại trang cho đến khi người dùng đóng tác vụ.
+     - Nếu người dùng đang ở trạng thái rảnh rỗi (idle), hệ thống tự động tải lại trang sạch (`window.location.reload()`), giữ nguyên đường dẫn Friendly URL, phiên làm việc và bộ lọc đã chọn.
+3. **Thao tác Thủ công (Manual Override)**:
+   - Trong màn hình **Thiết lập (`SettingsManager`)**: Cung cấp nút bấm 1-click **`Dọn cache và làm mới`** để người dùng chủ động xóa cache và tải lại trang ngay lập tức bất cứ lúc nào.
 
 ---
 

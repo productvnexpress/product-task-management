@@ -25,6 +25,7 @@ import { ProjectChecklistModal } from './ProjectChecklistModal';
 import { calculateChecklistStats } from '../data/defaultProjectChecklist';
 import { getUserRole } from '../utils/rbac';
 import { recurringTaskService, calculateNextCycleDate } from '../services/recurringTaskService';
+import { MobileQuickAddDrawer } from './MobileQuickAddDrawer';
 
 interface QuickAddBarProps {
   projects: ProjectItem[];
@@ -102,6 +103,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   const isAdmin = getUserRole(currentUser) === 'Admin';
   const [isUrgent, setIsUrgent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Recurring task states (Admin only)
   const [isRecurring, setIsRecurring] = useState(false);
@@ -227,36 +229,58 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   };
 
   return (
-    <div className="bg-[#ffffff] border border-[#d6d6d6] focus-within:border-[#b13460] rounded-[10px] transition-all p-4 shadow-2xs">
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded-full border border-[#a8a8a8] flex items-center justify-center text-[#7f7f7f] shrink-0">
-            <Plus className="w-4 h-4" />
+    <>
+      {/* 1. Mobile Quick Add Tap Pill (Hiển thị riêng trên thiết bị di động < md) */}
+      <div className="block md:hidden">
+        <div
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className="bg-white border border-[#d6d6d6] hover:border-[#963861] active:scale-[0.99] rounded-[12px] p-3 shadow-2xs flex items-center justify-between gap-3 cursor-pointer transition-all"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[#963861]/10 text-[#963861] flex items-center justify-center shrink-0">
+              <Plus className="w-4 h-4 stroke-[3]" />
+            </div>
+            <span className="text-xs font-title font-medium text-[#71717a] truncate">
+              Chạm để thêm công việc mới...
+            </span>
           </div>
-          <input
-            id="quick-add-input"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onFocus={() => setIsExpanded(true)}
-            placeholder="Thêm công việc mới... (Nhập tên công việc & nhấn Enter)"
-            className="w-full text-sm font-body text-[#202020] placeholder-[#7f7f7f] focus:outline-hidden bg-transparent"
-          />
-          {title.trim() && (
-            <motion.button
-              type="submit"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.95 }}
-              className="h-[32px] px-4 rounded-[6px] bg-[#b13460] text-white text-xs font-ui font-bold flex items-center gap-1.5 shrink-0 hover:bg-[#8f274c] transition-colors shadow-2xs cursor-pointer"
-            >
-              <span>Thêm</span>
-              <CornerDownLeft className="w-3.5 h-3.5" />
-            </motion.button>
-          )}
+          <span className="shrink-0 px-2.5 py-1 rounded-[6px] bg-[#963861] text-white text-[11px] font-ui font-bold shadow-2xs">
+            + Thêm việc
+          </span>
         </div>
+      </div>
+
+      {/* 2. Desktop Quick Add Form Box (Giữ nguyên trải nghiệm trên Desktop >= md) */}
+      <div className="hidden md:block bg-[#ffffff] border border-[#d6d6d6] focus-within:border-[#b13460] rounded-[10px] transition-all p-4 shadow-2xs">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full border border-[#a8a8a8] flex items-center justify-center text-[#7f7f7f] shrink-0">
+              <Plus className="w-4 h-4" />
+            </div>
+            <input
+              id="quick-add-input"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onFocus={() => setIsExpanded(true)}
+              placeholder="Thêm công việc mới... (Nhập tên công việc & nhấn Enter)"
+              className="w-full text-sm font-body text-[#202020] placeholder-[#7f7f7f] focus:outline-hidden bg-transparent"
+            />
+            {title.trim() && (
+              <motion.button
+                type="submit"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.95 }}
+                className="h-[32px] px-4 rounded-[6px] bg-[#b13460] text-white text-xs font-ui font-bold flex items-center gap-1.5 shrink-0 hover:bg-[#8f274c] transition-colors shadow-2xs cursor-pointer"
+              >
+                <span>Thêm</span>
+                <CornerDownLeft className="w-3.5 h-3.5" />
+              </motion.button>
+            )}
+          </div>
 
         {/* Options Row when expanded */}
         <AnimatePresence>
@@ -505,6 +529,20 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           onUpdateProjectChecklist={onUpdateProjectChecklist}
         />
       )}
-    </div>
+      </div>
+
+      {/* 3. Mobile Dedicated Quick Add Sheet Drawer */}
+      <MobileQuickAddDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        projects={projects}
+        tasks={tasks}
+        members={members}
+        onAddTask={onAddTask}
+        defaultProjectId={defaultProjectId || projectId}
+        defaultAssignee={defaultAssignee || assignee}
+        currentUser={currentUser}
+      />
+    </>
   );
 };

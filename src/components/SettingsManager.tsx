@@ -832,7 +832,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
 
           <div className="mt-4 pt-3 border-t border-[#f0f0f0] space-y-2">
             <div className="text-[11px] text-[#7f7f7f] leading-snug">
-              Hệ thống tự động xóa bộ nhớ đệm mỗi 6 giờ và cập nhật phiên bản mới.
+              Hệ thống tự động làm mới và dọn bộ nhớ đệm mỗi 3 giờ để cập nhật dữ liệu mới.
             </div>
             <button
               type="button"

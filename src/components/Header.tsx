@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { formatDateWithEnDay, getInitials } from '../utils/formatters';
 import { getTeamColor } from '../utils/colors';
-import { Plus, User, KeyRound, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { Plus, User, KeyRound, LogOut, ChevronDown, Bell, Menu } from 'lucide-react';
 import { MemberItem, TaskItem, ProjectItem, ActiveTab, TeamType, TaskPersonalScope } from '../types';
 import { AccountSwitcher } from './AccountSwitcher';
 import { canCreateProject, canCreateMember, getUserRole, getRoleDisplayInfo } from '../utils/rbac';
@@ -33,6 +33,7 @@ interface HeaderProps {
   onOpenNotifications?: () => void;
   personalScope?: TaskPersonalScope;
   onChangeScope?: (scope: TaskPersonalScope, member?: MemberItem | null) => void;
+  onToggleSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   personalScope,
   onChangeScope,
+  onToggleSidebar,
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -76,40 +78,54 @@ export const Header: React.FC<HeaderProps> = ({
   const roleInfo = getRoleDisplayInfo(userRole);
   const userTeamCol = userToShow ? getTeamColor(userToShow.team) : null;
   return (
-    <header className="bg-[#ffffff] border-b border-[#e0e0e0] px-4 md:px-6 py-4">
-      <div className="flex flex-wrap items-center justify-between gap-4 max-w-[1040px] w-full mx-auto">
-        {/* Left title & timestamp */}
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-3">
-            <h2 className="font-title text-2xl font-bold text-[#202020] tracking-tight">
-              {activeTabTitle}
-            </h2>
-            {isDbConnected === true && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]" title="Đang kết nối trực tiếp với Supabase Database (Realtime)">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                Supabase Live
-              </span>
-            )}
-            {isDbConnected === false && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#fffbeb] text-[#b45309] border border-[#fde68a]" title="Không thể kết nối Supabase, đang dùng bộ nhớ tạm LocalStorage">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-                Offline Cache
-              </span>
-            )}
-            {isDbConnected === null && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#f8fafc] text-[#64748b] border border-[#e2e8f0]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] animate-ping" />
-                Đang kết nối...
-              </span>
-            )}
+    <header className="bg-[#ffffff] border-b border-[#e0e0e0] px-4 md:px-6 py-3.5 md:py-4">
+      <div className="flex items-center justify-between gap-3 max-w-[1040px] w-full mx-auto">
+        {/* Left: Mobile Menu Toggle + Title & timestamp */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Hamburger button for Mobile */}
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="p-2 -ml-1 rounded-[8px] border border-[#e2e8f0] bg-white text-[#475569] hover:text-[#963861] hover:bg-[#fffbfd] md:hidden cursor-pointer shadow-2xs shrink-0"
+            title="Mở thanh điều hướng và bộ lọc"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+              <h2 className="font-title text-xl md:text-2xl font-bold text-[#202020] tracking-tight truncate">
+                {activeTabTitle}
+              </h2>
+              {isDbConnected === true && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0] shrink-0" title="Đang kết nối trực tiếp với Supabase Database (Realtime)">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                  <span className="hidden sm:inline">Supabase Live</span>
+                  <span className="sm:hidden">Live</span>
+                </span>
+              )}
+              {isDbConnected === false && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#fffbeb] text-[#b45309] border border-[#fde68a] shrink-0" title="Không thể kết nối Supabase, đang dùng bộ nhớ tạm LocalStorage">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                  <span className="hidden sm:inline">Offline Cache</span>
+                  <span className="sm:hidden">Offline</span>
+                </span>
+              )}
+              {isDbConnected === null && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#f8fafc] text-[#64748b] border border-[#e2e8f0] shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] animate-ping" />
+                  <span className="hidden sm:inline">Đang kết nối...</span>
+                </span>
+              )}
+            </div>
+            <p className="font-ui text-xs text-[#7f7f7f] truncate">
+              {formatDateWithEnDay(currentDate)}
+            </p>
           </div>
-          <p className="font-ui text-xs text-[#7f7f7f]">
-            {formatDateWithEnDay(currentDate)}
-          </p>
         </div>
 
         {/* Right actions: User Profile Menu + CTA button tailored to active tab */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
           {/* 1. Perspective Selector: Toàn ban / Việc của tôi / Đồng nghiệp */}
           <AccountSwitcher
             members={members}
@@ -231,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
           {activeTab === 'projects' && canCreateProject(currentAuthUser) ? (
             <button
               onClick={onOpenAddProject}
-              className="h-9 px-4 rounded-[8px] bg-[#b13460] hover:bg-[#8f274c] text-white font-ui text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#b13460] hover:bg-[#8f274c] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Tạo dự án mới</span>
@@ -239,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
           ) : activeTab === 'members' && canCreateMember(currentAuthUser) ? (
             <button
               onClick={onOpenAddMember}
-              className="h-9 px-4 rounded-[8px] bg-[#24a148] hover:bg-[#1d8239] text-white font-ui text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#24a148] hover:bg-[#1d8239] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Tạo nhân sự mới</span>
@@ -247,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={onOpenQuickAdd}
-              className="h-9 px-4 rounded-[8px] bg-[#963861] hover:bg-[#832e52] text-white font-ui text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#963861] hover:bg-[#832e52] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Tạo việc mới</span>

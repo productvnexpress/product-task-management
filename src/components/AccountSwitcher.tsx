@@ -161,7 +161,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
             <div className="w-6 h-6 rounded-full bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1] flex items-center justify-center shrink-0">
               <Globe className="w-3.5 h-3.5 text-[#475569]" />
             </div>
-            <div className="text-left flex items-center gap-1.5">
+            <div className="text-left hidden sm:flex items-center gap-1.5">
               <span className="text-xs font-ui font-bold text-[#1e293b]">
                 Toàn bộ phận
               </span>
@@ -175,7 +175,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
             <div className="w-6 h-6 rounded-full bg-[#963861] text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs">
               <Star className="w-3 h-3 fill-current" />
             </div>
-            <div className="text-left flex items-center gap-1.5">
+            <div className="text-left hidden sm:flex items-center gap-1.5">
               <span className="text-xs font-ui font-bold text-[#963861] max-w-[130px] truncate">
                 Của tôi
               </span>
@@ -189,7 +189,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
             <div className="w-6 h-6 rounded-full bg-[#1d4ed8] text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs">
               <Briefcase className="w-3.5 h-3.5" />
             </div>
-            <div className="text-left flex items-center gap-1.5">
+            <div className="text-left hidden sm:flex items-center gap-1.5">
               <span className="text-xs font-ui font-bold text-[#1d4ed8] max-w-[130px] truncate">
                 Dự án của tôi
               </span>
@@ -205,7 +205,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({
             >
               {activeMember ? getInitials(activeMember.name) : 'DN'}
             </div>
-            <div className="text-left flex items-center gap-1.5">
+            <div className="text-left hidden sm:flex items-center gap-1.5">
               <span className="text-xs font-ui font-bold text-[#1e293b] max-w-[120px] truncate">
                 {activeMember?.name}
               </span>

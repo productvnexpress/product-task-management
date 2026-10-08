@@ -67,6 +67,8 @@ interface SidebarProps {
   onOpenAddMember?: () => void;
   onResetData?: () => void;
   onLogoClick?: () => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 const TEAMS: ('Tất cả' | TeamType)[] = [
@@ -117,6 +119,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAddMember,
   onResetData,
   onLogoClick,
+  isOpenMobile = false,
+  onCloseMobile,
 }) => {
   const currentMember = activeProductMember || (selectedAssignee !== 'Tất cả' ? members?.find((m) => m.name === selectedAssignee) : null);
   const isAdmin = getUserRole(currentAuthUser || activeProductMember) === 'Admin';
@@ -229,29 +233,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col h-screen sticky top-0 shrink-0 select-none shadow-xs">
-      {/* Brand & App Title Header */}
-      <div className="p-6 border-b border-[#f0f0f0] space-y-3">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onLogoClick}
-            className="flex items-center gap-2.5 text-left group cursor-pointer transition-opacity hover:opacity-90 focus:outline-none"
-            title="Về công việc mặc định"
-          >
-            <div className="w-9 h-9 rounded-[8px] bg-[#963861] group-hover:bg-[#80284f] text-white flex items-center justify-center font-ui font-bold text-lg shadow-xs transition-colors">
-              ✓
-            </div>
-            <div>
-              <span className="font-ui font-extrabold text-[11px] tracking-wider uppercase text-[#913257] group-hover:text-[#80284f] block transition-colors">
-                VnExpress Product
-              </span>
-              <h1 className="font-title text-base font-bold text-[#202020] group-hover:text-[#963861] leading-snug transition-colors">
-                Công việc
-              </h1>
-            </div>
-          </button>
-        </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpenMobile && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-xs transition-opacity"
+        />
+      )}
+
+      {/* Sidebar Aside element: fixed slide-in drawer on mobile (< md), sticky sidebar on desktop (>= md) */}
+      <aside
+        className={`fixed md:sticky top-0 left-0 z-50 md:z-10 h-screen w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col shrink-0 select-none shadow-xl md:shadow-xs transition-transform duration-300 ease-in-out ${
+          isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        {/* Brand & App Title Header */}
+        <div className="p-6 border-b border-[#f0f0f0] space-y-3">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                onLogoClick?.();
+                onCloseMobile?.();
+              }}
+              className="flex items-center gap-2.5 text-left group cursor-pointer transition-opacity hover:opacity-90 focus:outline-none"
+              title="Về công việc mặc định"
+            >
+              <div className="w-9 h-9 rounded-[8px] bg-[#963861] group-hover:bg-[#80284f] text-white flex items-center justify-center font-ui font-bold text-lg shadow-xs transition-colors">
+                ✓
+              </div>
+              <div>
+                <span className="font-ui font-extrabold text-[11px] tracking-wider uppercase text-[#913257] group-hover:text-[#80284f] block transition-colors">
+                  VnExpress Product
+                </span>
+                <h1 className="font-title text-base font-bold text-[#202020] group-hover:text-[#963861] leading-snug transition-colors">
+                  Công việc
+                </h1>
+              </div>
+            </button>
+
+            {/* Close button for Mobile Drawer */}
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-full text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f5] md:hidden cursor-pointer"
+              title="Đóng thanh bên"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
         {/* Primary CTA tailored to active tab with RBAC */}
         {activeTab === 'projects' && canCreateProject(currentAuthUser) ? (
@@ -837,5 +868,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
     </aside>
+    </>
   );
 };

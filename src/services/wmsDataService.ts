@@ -842,28 +842,46 @@ export const wmsDataService = {
     onTrashChange?: () => void;
     onNotificationsChange?: () => void;
   }) {
+    // Debounce helper để gộp nhiều sự kiện Realtime liên tiếp (ví dụ insert task + insert task_log) thành 1 lần gọi duy nhất
+    const createDebouncer = (fn?: () => void, delayMs = 400) => {
+      let timer: any = null;
+      return () => {
+        if (!fn) return;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          fn();
+        }, delayMs);
+      };
+    };
+
+    const debouncedTasks = createDebouncer(callbacks.onTasksChange, 400);
+    const debouncedProjects = createDebouncer(callbacks.onProjectsChange, 400);
+    const debouncedTrash = createDebouncer(callbacks.onTrashChange, 400);
+    const debouncedNotifications = createDebouncer(callbacks.onNotificationsChange, 400);
+
     const channel = supabase
       .channel('wms-db-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        callbacks.onTasksChange?.();
+        debouncedTasks();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_logs' }, () => {
-        callbacks.onTasksChange?.();
+        debouncedTasks();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        callbacks.onProjectsChange?.();
+        debouncedProjects();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_phases' }, () => {
-        callbacks.onProjectsChange?.();
+        debouncedProjects();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_logs' }, () => {
-        callbacks.onProjectsChange?.();
+        debouncedProjects();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trash' }, () => {
-        callbacks.onTrashChange?.();
+        debouncedTrash();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        callbacks.onNotificationsChange?.();
+        debouncedNotifications();
       })
       .subscribe();
 

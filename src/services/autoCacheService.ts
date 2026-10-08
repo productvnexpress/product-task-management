@@ -5,13 +5,14 @@
 
 /**
  * Dịch vụ Tự động Làm mới Bộ nhớ đệm & Kiểm tra Phiên bản (AutoCacheService)
- * - Tự động xóa CacheStorage & dọn dẹp cache sau mỗi 6 giờ.
+ * - Tự động refresh hệ thống & dọn dẹp cache sau mỗi 3 giờ (chu kỳ 3h/lần).
  * - Tự động phát hiện khi có bản build/release mới trên server và làm mới thiết bị.
  * - Hỗ trợ thao tác xóa cache thủ công lập tức.
  */
 
-const CACHE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 giờ
-const CHECK_INTERVAL_MS = 15 * 60 * 1000; // Kiểm tra mỗi 15 phút
+const AUTO_REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000; // 3 giờ
+const CHECK_INTERVAL_MS = 5 * 60 * 1000; // Kiểm tra mỗi 5 phút
+const STORAGE_KEY_LAST_REFRESH = 'vne_last_auto_refresh_timestamp';
 const STORAGE_KEY_LAST_CLEAR = 'vne_last_cache_clear_timestamp';
 const STORAGE_KEY_SCRIPT_HASH = 'vne_app_script_hash';
 
@@ -36,6 +37,7 @@ const ESSENTIAL_STORAGE_KEYS = new Set([
   'vne_recurring_engine_lock_timestamp',
   'vne_web_push_dismissed',
   'vne_task_filter_state_v1',
+  STORAGE_KEY_LAST_REFRESH,
   STORAGE_KEY_LAST_CLEAR,
   STORAGE_KEY_SCRIPT_HASH,
 ]);
@@ -54,7 +56,7 @@ class AutoCacheService {
     // 1. Kiểm tra ngay khi khởi động
     this.checkCacheAndRelease();
 
-    // 2. Định kỳ kiểm tra mỗi 15 phút
+    // 2. Định kỳ kiểm tra mỗi 5 phút
     this.checkTimer = window.setInterval(() => {
       this.checkCacheAndRelease();
     }, CHECK_INTERVAL_MS);
@@ -66,27 +68,58 @@ class AutoCacheService {
       }
     });
 
-    console.log('[AutoCache] Dịch vụ tự động làm mới bộ nhớ đệm (chu kỳ 6h) đã kích hoạt.');
+    // 4. Kiểm tra khi thiết bị khôi phục kết nối mạng (online)
+    window.addEventListener('online', () => {
+      this.checkCacheAndRelease();
+    });
+
+    console.log('[AutoCache] Dịch vụ tự động làm mới bộ nhớ đệm (chu kỳ 3h) đã kích hoạt.');
   }
 
   /**
-   * Kiểm tra điều kiện 6 giờ và kiểm tra bản release mới
+   * Kiểm tra điều kiện chu kỳ 3 giờ và kiểm tra bản release mới
    */
   async checkCacheAndRelease() {
-    const lastClearStr = localStorage.getItem(STORAGE_KEY_LAST_CLEAR);
-    const lastClearTime = lastClearStr ? parseInt(lastClearStr, 10) : 0;
+    const lastRefreshStr = localStorage.getItem(STORAGE_KEY_LAST_REFRESH) || localStorage.getItem(STORAGE_KEY_LAST_CLEAR);
+    const lastRefreshTime = lastRefreshStr ? parseInt(lastRefreshStr, 10) : 0;
     const now = Date.now();
-    const elapsed = now - lastClearTime;
 
-    // 1. Kiểm tra nếu đã đủ hoặc vượt quá 6 giờ
-    if (!lastClearTime || elapsed >= CACHE_INTERVAL_MS) {
-      console.log(`[AutoCache] Đã qua ${Math.round(elapsed / 3600000)}h kể từ lần dọn cache trước. Thực hiện dọn dẹp...`);
-      await this.clearBrowserCaches();
+    // Lần đầu mở ứng dụng: lưu mốc thời gian bắt đầu tính chu kỳ 3h
+    if (!lastRefreshTime) {
+      localStorage.setItem(STORAGE_KEY_LAST_REFRESH, now.toString());
       localStorage.setItem(STORAGE_KEY_LAST_CLEAR, now.toString());
+      await this.checkForNewRelease();
+      return;
     }
 
-    // 2. Kiểm tra xem server có bản build mới không
-    await this.checkForNewRelease();
+    const elapsed = now - lastRefreshTime;
+
+    // 1. Kiểm tra nếu đã đủ hoặc vượt quá 3 giờ (3h một lần)
+    if (elapsed >= AUTO_REFRESH_INTERVAL_MS) {
+      console.log(`[AutoCache] Đã qua ${Math.round(elapsed / 3600000)}h kể từ lần làm mới trước. Thực hiện dọn dẹp và refresh...`);
+      await this.clearBrowserCaches();
+      localStorage.setItem(STORAGE_KEY_LAST_REFRESH, now.toString());
+      localStorage.setItem(STORAGE_KEY_LAST_CLEAR, now.toString());
+
+      // Kiểm tra bản release mới từ server
+      const hasNewRelease = await this.checkForNewRelease();
+
+      // Nếu tab đang ẩn (chạy ngầm), tải lại trang ngay để người dùng có bản mới nhất khi quay lại
+      if (document.visibilityState === 'hidden') {
+        window.location.reload();
+        return;
+      }
+
+      // Kích hoạt sự kiện tự động refresh trên hệ thống
+      window.dispatchEvent(
+        new CustomEvent('vne_trigger_auto_refresh', {
+          detail: { elapsed, hasNewRelease, timestamp: now },
+        })
+      );
+    } else {
+      // Dù chưa đến 3h, vẫn kiểm tra xem server có bản build mới không
+      await this.checkForNewRelease();
+    }
   }
 
   /**
@@ -206,8 +239,9 @@ class AutoCacheService {
    */
   async clearCacheAndReload() {
     console.log('[AutoCache] Thực hiện xóa bộ nhớ đệm và tải lại trang...');
-    await this.clearBrowserCaches();
-    localStorage.setItem(STORAGE_KEY_LAST_CLEAR, Date.now().toString());
+    const nowStr = Date.now().toString();
+    localStorage.setItem(STORAGE_KEY_LAST_CLEAR, nowStr);
+    localStorage.setItem(STORAGE_KEY_LAST_REFRESH, nowStr);
 
     // Cập nhật Service Worker nếu có
     if ('serviceWorker' in navigator) {
