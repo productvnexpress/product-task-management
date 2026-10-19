@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Filter, X, RotateCcw, Plus, ChevronRight, Check } from 'lucide-react';
-import { FilterState, ProjectItem, MemberItem, TaskStatus, TeamType, DueFilterType } from '../types';
+import { FilterState, ProjectItem, MemberItem, TaskStatus, TeamType, DueFilterType, FolderItem } from '../types';
+import { getFolderPath, INITIAL_FOLDERS } from '../utils/folderUtils';
 import { TaskPersonalScope } from './PersonalizationBanner';
 import { isSamePersonName } from '../utils/memberPersonalization';
 import { getUserRole } from '../utils/rbac';
@@ -8,11 +9,13 @@ import { getUserRole } from '../utils/rbac';
 interface ActiveFiltersBarProps {
   filterState: FilterState;
   projects: ProjectItem[];
+  folders?: FolderItem[];
   members?: MemberItem[];
   taskPersonalScope?: TaskPersonalScope;
   activeProductMember?: MemberItem | null;
   currentAuthUser?: MemberItem | null;
   onClearProject: () => void;
+  onClearFolder?: () => void;
   onClearAssignee: () => void;
   onClearTeam: () => void;
   onClearStatus: () => void;
@@ -21,6 +24,7 @@ interface ActiveFiltersBarProps {
   onClearPersonalScope?: () => void;
   onClearAll: () => void;
   onSelectProject?: (projId: string) => void;
+  onSelectFolder?: (folderId: string) => void;
   onSelectAssignee?: (assignee: string) => void;
   onSelectStatus?: (status: TaskStatus) => void;
   onSelectDue?: (due: DueFilterType) => void;
@@ -30,11 +34,13 @@ interface ActiveFiltersBarProps {
 export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   filterState,
   projects,
+  folders = INITIAL_FOLDERS,
   members = [],
   taskPersonalScope,
   activeProductMember,
   currentAuthUser,
   onClearProject,
+  onClearFolder,
   onClearAssignee,
   onClearTeam,
   onClearStatus,
@@ -43,6 +49,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   onClearPersonalScope,
   onClearAll,
   onSelectProject,
+  onSelectFolder,
   onSelectAssignee,
   onSelectStatus,
   onSelectDue,
@@ -68,6 +75,11 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   const activeProject =
     filterState.projectId && filterState.projectId !== 'all'
       ? projects.find((p) => p.id === filterState.projectId)?.name || filterState.projectId
+      : null;
+
+  const activeFolder =
+    filterState.folderId && filterState.folderId !== 'all'
+      ? getFolderPath(filterState.folderId, folders) || filterState.folderId
       : null;
 
   // Xác định người dùng có đang xem danh sách của chính mình trong chế độ "Của tôi"
@@ -115,6 +127,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
   const hasAnyFilter = Boolean(
     activeProject ||
+      activeFolder ||
       activeAssignee ||
       activeTeam ||
       activeStatus ||
@@ -143,6 +156,22 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
             <Filter className="w-3 h-3 text-[#64748b]" />
             <span>Đang lọc:</span>
           </span>
+
+          {/* Thư mục */}
+          {activeFolder && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-[#fdf2f7] text-[11px] font-ui text-[#963861] border border-[#f3c2d4] shadow-2xs">
+              <span className="text-[#963861]/70">Thư mục:</span>
+              <span className="font-semibold text-[#963861]">📁 {activeFolder}</span>
+              <button
+                type="button"
+                onClick={onClearFolder}
+                className="p-0.5 rounded-[3px] text-[#963861]/70 hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                title="Bỏ lọc theo thư mục này"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
 
           {/* Dự án */}
           {activeProject && (

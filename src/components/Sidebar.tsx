@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ActiveTab, ProjectItem, MemberItem, TeamType, TaskStatus, DueFilterType } from '../types';
+import { ActiveTab, ProjectItem, MemberItem, TeamType, TaskStatus, DueFilterType, FolderItem } from '../types';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
 import {
   sortProjectsAlphabetically,
   isOthersProject,
   normalizeProjectStatus,
 } from '../utils/projectSortingUtils';
+import { INITIAL_FOLDERS, inferProjectFolderId } from '../utils/folderUtils';
 import {
   CheckSquare,
   FolderKanban,
@@ -20,6 +21,8 @@ import {
   Plus,
   AlertTriangle,
   Folder,
+  FolderOpen,
+  FolderPlus,
   Layers,
   ChevronRight,
   ChevronDown,
@@ -38,6 +41,11 @@ import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
 interface SidebarProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
+  folders?: FolderItem[];
+  selectedFolderId?: string;
+  onSelectFolder?: (folderId: string) => void;
+  taskCountsByFolder?: Record<string, number>;
+  onOpenFolderManager?: () => void;
   projects: ProjectItem[];
   members?: MemberItem[];
   activeProductMember?: MemberItem | null;
@@ -90,6 +98,11 @@ const STATUSES: ('Tất cả' | TaskStatus)[] = [
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabChange,
+  folders = INITIAL_FOLDERS,
+  selectedFolderId = 'all',
+  onSelectFolder,
+  taskCountsByFolder = {},
+  onOpenFolderManager,
   projects,
   members,
   activeProductMember,
@@ -123,8 +136,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const currentMember = activeProductMember || (selectedAssignee !== 'Tất cả' ? members?.find((m) => m.name === selectedAssignee) : null);
-  const isAdmin = getUserRole(currentAuthUser || activeProductMember) === 'Admin';
+  const userRole = getUserRole(currentAuthUser || activeProductMember);
+  const isAdmin = userRole === 'Admin';
+  const canManageFolders = userRole === 'Admin' || userRole === 'Manager';
   const [showAllProjectsInSidebar, setShowAllProjectsInSidebar] = useState(false);
+
+  // State đóng/mở cây thư mục trong Sidebar (mặc định mở VnExpress)
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
+    'folder-vne': true,
+  });
+
+  const toggleExpandFolder = (folderId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedFolderIds((prev) => ({ ...prev, [folderId]: !prev[folderId] }));
+  };
 
   useEffect(() => {
     setShowAllProjectsInSidebar(false);
@@ -169,6 +194,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     return sortProjectsAlphabetically(list);
   }, [baseProjects, showAllProjectsInSidebar, selectedProjectId]);
+
+  const rootFolders = useMemo(() => {
+    return folders
+      .filter((f) => !f.parentId)
+      .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
+  }, [folders]);
 
   // User activity persistence for collapse/expand
   const userKey = activeProductMember?.id || 'default_user';
@@ -242,9 +273,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar Aside element: fixed slide-in drawer on mobile (< md), sticky sidebar on desktop (>= md) */}
+      {/* Spacer giữ chỗ cố định 320px (w-80) trên Desktop để Left Sidebar được pin fixed tuyệt đối */}
+      <div className="hidden md:block w-80 shrink-0 select-none" aria-hidden="true" />
+
+      {/* Sidebar Aside element: fixed pinned at top-0 left-0 h-screen on both mobile drawer & desktop */}
       <aside
-        className={`fixed md:sticky top-0 left-0 z-50 md:z-10 h-screen w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col shrink-0 select-none shadow-xl md:shadow-xs transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 bottom-0 z-50 md:z-30 h-screen w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col shrink-0 select-none shadow-xl md:shadow-xs transition-transform duration-300 ease-in-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -651,38 +685,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Project Selector Filter */}
+          {/* Folder & Project Tree Selector Filter */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-3">
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f] flex items-center justify-between w-full">
-                <span>
-                  {showAllProjectsInSidebar ? 'Toàn bộ dự án' : 'Đang triển khai'}
-                </span>
+              <span className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f]">
+                Thư mục & Dự án
+              </span>
+              <div className="flex items-center gap-2">
+                {canManageFolders && onOpenFolderManager && (
+                  <button
+                    type="button"
+                    onClick={onOpenFolderManager}
+                    className="text-[10px] font-ui font-bold text-[#475569] hover:text-[#963861] flex items-center gap-0.5 cursor-pointer"
+                    title="Quản lý cây thư mục"
+                  >
+                    <FolderPlus className="w-3 h-3" />
+                    <span>Thư mục</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowAllProjectsInSidebar(!showAllProjectsInSidebar)}
                   className="text-[10px] font-ui font-bold text-[#963861] hover:underline cursor-pointer normal-case"
                 >
-                  {showAllProjectsInSidebar ? 'Chỉ đang triển khai' : `Tất cả (${baseProjects.length})`}
+                  {showAllProjectsInSidebar ? 'Đang chạy' : `Tất cả (${baseProjects.length})`}
                 </button>
-              </p>
+              </div>
             </div>
 
             <div className="space-y-0.5">
+              {/* Nút Tất cả thư mục & dự án */}
               <button
+                type="button"
                 onClick={() => {
+                  onSelectFolder?.('all');
                   onSelectProject('all');
                 }}
-                className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors ${
-                  selectedProjectId === 'all'
+                className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                  (!selectedFolderId || selectedFolderId === 'all') && selectedProjectId === 'all'
                     ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] font-bold'
                     : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
                 }`}
               >
-                <span>Tất cả dự án {showAllProjectsInSidebar ? `(${baseProjects.length})` : `(${inProgressProjects.length})`}</span>
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#64748b]" />
+                  <span>Tất cả thư mục & dự án</span>
+                </span>
                 <span
                   className={`font-num text-[10px] px-1.5 py-0.2 rounded-full ${
-                    selectedProjectId === 'all'
+                    (!selectedFolderId || selectedFolderId === 'all') && selectedProjectId === 'all'
                       ? 'bg-[#e2e8f0] text-[#334155]'
                       : 'bg-[#f0f0f0] text-[#7f7f7f]'
                   }`}
@@ -691,39 +742,248 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </button>
 
-              {displayedProjects.map((p) => {
-                const isSel = selectedProjectId === p.id;
-                const count = taskCountsByProject[p.id] || 0;
+              {/* Danh sách Cây Thư mục Cấp 1 (VnExpress, Ngôi sao, English, Tia sáng...) */}
+              {rootFolders.map((root) => {
+                const subFolders = folders
+                  .filter((f) => f.parentId === root.id)
+                  .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
+                const directRootProjects = displayedProjects.filter(
+                  (p) => (p.folderId || inferProjectFolderId(p)) === root.id
+                );
+                const isRootSelected = selectedFolderId === root.id && selectedProjectId === 'all';
+                const hasChildSelected =
+                  subFolders.some((sf) => sf.id === selectedFolderId) ||
+                  displayedProjects.some(
+                    (p) =>
+                      p.id === selectedProjectId &&
+                      ((p.folderId || inferProjectFolderId(p)) === root.id ||
+                        subFolders.some((sf) => sf.id === (p.folderId || inferProjectFolderId(p))))
+                  );
+                const isRootExpanded = Boolean(expandedFolderIds[root.id] || isRootSelected || hasChildSelected);
+                const rootTaskCount = taskCountsByFolder[root.id] || 0;
+                const hasExpandableContent = subFolders.length > 0 || directRootProjects.length > 0;
+
                 return (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      onSelectProject(p.id);
-                    }}
-                    className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors ${
-                      isSel
-                        ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold'
-                        : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                      <span className="truncate" title={p.name}>
-                        {p.name.replace(/^Dự án\s+/i, '')}
-                      </span>
-                      {p.isStrategic && (
-                        <span className="text-[#d97706] text-[11px] leading-none shrink-0" title="Dự án chiến lược">
-                          ⭐
+                  <div key={root.id} className="space-y-0.5">
+                    {/* Hàng Thư mục gốc (Root Folder) */}
+                    <div
+                      className={`w-full px-2 py-1.5 rounded-[6px] text-xs font-ui flex items-center justify-between transition-colors ${
+                        isRootSelected
+                          ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold'
+                          : 'text-[#334155] hover:bg-[#f8fafc] hover:text-[#202020]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        {hasExpandableContent ? (
+                          <button
+                            type="button"
+                            onClick={(e) => toggleExpandFolder(root.id, e)}
+                            className="p-0.5 rounded hover:bg-black/5 text-[#64748b] shrink-0 cursor-pointer"
+                            title={isRootExpanded ? 'Thu gọn thư mục' : 'Mở rộng thư mục'}
+                          >
+                            {isRootExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        ) : (
+                          <span className="w-4 shrink-0" />
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextFolder = isRootSelected ? 'all' : root.id;
+                            onSelectFolder?.(nextFolder);
+                            onSelectProject('all');
+                            if (!isRootExpanded && nextFolder !== 'all') {
+                              setExpandedFolderIds((prev) => ({ ...prev, [root.id]: true }));
+                            }
+                          }}
+                          className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer"
+                        >
+                          {isRootExpanded ? (
+                            <FolderOpen className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                          ) : (
+                            <Folder className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                          )}
+                          <span className="truncate font-semibold">{root.name}</span>
+                        </button>
+                      </div>
+
+                      {rootTaskCount > 0 && (
+                        <span
+                          className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                            isRootSelected ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                          }`}
+                        >
+                          {rootTaskCount}
                         </span>
                       )}
                     </div>
-                    <span
-                      className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                        isSel ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
+
+                    {/* Nội dung bên trong Root Folder: Sub-folders & Projects */}
+                    {isRootExpanded && hasExpandableContent && (
+                      <div className="pl-3.5 ml-3 border-l border-[#e5e7eb] space-y-0.5">
+                        {/* 1. Các Sub-folders (Thể thao, Thế giới, ...) */}
+                        {subFolders.map((sub) => {
+                          const subProjects = displayedProjects.filter(
+                            (p) => (p.folderId || inferProjectFolderId(p)) === sub.id
+                          );
+                          const isSubSelected = selectedFolderId === sub.id && selectedProjectId === 'all';
+                          const hasSubProjSelected = subProjects.some((p) => p.id === selectedProjectId);
+                          const isSubExpanded = Boolean(
+                            expandedFolderIds[sub.id] !== undefined
+                              ? expandedFolderIds[sub.id]
+                              : isSubSelected || hasSubProjSelected || subProjects.length > 0
+                          );
+                          const subTaskCount = taskCountsByFolder[sub.id] || 0;
+
+                          return (
+                            <div key={sub.id} className="space-y-0.5">
+                              <div
+                                className={`w-full px-2 py-1 rounded-[6px] text-xs font-ui flex items-center justify-between transition-colors ${
+                                  isSubSelected
+                                    ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold'
+                                    : 'text-[#475569] hover:bg-[#f8fafc] hover:text-[#202020]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1 min-w-0 flex-1">
+                                  {subProjects.length > 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => toggleExpandFolder(sub.id, e)}
+                                      className="p-0.5 rounded hover:bg-black/5 text-[#94a3b8] shrink-0 cursor-pointer"
+                                    >
+                                      {isSubExpanded ? (
+                                        <ChevronDown className="w-3 h-3" />
+                                      ) : (
+                                        <ChevronRight className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <span className="w-3.5 shrink-0 text-center text-[#cbd5e1] text-[10px]">•</span>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextFolder = isSubSelected ? 'all' : sub.id;
+                                      onSelectFolder?.(nextFolder);
+                                      onSelectProject('all');
+                                    }}
+                                    className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer"
+                                  >
+                                    <Folder className="w-3 h-3 text-[#64748b] shrink-0" />
+                                    <span className="truncate">{sub.name}</span>
+                                  </button>
+                                </div>
+
+                                {subTaskCount > 0 && (
+                                  <span
+                                    className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                                      isSubSelected ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f4f4f5] text-[#71717a]'
+                                    }`}
+                                  >
+                                    {subTaskCount}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Các Dự án nằm trong Sub-folder */}
+                              {isSubExpanded && subProjects.length > 0 && (
+                                <div className="pl-3.5 ml-2.5 border-l border-[#f1f5f9] space-y-0.5">
+                                  {subProjects.map((p) => {
+                                    const isSel = selectedProjectId === p.id;
+                                    const count = taskCountsByProject[p.id] || 0;
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => {
+                                          onSelectFolder?.(sub.id);
+                                          onSelectProject(isSel ? 'all' : p.id);
+                                        }}
+                                        className={`w-full px-2.5 py-1 rounded-[6px] text-[11px] font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                                          isSel
+                                            ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
+                                            : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-1.5 min-w-0 pr-1.5">
+                                          <FolderKanban className="w-3 h-3 text-[#3b629b] shrink-0" />
+                                          <span className="truncate" title={p.name}>
+                                            {p.name.replace(/^Dự án\s+/i, '')}
+                                          </span>
+                                          {p.isStrategic && (
+                                            <span className="text-[#d97706] text-[10px] leading-none shrink-0" title="Dự án chiến lược">
+                                              ⭐
+                                            </span>
+                                          )}
+                                        </div>
+                                        {count > 0 && (
+                                          <span
+                                            className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                                              isSel ? 'bg-[#dbeafe] text-[#1e609c]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                                            }`}
+                                          >
+                                            {count}
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* 2. Các Dự án nằm trực tiếp trong Root Folder */}
+                        {directRootProjects.map((p) => {
+                          const isSel = selectedProjectId === p.id;
+                          const count = taskCountsByProject[p.id] || 0;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectFolder?.(root.id);
+                                onSelectProject(isSel ? 'all' : p.id);
+                              }}
+                              className={`w-full px-2.5 py-1 rounded-[6px] text-[11px] font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                                isSel
+                                  ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
+                                  : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0 pr-1.5">
+                                <FolderKanban className="w-3 h-3 text-[#3b629b] shrink-0" />
+                                <span className="truncate" title={p.name}>
+                                  {p.name.replace(/^Dự án\s+/i, '')}
+                                </span>
+                                {p.isStrategic && (
+                                  <span className="text-[#d97706] text-[10px] leading-none shrink-0" title="Dự án chiến lược">
+                                    ⭐
+                                  </span>
+                                )}
+                              </div>
+                              {count > 0 && (
+                                <span
+                                  className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
+                                    isSel ? 'bg-[#dbeafe] text-[#1e609c]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                                  }`}
+                                >
+                                  {count}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

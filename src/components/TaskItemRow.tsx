@@ -242,8 +242,8 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
               <option value="Hoàn thành">Hoàn thành ✓</option>
             </select>
           </div>
-        {/* Project Name */}
-        {showProjectBadge && (
+        {/* Project or Direct Folder Name */}
+        {(showProjectBadge || (!task.projectId && (task.folderName || task.projectName))) && (
           <>
             {onOpenProjectDetail && task.projectId ? (
               <button
@@ -259,9 +259,12 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
                 <span className="truncate max-w-[200px]">{task.projectName || 'Dự án'}</span>
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#475569] bg-[#f1f5f9] px-2 py-0.5 rounded-[4px] border border-[#e2e8f0]">
-                <Folder className="w-3 h-3 text-[#64748b]" />
-                <span className="truncate max-w-[200px]">{task.projectName || 'Dự án'}</span>
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded-[4px] border border-[#f3c2d4]"
+                title="Công việc tinh chỉnh nằm trực tiếp trong thư mục"
+              >
+                <Folder className="w-3 h-3 text-[#963861]" />
+                <span className="truncate max-w-[200px]">{task.folderName || task.projectName || 'Thư mục'}</span>
               </span>
             )}
             {(task.workLink || task.resultLink || task.phaseName || task.assignee) && (

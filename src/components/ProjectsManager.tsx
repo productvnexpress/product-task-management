@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRoles, ProjectLinks, FilterState } from '../types';
+import { ProjectItem, TaskItem, MemberItem, ProjectPhase, PhaseStatus, ProjectRoles, ProjectLinks, FilterState, FolderItem } from '../types';
+import { getFlattenedFolderOptions, getFolderPath, inferProjectFolderId, getDescendantFolderIds, INITIAL_FOLDERS } from '../utils/folderUtils';
 import { ProjectHistoryModal } from './ProjectHistoryModal';
 import { ProjectCalendarView } from './ProjectCalendarView';
 import { normalizeAndNumberPhases, formatPhaseName, cleanPhaseTitle } from '../utils/phaseUtils';
@@ -14,6 +15,8 @@ import { sortProjectsAlphabetically, normalizeProjectStatus } from '../utils/pro
 import { wmsDataService } from '../services/wmsDataService';
 import {
   FolderKanban,
+  Folder,
+  FolderPlus,
   History,
   Plus,
   Calendar,
@@ -60,6 +63,7 @@ import { ProjectDeadlineAlertBanner } from './ProjectDeadlineAlertBanner';
 
 interface ProjectsManagerProps {
   projects: ProjectItem[];
+  folders?: FolderItem[];
   tasks: TaskItem[];
   members: MemberItem[];
   filterState?: FilterState;
@@ -71,10 +75,12 @@ interface ProjectsManagerProps {
   currentAuthUser?: MemberItem | null;
   onOpenProjectDetail?: (projectId: string) => void;
   onOpenAddProject?: () => void;
+  onOpenFolderManager?: () => void;
 }
 
 export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
   projects,
+  folders = INITIAL_FOLDERS,
   tasks,
   members,
   filterState,
@@ -86,6 +92,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
   currentAuthUser,
   onOpenProjectDetail,
   onOpenAddProject,
+  onOpenFolderManager,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
 
@@ -104,6 +111,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
   // Quick Project Navigator & Filter State
   const [quickSearch, setQuickSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'strategic' | ProjectItem['status']>('all');
+  const [localFolderFilter, setLocalFolderFilter] = useState<string>('all');
 
   // Unified Workspace: Default to 'all' projects so everyone works on a single flat surface
   const [projectScope, setProjectScope] = useState<'all' | 'my_projects'>('all');
@@ -269,6 +277,18 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
         return false;
       }
 
+      // 1b. Sidebar or Local Folder Filter
+      const activeFolderFilter = (filterState?.folderId && filterState.folderId !== 'all')
+        ? filterState.folderId
+        : localFolderFilter;
+      if (activeFolderFilter && activeFolderFilter !== 'all') {
+        const validFolderIds = getDescendantFolderIds(activeFolderFilter, folders);
+        const projFolderId = p.folderId || inferProjectFolderId(p);
+        if (!validFolderIds.includes(projFolderId)) {
+          return false;
+        }
+      }
+
       // 2. Sidebar Team Filter
       if (filterState?.team && filterState.team !== 'Tất cả') {
         const teamVal = filterState.team;
@@ -344,7 +364,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
     });
 
     return sortProjectsAlphabetically(result);
-  }, [projects, filterState, tasks, members, statusFilter, quickSearch, targetMemberForProjects, projectScope]);
+  }, [projects, filterState, tasks, members, statusFilter, quickSearch, targetMemberForProjects, projectScope, localFolderFilter, folders]);
 
   const formatPoDisplay = (rawPoString?: string) => {
     if (!rawPoString) return '';
@@ -402,6 +422,33 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
               {activeProductMember && currentAuthUser && activeProductMember.id !== currentAuthUser.id
                 ? `👤 Dự án của ${activeProductMember.name.split(' ').slice(-1)[0]} (${myProjectsCount})`
                 : `⭐ Dự án của tôi (${myProjectsCount})`}
+            </button>
+          )}
+
+          {/* Folder Filter Dropdown */}
+          <select
+            value={localFolderFilter}
+            onChange={(e) => setLocalFolderFilter(e.target.value)}
+            className="h-8 px-2.5 rounded-[6px] text-xs font-ui font-semibold bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] cursor-pointer focus:outline-hidden focus:border-[#963861]"
+            title="Lọc dự án theo Thư mục (Folder)"
+          >
+            <option value="all">📁 Tất cả Thư mục</option>
+            {getFlattenedFolderOptions(folders).map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                📁 {opt.fullPath}
+              </option>
+            ))}
+          </select>
+
+          {onOpenFolderManager && (
+            <button
+              type="button"
+              onClick={onOpenFolderManager}
+              className="h-8 px-2.5 rounded-[6px] text-xs font-ui font-semibold bg-white hover:bg-[#fcf0f5] text-[#963861] border border-[#f3c2d4] flex items-center gap-1 cursor-pointer transition-colors"
+              title="Quản lý cây Thư mục (VnExpress, Ngôi sao, English, Tia sáng...)"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Thư mục</span>
             </button>
           )}
         </div>
@@ -577,6 +624,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
           const phaseList = proj.phases || [];
           const completedPhases = phaseList.filter((p) => p.status === 'Đã hoàn thành');
           const memberRelation = activeProductMember ? getMemberProjectRelation(proj, activeProductMember, tasks) : null;
+          const projFolderPath = getFolderPath(proj.folderId || inferProjectFolderId(proj), folders);
 
           return (
             <div
@@ -592,6 +640,11 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({
                 {/* Header Row */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-ui font-bold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded-[4px] border border-[#f3c2d4]">
+                      <Folder className="w-3 h-3 text-[#963861]" />
+                      <span>{projFolderPath || 'VnExpress'}</span>
+                    </span>
+
                     <h3
                       onClick={() => openProjectDrawer(proj)}
                       className="font-ui text-base font-bold text-[#202020] hover:text-[#b13460] cursor-pointer transition-colors leading-snug flex items-center gap-1.5"

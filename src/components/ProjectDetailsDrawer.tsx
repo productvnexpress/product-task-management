@@ -18,7 +18,9 @@ import {
   ProjectNoteItem,
   ProjectHistoryLog,
   ProjectChecklistItem,
+  FolderItem,
 } from '../types';
+import { getFlattenedFolderOptions, getFolderPath, inferProjectFolderId, INITIAL_FOLDERS } from '../utils/folderUtils';
 import { ProjectChecklistSection } from './ProjectChecklistSection';
 import { normalizeProjectChecklist } from '../data/defaultProjectChecklist';
 import { wmsDataService } from '../services/wmsDataService';
@@ -79,6 +81,7 @@ import { normalizeProjectStatus, generateProjectCode } from '../utils/projectSor
 interface ProjectDetailsDrawerProps {
   project: ProjectItem | null;
   projects?: ProjectItem[];
+  folders?: FolderItem[];
   tasks: TaskItem[];
   members: MemberItem[];
   isOpen: boolean;
@@ -94,6 +97,7 @@ interface ProjectDetailsDrawerProps {
 export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   project,
   projects = [],
+  folders = INITIAL_FOLDERS,
   tasks,
   members,
   isOpen,
@@ -114,6 +118,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   // Form State for Cột Trái (Left Column)
   const [name, setName] = useState(project?.name || '');
   const [code, setCode] = useState(project?.code || '');
+  const [folderId, setFolderId] = useState(project?.folderId || (project ? inferProjectFolderId(project) : 'folder-vne'));
   const [isCodeManuallyEdited, setIsCodeManuallyEdited] = useState(false);
   const [description, setDescription] = useState(project?.description || '');
   const [objective, setObjective] = useState(project?.objective || '');
@@ -286,6 +291,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     if (isCreateMode || !project) {
       setName('');
       setCode('');
+      setFolderId(folders[0]?.id || 'folder-vne');
       setIsCodeManuallyEdited(false);
       setDescription('');
       setObjective('');
@@ -358,6 +364,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     } else if (project) {
       setName(project.name);
       setCode(project.code);
+      setFolderId(project.folderId || inferProjectFolderId(project));
       setDescription(project.description || '');
       setObjective(project.objective || '');
       setProductOwner(project.productOwner || '');
@@ -406,7 +413,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setIsAddingPhase(false);
       setIsHistoryOpen(false);
     }
-  }, [project, isOpen, isCreateMode, members, activeProductMember, currentAuthUser]);
+  }, [project, isOpen, isCreateMode, members, activeProductMember, currentAuthUser, folders]);
 
   // Handle ESC key press to close modal or drawer
   useEffect(() => {
@@ -434,6 +441,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     if (project) {
       setName(project.name);
       setCode(project.code);
+      setFolderId(project.folderId || inferProjectFolderId(project));
       setDescription(project.description || '');
       setObjective(project.objective || '');
       setProductOwner(project.productOwner || '');
@@ -855,6 +863,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     const newProjPayload: Omit<ProjectItem, 'id'> = {
       name: name.trim(),
       code: finalCode,
+      folderId: folderId || 'folder-vne',
       description: description.trim(),
       objective: objective.trim(),
       productOwner: productOwner.trim(),
@@ -926,6 +935,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       ...(project || {} as ProjectItem),
       name: name.trim(),
       code: finalCode,
+      folderId: folderId || project?.folderId || 'folder-vne',
       description: description.trim(),
       objective: objective.trim(),
       productOwner: productOwner.trim(),
@@ -1438,34 +1448,61 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               </div>
             )}
 
-            {/* Mã dự án (Code) */}
+            {/* Thư mục (Folder) & Mã dự án (Code) */}
             {isEditing ? (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <label className="font-ui text-xs font-semibold text-[#303030] block">
-                    Mã dự án <span className="text-[#da1e28]">*</span>
+                    Thư mục (Folder) <span className="text-[#da1e28]">*</span>
                   </label>
-                  <span className="text-[10px] text-[#71717a] font-ui">
-                    Mã định danh duy nhất (ví dụ: VNE-XE)
-                  </span>
+                  <select
+                    value={folderId}
+                    onChange={(e) => setFolderId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white font-ui focus:border-[#b13460]"
+                  >
+                    {getFlattenedFolderOptions(folders).map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        📁 {opt.fullPath}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => {
-                    setIsCodeManuallyEdited(true);
-                    setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
-                  }}
-                  placeholder="VNE-XXX"
-                  className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold uppercase text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
-                />
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="font-ui text-xs font-semibold text-[#303030] block">
+                      Mã dự án <span className="text-[#da1e28]">*</span>
+                    </label>
+                    <span className="text-[10px] text-[#71717a] font-ui">
+                      Ví dụ: VNE-XE
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => {
+                      setIsCodeManuallyEdited(true);
+                      setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
+                    }}
+                    placeholder="VNE-XXX"
+                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold uppercase text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
-                <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Mã dự án</span>
-                <span className="font-ui text-xs font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4]">
-                  {code || 'Chưa có mã'}
-                </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
+                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Thư mục (Folder)</span>
+                  <span className="font-ui text-xs font-bold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f3c2d4] inline-flex items-center gap-1">
+                    📁 {getFolderPath(folderId, folders) || 'VnExpress'}
+                  </span>
+                </div>
+                <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
+                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Mã dự án</span>
+                  <span className="font-ui text-xs font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4]">
+                    {code || 'Chưa có mã'}
+                  </span>
+                </div>
               </div>
             )}
 

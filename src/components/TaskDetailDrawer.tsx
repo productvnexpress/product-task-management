@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel, TaskLogItem } from '../types';
+import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel, TaskLogItem, FolderItem } from '../types';
 import { formatLogTimestamp, addManualLog, deduplicateTaskLogs } from '../utils/taskLogUtils';
 import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers } from '../utils/memberPersonalization';
@@ -13,6 +13,13 @@ import { canEditTask, canDeleteTask, getUserRole } from '../utils/rbac';
 import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
 import { getTodayDateString } from '../utils/dateUtils';
 import { analyzeTaskDiscipline, getTaskCompletionDate } from '../utils/reportUtils';
+import {
+  INITIAL_FOLDERS,
+  getFlattenedFolderOptions,
+  getFolderPath,
+  inferProjectFolderId,
+  isDirectFolderTask,
+} from '../utils/folderUtils';
 import {
   X,
   Check,
@@ -22,6 +29,7 @@ import {
   AlertTriangle,
   Trash2,
   Briefcase,
+  Folder,
   Layers,
   Link,
   ExternalLink,
@@ -57,6 +65,7 @@ interface TaskDetailDrawerProps {
   task: TaskItem | null;
   isOpen: boolean;
   onClose: () => void;
+  folders?: FolderItem[];
   projects: ProjectItem[];
   members: MemberItem[];
   onSaveTask: (updatedTask: TaskItem, authorName?: string, customNote?: string) => void;
@@ -73,6 +82,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   task,
   isOpen,
   onClose,
+  folders = INITIAL_FOLDERS,
   projects,
   members,
   onSaveTask,
@@ -154,6 +164,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   const [ruleModalEndDate, setRuleModalEndDate] = useState('');
 
   const sortedProjects = useMemo(() => sortProjectsAlphabetically(projects), [projects]);
+  const flattenedFolders = useMemo(() => getFlattenedFolderOptions(folders), [folders]);
 
   const minDueDate = useMemo(() => {
     const d = new Date();
@@ -176,7 +187,12 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     if (task) {
       setTitle(task.title);
       setStatus(task.status);
-      setProjectId(task.projectId);
+      if (isDirectFolderTask(task)) {
+        const fId = (task.folderId || task.projectId?.replace(/^folder:/, '') || 'folder-vne').trim();
+        setProjectId(`folder:${fId}`);
+      } else {
+        setProjectId(task.projectId);
+      }
       setPhaseId(task.phaseId || '');
       setPhaseName(task.phaseName || '');
       setTeam(task.team);
@@ -372,16 +388,27 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       return;
     }
 
-    const selectedProj = projects.find((p) => p.id === projectId);
+    const isDirectFolder = projectId.startsWith('folder:');
+    const rawFolderId = isDirectFolder ? projectId.replace('folder:', '') : undefined;
+    const selectedProj = isDirectFolder ? undefined : projects.find((p) => p.id === projectId);
+    const effectiveFolderId = isDirectFolder
+      ? rawFolderId
+      : (selectedProj ? (selectedProj.folderId || inferProjectFolderId(selectedProj)) : task.folderId);
+    const effectiveFolderName = effectiveFolderId ? getFolderPath(effectiveFolderId, folders) : task.folderName;
+
     const updatedTask: TaskItem = {
       ...task,
       title: title.trim() || task.title,
       status,
       completedAt: status === 'Hoàn thành' ? (completedAt || task.completedAt || new Date().toISOString()) : undefined,
-      projectId,
-      projectName: selectedProj ? selectedProj.name : task.projectName,
-      phaseId: phaseId || undefined,
-      phaseName: phaseName || undefined,
+      projectId: isDirectFolder ? '' : projectId,
+      projectName: isDirectFolder
+        ? (effectiveFolderName || 'Tinh chỉnh chung')
+        : (selectedProj ? selectedProj.name : task.projectName),
+      folderId: effectiveFolderId,
+      folderName: effectiveFolderName,
+      phaseId: isDirectFolder ? undefined : (phaseId || undefined),
+      phaseName: isDirectFolder ? undefined : (phaseName || undefined),
       team,
       assignee,
       productOwners: selectedProductOwners,
@@ -872,12 +899,12 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
             {/* Grid for Dự án, Giai đoạn, Phụ trách, Hạn hoàn thành */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 5. Dự án */}
+              {/* 5. Thư mục / Dự án */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5 text-[#b13460]" />
-                    <span>Dự án:</span>
+                    <span>Thư mục / Dự án:</span>
                   </label>
                   {selectedProject && onOpenProjectDetail && (
                     <button
@@ -896,11 +923,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   onChange={(e) => handleProjectChange(e.target.value)}
                   className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
                 >
-                  {sortedProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                  {folders.length > 0 && (
+                    <optgroup label="── 📁 Trực tiếp trong Thư mục (Tinh chỉnh nhỏ) ──">
+                      {getFlattenedFolderOptions(folders).map((opt) => (
+                        <option key={`folder:${opt.id}`} value={`folder:${opt.id}`}>
+                          📁 {opt.fullPath} (Không thuộc dự án)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="── 📋 Thuộc Dự án ──">
+                    {sortedProjects.map((p) => {
+                      const fPath = getFolderPath(p.folderId || inferProjectFolderId(p), folders);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {fPath ? `[${fPath}] ` : ''}{p.name}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
                 </select>
               </div>
 
@@ -912,15 +953,18 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 </label>
                 <select
                   value={phaseId}
+                  disabled={projectId.startsWith('folder:')}
                   onChange={(e) => {
                     const selectedPId = e.target.value;
                     setPhaseId(selectedPId);
                     const foundPh = availablePhases.find((ph) => ph.id === selectedPId);
                     setPhaseName(foundPh ? foundPh.name : '');
                   }}
-                  className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                  className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020] disabled:bg-[#f5f5f5] disabled:text-[#888888]"
                 >
-                  <option value="">-- Toàn dự án (Chung) --</option>
+                  <option value="">
+                    {projectId.startsWith('folder:') ? '-- Công việc trực tiếp trong Thư mục --' : '-- Toàn dự án (Chung) --'}
+                  </option>
                   {availablePhases.map((ph) => (
                     <option key={ph.id} value={ph.id}>
                       {ph.name} ({ph.status})

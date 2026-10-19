@@ -19,8 +19,22 @@ import {
   TaskLogItem,
   NotificationItem,
   RecurrenceFrequency,
+  FolderItem,
 } from './types';
 import { INITIAL_PROJECTS, INITIAL_MEMBERS, INITIAL_TASKS } from './data/initialData';
+import {
+  INITIAL_FOLDERS,
+  ensureProjectsHaveFolder,
+  getFolderPath,
+  inferProjectFolderId,
+  isDirectFolderTask,
+  isTaskMatchingFolderFilter,
+  loadFoldersFromStorage,
+  saveFoldersToStorage,
+  getDescendantFolderIds,
+  getTaskEffectiveFolderId,
+} from './utils/folderUtils';
+import { FolderManagerModal } from './components/FolderManagerModal';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { ActiveFiltersBar } from './components/ActiveFiltersBar';
@@ -84,34 +98,40 @@ export function App() {
   // Database Connection State (Supabase Live / Offline Cache)
   const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
 
+  // Folders state (Cây thư mục phân cấp: VnExpress -> Thể thao, Thế giới..., Ngôi sao, English, Tia sáng)
+  const [folders, setFolders] = useState<FolderItem[]>(() => loadFoldersFromStorage());
+  const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false);
+
   // Main persistence states
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
     const saved = localStorage.getItem('vne_projects_v9');
     const rawList: ProjectItem[] = saved ? JSON.parse(saved) : INITIAL_PROJECTS;
-    return rawList.map((p) => {
-      const customLinks = p.links?.custom || p.customLinks || [];
-      const hasLinksObj = p.links !== undefined;
-      return {
-        ...p,
-        status: normalizeProjectStatus(p.status),
-        linkOrderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
-        linkChat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
-        linkDashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
-        linkReport: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
-        linkBeta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
-        linkProduction: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
-        links: {
-          orderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
-          chat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
-          dashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
-          report: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
-          beta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
-          production: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
-          custom: customLinks,
-        },
-        customLinks,
-      };
-    });
+    return ensureProjectsHaveFolder(
+      rawList.map((p) => {
+        const customLinks = p.links?.custom || p.customLinks || [];
+        const hasLinksObj = p.links !== undefined;
+        return {
+          ...p,
+          status: normalizeProjectStatus(p.status),
+          linkOrderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
+          linkChat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
+          linkDashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
+          linkReport: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
+          linkBeta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
+          linkProduction: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
+          links: {
+            orderTech: hasLinksObj ? (p.links?.orderTech || undefined) : (p.linkOrderTech || undefined),
+            chat: hasLinksObj ? (p.links?.chat || undefined) : (p.linkChat || undefined),
+            dashboard: hasLinksObj ? (p.links?.dashboard || undefined) : (p.linkDashboard || undefined),
+            report: hasLinksObj ? (p.links?.report || undefined) : (p.linkReport || undefined),
+            beta: hasLinksObj ? (p.links?.beta || undefined) : (p.linkBeta || undefined),
+            production: hasLinksObj ? (p.links?.production || undefined) : (p.linkProduction || undefined),
+            custom: customLinks,
+          },
+          customLinks,
+        };
+      })
+    );
   });
 
   const [members, setMembers] = useState<MemberItem[]>(() => {
@@ -423,6 +443,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     const def = getDefaultPerspectiveForUser(user);
     return {
       projectId: 'all',
+      folderId: 'all',
       team: 'Tất cả',
       status: 'Tất cả',
       assignee: def.assignee,
@@ -438,6 +459,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setTaskPersonalScope(def.scope);
     setFilterState({
       projectId: 'all',
+      folderId: 'all',
       team: 'Tất cả',
       status: 'Tất cả',
       assignee: def.assignee,
@@ -601,6 +623,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Sync to LocalStorage
   useEffect(() => {
+    saveFoldersToStorage(folders);
+  }, [folders]);
+
+  useEffect(() => {
     localStorage.setItem('vne_projects_v9', JSON.stringify(projects));
   }, [projects]);
 
@@ -681,12 +707,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         }
       }
 
-      const [mems, projs, tsks, trsh, notifs] = await Promise.all([
+      const [mems, projs, tsks, trsh, notifs, flds] = await Promise.all([
         wmsDataService.fetchMembers(),
         wmsDataService.fetchProjects(),
         wmsDataService.fetchTasks(),
         wmsDataService.fetchTrash(),
         wmsDataService.fetchNotifications(),
+        wmsDataService.fetchFolders().catch(() => null),
         workingTimeService.initFromSupabase().catch((e) => {
           console.warn('[workingTimeService] Supabase init warning:', e);
           return null;
@@ -700,6 +727,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           return null;
         }),
       ]);
+
+      if (flds && flds.length > 0) {
+        setFolders(flds);
+      }
 
       if (projs && projs.length > 0) {
         // Tự động kiểm tra và đồng bộ các dự án được tạo ở local cache chưa kịp lưu vào Supabase
@@ -728,12 +759,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           const refreshed = await wmsDataService.fetchProjects();
           if (refreshed && refreshed.length > 0) {
-            setProjects(refreshed.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+            setProjects(ensureProjectsHaveFolder(refreshed.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) }))));
           } else {
-            setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+            setProjects(ensureProjectsHaveFolder(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) }))));
           }
         } else {
-          setProjects(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) })));
+          setProjects(ensureProjectsHaveFolder(projs.map((p) => ({ ...p, status: normalizeProjectStatus(p.status) }))));
         }
       }
       if (tsks) setTasks(tsks);
@@ -1609,6 +1640,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       title: string;
       projectId: string;
       projectName: string;
+      folderId?: string;
+      folderName?: string;
       team: TeamType;
       assignee: string;
       dueDate?: string;
@@ -1633,6 +1666,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       title: newTaskData.title,
       projectId: newTaskData.projectId,
       projectName: newTaskData.projectName,
+      folderId: newTaskData.folderId,
+      folderName: newTaskData.folderName,
       team: newTaskData.team,
       assignee: newTaskData.assignee,
       status: 'Chưa làm',
@@ -1979,6 +2014,15 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         return false;
       }
 
+      // 1b. Folder Filter
+      if (
+        filterState.folderId &&
+        filterState.folderId !== 'all' &&
+        !isTaskMatchingFolderFilter(t, filterState.folderId, projects, folders)
+      ) {
+        return false;
+      }
+
       // 2. Team Filter
       if (filterState.team !== 'Tất cả' && t.team !== filterState.team) {
         return false;
@@ -2023,15 +2067,16 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         const matchTitle = (t.title || '').toLowerCase().includes(q);
         const matchAssignee = (t.assignee || '').toLowerCase().includes(q);
         const matchProject = (t.projectName || '').toLowerCase().includes(q);
+        const matchFolder = (t.folderName || '').toLowerCase().includes(q);
         const matchDetails = (t.details || '').toLowerCase().includes(q);
-        if (!matchTitle && !matchAssignee && !matchProject && !matchDetails) {
+        if (!matchTitle && !matchAssignee && !matchProject && !matchFolder && !matchDetails) {
           return false;
         }
       }
 
       return true;
     });
-  }, [tasks, filterState, projects, activeProductMember, taskPersonalScope]);
+  }, [tasks, filterState, projects, folders, activeProductMember, taskPersonalScope]);
 
   // Active vs Completed Tasks separation
   const activeTasks = useMemo(
@@ -2095,14 +2140,17 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       });
   }, [filteredTasks]);
 
-  // Group active tasks by project if 'all' projects selected
+  // Group active tasks by project or direct folder if 'all' projects selected
   const activeTasksByProject = useMemo(() => {
     const groups: Record<string, TaskItem[]> = {};
     activeTasks.forEach((t) => {
-      if (!groups[t.projectName]) {
-        groups[t.projectName] = [];
+      const groupKey = isDirectFolderTask(t)
+        ? `folder:${t.folderId || 'folder-vne'}`
+        : (t.projectName || 'Chưa xác định (Others)');
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
       }
-      groups[t.projectName].push(t);
+      groups[groupKey].push(t);
     });
     return groups;
   }, [activeTasks]);
@@ -2152,6 +2200,27 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     return counts;
   }, [tasks, projects, activeProductMember, taskPersonalScope, targetMemberForCounts, filterState.assignee]);
 
+  // Task counts by folder (bao gồm cả công việc trực tiếp trong folder và công việc thuộc các dự án trong folder/folder con)
+  const taskCountsByFolder = useMemo(() => {
+    const counts: Record<string, number> = {};
+    folders.forEach((f) => {
+      counts[f.id] = tasks.filter((t) => {
+        if (t.status === 'Hoàn thành') return false;
+        if (!isTaskMatchingFolderFilter(t, f.id, projects, folders)) return false;
+
+        if (activeProductMember) {
+          if (taskPersonalScope === 'my_tasks') {
+            return isTaskForMember(t, activeProductMember);
+          }
+        } else if (targetMemberForCounts && filterState.assignee !== 'Tất cả') {
+          return isTaskForMember(t, targetMemberForCounts);
+        }
+        return true;
+      }).length;
+    });
+    return counts;
+  }, [tasks, projects, folders, activeProductMember, taskPersonalScope, targetMemberForCounts, filterState.assignee]);
+
   // Scoped tasks for due date calculations & reminder panel (respecting active scope and filters, excluding dueFilter itself)
   const scopedTasksForDue = useMemo(() => {
     return tasks.filter((t) => {
@@ -2177,6 +2246,15 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         return false;
       }
 
+      // 1b. Folder Filter
+      if (
+        filterState.folderId &&
+        filterState.folderId !== 'all' &&
+        !isTaskMatchingFolderFilter(t, filterState.folderId, projects, folders)
+      ) {
+        return false;
+      }
+
       // 2. Team Filter
       if (filterState.team !== 'Tất cả' && t.team !== filterState.team) {
         return false;
@@ -2194,7 +2272,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
       return true;
     });
-  }, [tasks, activeProductMember, taskPersonalScope, projects, filterState.projectId, filterState.team, filterState.assignee]);
+  }, [tasks, activeProductMember, taskPersonalScope, projects, folders, filterState.projectId, filterState.folderId, filterState.team, filterState.assignee]);
 
   // Today and Overdue counts for filters (dynamically scoped)
   const todayCount = useMemo(() => {
@@ -2226,17 +2304,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#202020] flex flex-row antialiased font-body w-full max-w-full overflow-x-hidden">
-      {/* 1. LEFT SIDEBAR (Contains Logo, Navigation, & All Filters) */}
+    <div className="min-h-screen bg-[#f8f9fa] text-[#202020] flex flex-row antialiased font-body w-full max-w-full overflow-x-clip">
+      {/* 1. LEFT SIDEBAR (Pinned Fixed Left Sidebar with Folders & Projects Tree) */}
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         projects={projects}
+        folders={folders}
         members={members}
         activeProductMember={activeProductMember}
         currentAuthUser={currentAuthUser}
         selectedProjectId={filterState.projectId}
-        onSelectProject={(id) => setFilterState((f) => ({ ...f, projectId: id }))}
+        onSelectProject={(id) => setFilterState((f) => ({ ...f, projectId: id, folderId: 'all' }))}
+        selectedFolderId={filterState.folderId || 'all'}
+        onSelectFolder={(folderId) => setFilterState((f) => ({ ...f, folderId, projectId: 'all' }))}
         selectedTeam={filterState.team}
         onSelectTeam={(team) => setFilterState((f) => ({ ...f, team }))}
         selectedStatus={filterState.status}
@@ -2260,6 +2341,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         searchQuery={filterState.searchQuery}
         onSearchChange={(q) => setFilterState((f) => ({ ...f, searchQuery: q }))}
         taskCountsByProject={taskCountsByProject}
+        taskCountsByFolder={taskCountsByFolder}
         totalActiveTasks={taskStats.inProgress}
         trashCount={trash.length}
         blockedCount={taskStats.blocked}
@@ -2274,6 +2356,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
         }}
         onOpenAddProject={handleOpenAddProject}
+        onOpenFolderManager={() => setIsFolderManagerOpen(true)}
         onOpenAddMember={handleOpenAddMember}
         onResetData={handleResetData}
         onLogoClick={handleLogoClick}
@@ -2324,11 +2407,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           <ActiveFiltersBar
             filterState={filterState}
             projects={projects}
+            folders={folders}
             members={members}
             taskPersonalScope={taskPersonalScope}
             activeProductMember={activeProductMember}
             currentAuthUser={currentAuthUser}
             onClearProject={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
+            onClearFolder={() => setFilterState((f) => ({ ...f, folderId: 'all' }))}
             onClearAssignee={() => {
               const def = getDefaultPerspectiveForUser(currentAuthUser);
               setActiveProductMember(def.activeMember);
@@ -2346,7 +2431,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               setFilterState((f) => ({ ...f, assignee: def.assignee }));
             }}
             onClearAll={handleResetToDefaultView}
-            onSelectProject={(projId) => setFilterState((f) => ({ ...f, projectId: projId }))}
+            onSelectProject={(projId) => setFilterState((f) => ({ ...f, projectId: projId, folderId: 'all' }))}
+            onSelectFolder={(folderId) => setFilterState((f) => ({ ...f, folderId, projectId: 'all' }))}
             onSelectStatus={(status) => setFilterState((f) => ({ ...f, status }))}
             onSelectDue={(dueFilter) => setFilterState((f) => ({ ...f, dueFilter }))}
             onSelectTeam={(team) => setFilterState((f) => ({ ...f, team }))}
@@ -2447,11 +2533,15 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                       {/* Quick Add Form Box */}
                       <QuickAddBar
                         projects={projects}
+                        folders={folders}
                         tasks={tasks}
                         members={members}
                         onAddTask={handleAddTask}
                         defaultProjectId={
                           filterState.projectId !== 'all' ? filterState.projectId : undefined
+                        }
+                        defaultFolderId={
+                          filterState.folderId && filterState.folderId !== 'all' ? filterState.folderId : undefined
                         }
                         defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
                         currentUser={currentAuthUser || activeProductMember}
@@ -2474,6 +2564,19 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
                         {/* Active Filter Badges */}
                         <div className="flex flex-wrap items-center gap-2">
+                          {filterState.folderId && filterState.folderId !== 'all' && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fdf2f7] text-[#963861] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
+                              <span>📁 Thư mục: {getFolderPath(filterState.folderId, folders)}</span>
+                              <button
+                                onClick={() => setFilterState((f) => ({ ...f, folderId: 'all' }))}
+                                className="hover:text-[#8f274c] text-[10px] ml-1 cursor-pointer"
+                                title="Bỏ lọc theo thư mục"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          )}
+
                           {filterState.projectId !== 'all' && (
                             <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fcf0f5] text-[#b13460] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
                               <button
@@ -2559,6 +2662,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           )}
 
                           {(filterState.projectId !== 'all' ||
+                            (filterState.folderId && filterState.folderId !== 'all') ||
                             filterState.assignee !== 'Tất cả' ||
                             filterState.team !== 'Tất cả' ||
                             filterState.status !== 'Tất cả' ||
@@ -2595,25 +2699,44 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                       </div>
                     </div>
                   ) : filterState.projectId === 'all' ? (
-                    // Grouped by Project Name: Project Name on Left (Pinned), 800px Tasks Card on Right
+                    // Grouped by Project or Direct Folder: Anchor on Left (Pinned), 800px Tasks Card on Right
                     <div className="space-y-6 md:space-y-8">
                       {Object.entries(activeTasksByProject).map(
-                        ([projName, projTasks], idx) => {
-                          const targetProj = projects.find(
-                            (p) => p.name === projName || p.id === projTasks[0]?.projectId
-                          );
+                        ([groupKey, projTasks], idx) => {
+                          const isDirectFolderGroup = groupKey.startsWith('folder:');
+                          const directFolderId = isDirectFolderGroup ? groupKey.replace('folder:', '') : undefined;
+                          const directFolderPath = directFolderId
+                            ? (getFolderPath(directFolderId, folders) || projTasks[0]?.folderName || projTasks[0]?.projectName || 'Thư mục')
+                            : '';
+
+                          const targetProj = isDirectFolderGroup
+                            ? undefined
+                            : projects.find(
+                                (p) => p.name === groupKey || p.id === projTasks[0]?.projectId
+                              );
+                          const projFolderPath = targetProj
+                            ? getFolderPath(targetProj.folderId || inferProjectFolderId(targetProj), folders)
+                            : '';
+                          const displayTitle = isDirectFolderGroup ? directFolderPath : groupKey;
+
                           return (
                             <div
-                              key={projName}
+                              key={groupKey}
                               className={idx > 0 ? 'border-t border-[#e5e7eb] pt-6 md:pt-8' : ''}
                             >
                               <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                                {/* Mobile: 1 dòng duy nhất cho phần dự án */}
+                                {/* Mobile: 1 dòng duy nhất cho phần dự án / thư mục */}
                                 <div className="flex md:hidden items-center justify-between w-full py-1.5 px-0.5">
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (targetProj) {
+                                      if (isDirectFolderGroup && directFolderId) {
+                                        setFilterState((prev) => ({
+                                          ...prev,
+                                          folderId: prev.folderId === directFolderId ? 'all' : directFolderId,
+                                          projectId: 'all',
+                                        }));
+                                      } else if (targetProj) {
                                         setFilterState((prev) => ({
                                           ...prev,
                                           projectId: prev.projectId === targetProj.id ? 'all' : targetProj.id,
@@ -2621,12 +2744,21 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                       }
                                     }}
                                     className="group/title flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
-                                    title={`Bấm để lọc công việc theo dự án: ${projName}`}
+                                    title={
+                                      isDirectFolderGroup
+                                        ? `Bấm để lọc theo thư mục: ${displayTitle}`
+                                        : `Bấm để lọc công việc theo dự án: ${displayTitle}`
+                                    }
                                   >
-                                    <Folder className="w-4 h-4 text-[#71717a] group-hover/title:text-[#1e609c] shrink-0" />
+                                    <Folder className={`w-4 h-4 shrink-0 ${isDirectFolderGroup ? 'text-[#963861]' : 'text-[#71717a] group-hover/title:text-[#1e609c]'}`} />
                                     <span className="font-title text-[14px] font-semibold text-[#202020] group-hover/title:text-[#1e609c] truncate">
-                                      {projName}
+                                      {displayTitle}
                                     </span>
+                                    {isDirectFolderGroup && (
+                                      <span className="text-[10px] font-ui text-[#963861] bg-[#fdf2f7] border border-[#f3c2d4] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                        Tinh chỉnh
+                                      </span>
+                                    )}
                                     {targetProj?.isStrategic && (
                                       <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
                                     )}
@@ -2640,27 +2772,44 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     </span>
                                   </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (targetProj) handleOpenProjectDetail(targetProj.id);
-                                    }}
-                                    className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
-                                    title={`Xem thông tin dự án ${projName}`}
-                                  >
-                                    <span className="text-base font-bold leading-none">→</span>
-                                  </button>
+                                  {targetProj && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenProjectDetail(targetProj.id);
+                                      }}
+                                      className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
+                                      title={`Xem thông tin dự án ${displayTitle}`}
+                                    >
+                                      <span className="text-base font-bold leading-none">→</span>
+                                    </button>
+                                  )}
                                 </div>
 
-                                {/* Desktop: Cột trái Tên dự án pin theo khi cuộn */}
+                                {/* Desktop: Cột trái Tên dự án / Thư mục pin theo khi cuộn */}
                                 <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                                   <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
-                                    {/* Vùng 1: Bấm vào tên dự án sẽ lọc công việc theo dự án */}
+                                    {/* Nhãn Thư mục cha của dự án */}
+                                    {!isDirectFolderGroup && projFolderPath && (
+                                      <div className="pl-6 mb-1">
+                                        <span className="text-[10px] font-ui font-medium text-[#963861] bg-[#fdf2f7] px-1.5 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-block truncate max-w-full">
+                                          📁 {projFolderPath}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Vùng 1: Bấm vào tên dự án / thư mục sẽ lọc công việc */}
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (targetProj) {
+                                        if (isDirectFolderGroup && directFolderId) {
+                                          setFilterState((prev) => ({
+                                            ...prev,
+                                            folderId: prev.folderId === directFolderId ? 'all' : directFolderId,
+                                            projectId: 'all',
+                                          }));
+                                        } else if (targetProj) {
                                           setFilterState((prev) => ({
                                             ...prev,
                                             projectId: prev.projectId === targetProj.id ? 'all' : targetProj.id,
@@ -2668,25 +2817,33 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         }
                                       }}
                                       className="group/title text-left cursor-pointer block w-full"
-                                      title={`Bấm để lọc công việc theo dự án: ${projName}`}
+                                      title={
+                                        isDirectFolderGroup
+                                          ? `Bấm để lọc công việc theo thư mục: ${displayTitle}`
+                                          : `Bấm để lọc công việc theo dự án: ${displayTitle}`
+                                      }
                                     >
                                       <div className="flex items-start gap-2 min-w-0">
-                                        <Folder className="w-4 h-4 text-[#71717a] group-hover/title:text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                        <Folder className={`w-4 h-4 transition-colors shrink-0 mt-0.5 ${isDirectFolderGroup ? 'text-[#963861]' : 'text-[#71717a] group-hover/title:text-[#1e609c]'}`} />
                                         <div className="min-w-0 flex-1">
                                           <span className="font-title text-[14px] font-normal text-[#202020] group-hover/title:text-[#1e609c] group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
-                                            {projName}
+                                            {displayTitle}
                                           </span>
                                         </div>
                                         {targetProj?.isStrategic && (
                                           <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
-                                        {targetProj?.code && (
+                                      <div className="flex items-center flex-wrap gap-1.5 pl-6 text-xs font-ui mt-1.5">
+                                        {isDirectFolderGroup ? (
+                                          <span className="text-[10px] font-ui text-[#963861] bg-[#fdf2f7] border border-[#f3c2d4] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                            Trực tiếp trong folder
+                                          </span>
+                                        ) : targetProj?.code ? (
                                           <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
                                             {targetProj.code}
                                           </span>
-                                        )}
+                                        ) : null}
                                         <span className="text-[11px] font-ui text-[#64748b]">
                                           {projTasks.length} việc
                                         </span>
@@ -2694,22 +2851,22 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     </button>
 
                                     {/* Vùng 2: Bấm vào Thông tin dự án sẽ hiển thị thông tin ở Right Sidebar */}
-                                    <div className="pl-6 pt-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (targetProj) {
+                                    {targetProj && (
+                                      <div className="pl-6 pt-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             handleOpenProjectDetail(targetProj.id);
-                                          }
-                                        }}
-                                        className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                        title={`Bấm để xem thông tin dự án ${projName} ở Right Sidebar`}
-                                      >
-                                        <span>Thông tin dự án</span>
-                                        <span className="group-hover/info:translate-x-0.5 transition-transform">→</span>
-                                      </button>
-                                    </div>
+                                          }}
+                                          className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                          title={`Bấm để xem thông tin dự án ${displayTitle} ở Right Sidebar`}
+                                        >
+                                          <span>Thông tin dự án</span>
+                                          <span className="group-hover/info:translate-x-0.5 transition-transform">→</span>
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -2749,6 +2906,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     <div>
                       {(() => {
                         const curProj = projects.find((p) => p.id === filterState.projectId);
+                        const curProjFolderPath = curProj
+                          ? getFolderPath(curProj.folderId || inferProjectFolderId(curProj), folders)
+                          : '';
                         return (
                           <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                             {/* Mobile: 1 dòng duy nhất cho dự án đơn lẻ */}
@@ -2797,6 +2957,13 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                             <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                               {curProj ? (
                                 <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
+                                  {curProjFolderPath && (
+                                    <div className="pl-6 mb-1">
+                                      <span className="text-[10px] font-ui font-medium text-[#963861] bg-[#fdf2f7] px-1.5 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-block truncate max-w-full">
+                                        📁 {curProjFolderPath}
+                                      </span>
+                                    </div>
+                                  )}
                                   {/* Vùng 1: Bấm vào tên dự án sẽ bỏ lọc dự án (xem tất cả) */}
                                   <button
                                     type="button"
@@ -2950,6 +3117,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           {activeTab === 'projects' && (
             <ProjectsManager
               projects={projects}
+              folders={folders}
               tasks={tasks}
               members={members}
               filterState={filterState}
@@ -2957,13 +3125,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               onUpdateProject={handleUpdateProject}
               onDeleteProject={handleDeleteProject}
               onSelectProjectFilter={(projId) => {
-                setFilterState((f) => ({ ...f, projectId: projId }));
+                setFilterState((f) => ({ ...f, projectId: projId, folderId: 'all' }));
                 setActiveTab('tasks');
               }}
               activeProductMember={activeProductMember}
               currentAuthUser={currentAuthUser}
               onOpenProjectDetail={handleOpenProjectDetail}
               onOpenAddProject={handleOpenAddProject}
+              onOpenFolderManager={() => setIsFolderManagerOpen(true)}
             />
           )}
 
@@ -3055,6 +3224,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         projects={projects}
+        folders={folders}
         members={members}
         onSaveTask={handleSaveTask}
         onDeleteTask={handleDeleteTask}
@@ -3068,6 +3238,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       <ProjectDetailsDrawer
         project={selectedProjectForDrawer}
         projects={projects}
+        folders={folders}
         tasks={tasks}
         members={members}
         isOpen={isProjectDrawerOpen}
@@ -3079,7 +3250,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         onSaveProject={handleUpdateProject}
         onCreateProject={handleAddProject}
         onSelectProjectTasks={(projectId) => {
-          setFilterState((f) => ({ ...f, projectId }));
+          setFilterState((f) => ({ ...f, projectId, folderId: 'all' }));
           setActiveTab('tasks');
           setIsProjectDrawerOpen(false);
         }}
@@ -3187,12 +3358,34 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         isOpen={isMobileQuickAddOpen}
         onClose={() => setIsMobileQuickAddOpen(false)}
         projects={projects}
+        folders={folders}
         tasks={tasks}
         members={members}
         onAddTask={handleAddTask}
         defaultProjectId={filterState.projectId !== 'all' ? filterState.projectId : undefined}
+        defaultFolderId={filterState.folderId && filterState.folderId !== 'all' ? filterState.folderId : undefined}
         defaultAssignee={activeProductMember?.name || currentAuthUser?.name}
         currentUser={currentAuthUser || activeProductMember}
+      />
+
+      {/* Modal Quản lý Cây Thư mục (VnExpress -> Thể thao, Thế giới..., Ngôi sao, English, Tia sáng) */}
+      <FolderManagerModal
+        isOpen={isFolderManagerOpen}
+        onClose={() => setIsFolderManagerOpen(false)}
+        folders={folders}
+        projects={projects}
+        tasks={tasks}
+        onUpdateFolders={(nextFolders, deletedId) => {
+          setFolders(nextFolders);
+          saveFoldersToStorage(nextFolders);
+          wmsDataService.saveFolders(nextFolders).catch(() => {});
+          if (deletedId) {
+            wmsDataService.deleteFolderFromDb(deletedId).catch(() => {});
+            if (filterState.folderId === deletedId) {
+              setFilterState((f) => ({ ...f, folderId: 'all' }));
+            }
+          }
+        }}
       />
     </div>
   );

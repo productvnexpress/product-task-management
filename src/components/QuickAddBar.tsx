@@ -15,12 +15,19 @@ import {
   RecurrenceFrequency,
   RecurrenceEndType,
   RecurringRuleConfig,
+  FolderItem,
 } from '../types';
-import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw } from 'lucide-react';
+import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw, Folder } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers, isSamePersonName } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups, isOthersProject } from '../utils/projectSortingUtils';
+import {
+  INITIAL_FOLDERS,
+  getFlattenedFolderOptions,
+  getFolderPath,
+  inferProjectFolderId,
+} from '../utils/folderUtils';
 import { ProjectChecklistModal } from './ProjectChecklistModal';
 import { calculateChecklistStats } from '../data/defaultProjectChecklist';
 import { getUserRole } from '../utils/rbac';
@@ -28,12 +35,15 @@ import { recurringTaskService, calculateNextCycleDate } from '../services/recurr
 import { MobileQuickAddDrawer } from './MobileQuickAddDrawer';
 
 interface QuickAddBarProps {
+  folders?: FolderItem[];
   projects: ProjectItem[];
   tasks?: TaskItem[];
   members: MemberItem[];
   onAddTask: (task: {
     id?: string;
     title: string;
+    folderId?: string;
+    folderName?: string;
     projectId: string;
     projectName: string;
     phaseId?: string;
@@ -47,6 +57,7 @@ interface QuickAddBarProps {
     isRecurring?: boolean;
     recurringFrequency?: RecurrenceFrequency;
   }) => void;
+  defaultFolderId?: string;
   defaultProjectId?: string;
   defaultAssignee?: string;
   onUpdateProjectChecklist?: (projectId: string, updatedChecklist: ProjectChecklistItem[]) => void;
@@ -54,10 +65,12 @@ interface QuickAddBarProps {
 }
 
 export const QuickAddBar: React.FC<QuickAddBarProps> = ({
+  folders = INITIAL_FOLDERS,
   projects,
   tasks = [],
   members,
   onAddTask,
+  defaultFolderId,
   defaultProjectId,
   defaultAssignee,
   onUpdateProjectChecklist,
@@ -73,19 +86,24 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     return getTaskCreationProjectGroups(projects, assignee, members, tasks);
   }, [projects, assignee, members, tasks]);
 
-  // Default projectId selection
+  const flattenedFolders = useMemo(() => getFlattenedFolderOptions(folders), [folders]);
+
+  // Default projectId or folderId selection
   const initialProjectId = useMemo(() => {
-    if (defaultProjectId && projects.some((p) => p.id === defaultProjectId)) {
+    if (defaultProjectId && (defaultProjectId.startsWith('folder:') || projects.some((p) => p.id === defaultProjectId))) {
       return defaultProjectId;
+    }
+    if (defaultFolderId && defaultFolderId !== 'all') {
+      return `folder:${defaultFolderId}`;
     }
     return (
       projectGroups.myProjects[0]?.id ||
       projectGroups.otherProjects[0]?.id ||
       projectGroups.unspecifiedProject?.id ||
       projects[0]?.id ||
-      'proj-others'
+      'folder:folder-vne'
     );
-  }, [defaultProjectId, projects, projectGroups]);
+  }, [defaultFolderId, defaultProjectId, projects, projectGroups]);
 
   const [projectId, setProjectId] = useState<string>(initialProjectId);
   const [phaseId, setPhaseId] = useState<string>('');
@@ -121,24 +139,30 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   }, [defaultAssignee]);
 
   useEffect(() => {
-    if (defaultProjectId && projects.some((p) => p.id === defaultProjectId)) {
+    if (defaultProjectId && (defaultProjectId.startsWith('folder:') || projects.some((p) => p.id === defaultProjectId))) {
       setProjectId(defaultProjectId);
+    } else if (defaultFolderId && defaultFolderId !== 'all') {
+      setProjectId(`folder:${defaultFolderId}`);
     }
-  }, [defaultProjectId, projects]);
+  }, [defaultFolderId, defaultProjectId, projects]);
 
   // Sync projectId if current one becomes invalid
   useEffect(() => {
-    if (!projectId || !projects.some((p) => p.id === projectId)) {
+    const isValidFolder = projectId.startsWith('folder:') && folders.some((f) => f.id === projectId.replace(/^folder:/, ''));
+    const isValidProj = projects.some((p) => p.id === projectId);
+    if (!projectId || (!isValidFolder && !isValidProj)) {
       const fallbackId =
         projectGroups.myProjects[0]?.id ||
         projectGroups.otherProjects[0]?.id ||
         projectGroups.unspecifiedProject?.id ||
-        projects[0]?.id;
+        projects[0]?.id ||
+        'folder:folder-vne';
       if (fallbackId) setProjectId(fallbackId);
     }
-  }, [projects, projectGroups, projectId]);
+  }, [projects, folders, projectGroups, projectId]);
 
-  const selectedProj = projects.find((p) => p.id === projectId);
+  const isDirectFolder = projectId.startsWith('folder:');
+  const selectedProj = isDirectFolder ? undefined : projects.find((p) => p.id === projectId);
   const availablePhases = selectedProj?.phases || [];
 
   const checklistStats = useMemo(() => {
@@ -148,6 +172,10 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
   const handleProjectSelect = (pId: string) => {
     setProjectId(pId);
+    if (pId.startsWith('folder:')) {
+      setPhaseId('');
+      return;
+    }
     const p = projects.find((item) => item.id === pId);
     if (p && p.phases && p.phases.length > 0) {
       setPhaseId(p.phases[0].id);
@@ -168,8 +196,17 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
-    const projName = selectedProj ? selectedProj.name : 'Chưa xác định (Others)';
-    const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
+    const resolvedFolderId = isDirectFolder
+      ? projectId.replace(/^folder:/, '')
+      : selectedProj?.folderId || inferProjectFolderId(selectedProj || {});
+    const resolvedFolderPath = getFolderPath(resolvedFolderId, folders);
+
+    const projName = isDirectFolder
+      ? resolvedFolderPath
+      : selectedProj
+      ? selectedProj.name
+      : 'Chưa xác định (Others)';
+    const foundPhase = isDirectFolder ? undefined : availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
     const initialDueDate = isAssigningToOther && !dueDate ? '' : (dueDate || getTodayDateString());
@@ -180,12 +217,12 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     const nowIso = new Date().toISOString();
     if (isRecurring && isAdmin) {
       recurringRuleId = `rec-${Date.now()}`;
-      const nextRun = calculateNextCycleDate(initialDueDate, recurringFrequency);
+      const nextRun = calculateNextCycleDate(initialDueDate || getTodayDateString(), recurringFrequency);
 
       const newRule: RecurringRuleConfig = {
         id: recurringRuleId,
         title: title.trim(),
-        projectId,
+        projectId: isDirectFolder ? `folder:${resolvedFolderId}` : projectId,
         projectName: projName,
         phaseId: foundPhase ? foundPhase.id : undefined,
         phaseName: foundPhase ? foundPhase.name : undefined,
@@ -209,7 +246,9 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     onAddTask({
       id: recurringRuleId ? `task-rec-${recurringRuleId}-${initialDueDate}` : undefined,
       title: title.trim(),
-      projectId,
+      folderId: resolvedFolderId,
+      folderName: resolvedFolderPath,
+      projectId: isDirectFolder ? '' : projectId,
       projectName: projName,
       phaseId: foundPhase ? foundPhase.id : undefined,
       phaseName: foundPhase ? foundPhase.name : undefined,
@@ -297,29 +336,48 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
             >
               <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#f0f0f0] text-xs font-ui">
                 <div className="flex flex-wrap items-center gap-2">
-              {/* Project selector with 2 groups + Others at bottom */}
+              {/* Folder / Project selector */}
               <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                <Briefcase className="w-3.5 h-3.5 text-[#b13460] shrink-0" />
+                {isDirectFolder ? (
+                  <Folder className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                ) : (
+                  <Briefcase className="w-3.5 h-3.5 text-[#b13460] shrink-0" />
+                )}
                 <select
                   value={projectId}
                   onChange={(e) => handleProjectSelect(e.target.value)}
-                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[210px] truncate"
+                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[240px] truncate"
+                  title="Chọn Thư mục (trực tiếp cho task tinh chỉnh nhỏ) hoặc Dự án"
                 >
+                  <optgroup label="── 📁 Trực tiếp trong Thư mục (Tinh chỉnh nhỏ) ──">
+                    {flattenedFolders.map((item) => (
+                      <option key={`folder:${item.folder.id}`} value={`folder:${item.folder.id}`}>
+                        {item.depth > 0 ? `  ↳ 📂 ${item.fullPath}` : `📁 ${item.fullPath}`} (Trực tiếp)
+                      </option>
+                    ))}
+                  </optgroup>
+
                   {projectGroups.myProjects.length > 0 && (
-                    <optgroup label="── Dự án tham gia ──">
-                      {projectGroups.myProjects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name.replace(/^Dự án\s+/i, '')}
-                        </option>
-                      ))}
+                    <optgroup label="── 🚀 Dự án tham gia ──">
+                      {projectGroups.myProjects.map((p) => {
+                        const fPath = getFolderPath(p.folderId || inferProjectFolderId(p), folders);
+                        return (
+                          <option key={p.id} value={p.id}>
+                            [{fPath}] {p.name.replace(/^Dự án\s+/i, '')}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   )}
                   <optgroup label={projectGroups.myProjects.length > 0 ? "── Dự án khác ──" : "── Danh sách dự án ──"}>
-                    {projectGroups.otherProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name.replace(/^Dự án\s+/i, '')}
-                      </option>
-                    ))}
+                    {projectGroups.otherProjects.map((p) => {
+                      const fPath = getFolderPath(p.folderId || inferProjectFolderId(p), folders);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          [{fPath}] {p.name.replace(/^Dự án\s+/i, '')}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                   {projectGroups.unspecifiedProject && (
                     <optgroup label="── Khác ──">
@@ -578,10 +636,12 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       <MobileQuickAddDrawer
         isOpen={isMobileDrawerOpen}
         onClose={() => setIsMobileDrawerOpen(false)}
+        folders={folders}
         projects={projects}
         tasks={tasks}
         members={members}
         onAddTask={onAddTask}
+        defaultFolderId={defaultFolderId}
         defaultProjectId={defaultProjectId || projectId}
         defaultAssignee={defaultAssignee || assignee}
         currentUser={currentUser}

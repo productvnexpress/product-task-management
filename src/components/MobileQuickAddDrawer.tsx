@@ -12,6 +12,7 @@ import {
   PriorityLevel,
   TaskItem,
   RecurrenceFrequency,
+  FolderItem,
 } from '../types';
 import {
   X,
@@ -29,16 +30,25 @@ import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers, isSamePersonName } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups } from '../utils/projectSortingUtils';
+import {
+  INITIAL_FOLDERS,
+  getFlattenedFolderOptions,
+  getFolderPath,
+  inferProjectFolderId,
+} from '../utils/folderUtils';
 
 export interface MobileQuickAddDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  folders?: FolderItem[];
   projects: ProjectItem[];
   tasks?: TaskItem[];
   members: MemberItem[];
   onAddTask: (task: {
     id?: string;
     title: string;
+    folderId?: string;
+    folderName?: string;
     projectId: string;
     projectName: string;
     phaseId?: string;
@@ -52,6 +62,7 @@ export interface MobileQuickAddDrawerProps {
     isRecurring?: boolean;
     recurringFrequency?: RecurrenceFrequency;
   }) => void;
+  defaultFolderId?: string;
   defaultProjectId?: string;
   defaultAssignee?: string;
   currentUser?: MemberItem | null;
@@ -60,10 +71,12 @@ export interface MobileQuickAddDrawerProps {
 export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
   isOpen,
   onClose,
+  folders = INITIAL_FOLDERS,
   projects,
   tasks = [],
   members,
   onAddTask,
+  defaultFolderId,
   defaultProjectId,
   defaultAssignee,
   currentUser,
@@ -96,18 +109,22 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
     return getTaskCreationProjectGroups(projects, assignee, members, tasks);
   }, [projects, assignee, members, tasks]);
 
-  // Khởi tạo/cập nhật dự án mặc định khi mở drawer
+  const flattenedFolders = useMemo(() => getFlattenedFolderOptions(folders), [folders]);
+
+  // Khởi tạo/cập nhật dự án hoặc folder mặc định khi mở drawer
   useEffect(() => {
     if (isOpen) {
-      if (defaultProjectId && projects.some((p) => p.id === defaultProjectId)) {
+      if (defaultProjectId && (defaultProjectId.startsWith('folder:') || projects.some((p) => p.id === defaultProjectId))) {
         setProjectId(defaultProjectId);
+      } else if (defaultFolderId && defaultFolderId !== 'all') {
+        setProjectId(`folder:${defaultFolderId}`);
       } else {
         const fallback =
           projectGroups.myProjects[0]?.id ||
           projectGroups.otherProjects[0]?.id ||
           projectGroups.unspecifiedProject?.id ||
           projects[0]?.id ||
-          'proj-others';
+          'folder:folder-vne';
         setProjectId(fallback);
       }
 
@@ -127,16 +144,21 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
       }, 250);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, defaultProjectId, defaultAssignee, currentUser, projects, projectGroups, todayStr]);
+  }, [isOpen, defaultFolderId, defaultProjectId, defaultAssignee, currentUser, projects, projectGroups, todayStr]);
 
+  const isDirectFolder = projectId.startsWith('folder:');
   const selectedProj = useMemo(
-    () => projects.find((p) => p.id === projectId),
-    [projects, projectId]
+    () => (isDirectFolder ? undefined : projects.find((p) => p.id === projectId)),
+    [projects, projectId, isDirectFolder]
   );
   const availablePhases = selectedProj?.phases || [];
 
   const handleProjectSelect = (pId: string) => {
     setProjectId(pId);
+    if (pId.startsWith('folder:')) {
+      setPhaseId('');
+      return;
+    }
     const p = projects.find((item) => item.id === pId);
     if (p && p.phases && p.phases.length > 0) {
       setPhaseId(p.phases[0].id);
@@ -169,15 +191,26 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
       return;
     }
 
-    const projName = selectedProj ? selectedProj.name : 'Chưa xác định (Others)';
-    const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
+    const resolvedFolderId = isDirectFolder
+      ? projectId.replace(/^folder:/, '')
+      : selectedProj?.folderId || inferProjectFolderId(selectedProj || {});
+    const resolvedFolderPath = getFolderPath(resolvedFolderId, folders);
+
+    const projName = isDirectFolder
+      ? resolvedFolderPath
+      : selectedProj
+      ? selectedProj.name
+      : 'Chưa xác định (Others)';
+    const foundPhase = isDirectFolder ? undefined : availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
     const finalDueDate = isAssigningToOther && !dueDate ? '' : (dueDate || todayStr);
 
     onAddTask({
       title: title.trim(),
-      projectId,
+      folderId: resolvedFolderId,
+      folderName: resolvedFolderPath,
+      projectId: isDirectFolder ? '' : projectId,
       projectName: projName,
       phaseId: foundPhase ? foundPhase.id : undefined,
       phaseName: foundPhase ? foundPhase.name : undefined,
@@ -354,11 +387,11 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
               </div>
             </div>
 
-            {/* 3. Dự án & Giai đoạn */}
+            {/* 3. Thư mục / Dự án & Giai đoạn */}
             <div className="space-y-1.5">
               <label className="font-ui text-xs font-bold text-[#52525b] flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5 text-[#963861]" />
-                <span>Dự án:</span>
+                <span>Thư mục / Dự án:</span>
               </label>
               <div className="relative">
                 <select
@@ -366,13 +399,24 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
                   onChange={(e) => handleProjectSelect(e.target.value)}
                   className="w-full h-11 px-3 rounded-[8px] border border-[#d4d4d8] bg-[#f9f9f9] text-xs font-ui font-semibold text-[#18181b] focus:border-[#963861] focus:bg-white focus:outline-hidden transition-all"
                 >
+                  <optgroup label="── 📁 Trực tiếp trong Thư mục (Tinh chỉnh nhỏ) ──">
+                    {flattenedFolders.map((item) => (
+                      <option key={`folder:${item.folder.id}`} value={`folder:${item.folder.id}`}>
+                        {item.depth > 0 ? `  ↳ 📂 ${item.fullPath}` : `📁 ${item.fullPath}`} (Trực tiếp)
+                      </option>
+                    ))}
+                  </optgroup>
+
                   {projectGroups.myProjects.length > 0 && (
-                    <optgroup label="── Dự án tham gia ──">
-                      {projectGroups.myProjects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name.replace(/^Dự án\s+/i, '')}
-                        </option>
-                      ))}
+                    <optgroup label="── 🚀 Dự án tham gia ──">
+                      {projectGroups.myProjects.map((p) => {
+                        const fPath = getFolderPath(p.folderId || inferProjectFolderId(p), folders);
+                        return (
+                          <option key={p.id} value={p.id}>
+                            [{fPath}] {p.name.replace(/^Dự án\s+/i, '')}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   )}
                   <optgroup
@@ -382,11 +426,14 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
                         : '── Danh sách dự án ──'
                     }
                   >
-                    {projectGroups.otherProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name.replace(/^Dự án\s+/i, '')}
-                      </option>
-                    ))}
+                    {projectGroups.otherProjects.map((p) => {
+                      const fPath = getFolderPath(p.folderId || inferProjectFolderId(p), folders);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          [{fPath}] {p.name.replace(/^Dự án\s+/i, '')}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                   {projectGroups.unspecifiedProject && (
                     <optgroup label="── Khác ──">

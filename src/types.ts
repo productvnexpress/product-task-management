@@ -55,10 +55,20 @@ export interface ProjectLinks {
 
 export type ProjectStatus = 'Chưa triển khai' | 'Đang triển khai' | 'Tạm dừng' | 'Hoàn thành';
 
+export interface FolderItem {
+  id: string;
+  name: string;         // Tên thư mục: VnExpress, Thể thao, Thế giới, Ngôi sao, English, Tia sáng...
+  parentId?: string;    // ID thư mục cha (undefined nếu là thư mục gốc cấp 1)
+  code?: string;        // Mã thư mục viết tắt
+  description?: string;
+  sortOrder?: number;
+}
+
 export interface ProjectItem {
   id: string;
   name: string;
   code: string;
+  folderId?: string;          // Khóa ngoại liên kết với Thư mục (FolderItem.id) - Bắt buộc nằm trong folder
   description: string;
   objective?: string;         // Mục tiêu dự án
   productOwner?: string;      // Product Owner (Nội dung/Kinh doanh chịu trách nhiệm trực tiếp KPI)
@@ -156,8 +166,10 @@ export interface TaskLogItem {
 export interface TaskItem {
   id: string;
   title: string;
-  projectId: string;
-  projectName: string;
+  folderId?: string;   // Khóa ngoại liên kết trực tiếp hoặc gián tiếp với Folder (FolderItem.id)
+  folderName?: string; // Tên hiển thị của Folder (dùng cho task nằm trực tiếp trong folder)
+  projectId: string;   // Khóa ngoại dự án (hoặc rỗng '' nếu task nằm trực tiếp trong folder)
+  projectName: string; // Tên dự án (hoặc tên folder nếu task nằm trực tiếp trong folder)
   phaseId?: string;
   phaseName?: string;
   team: TeamType;
@@ -214,7 +226,8 @@ export type TaskPersonalScope = 'my_tasks' | 'my_projects_tasks' | 'all';
 export type DueFilterType = 'all' | 'today' | 'overdue' | 'soon' | 'custom';
 
 export interface FilterState {
-  projectId: string; // 'all' or projectId
+  folderId?: string; // 'all' or folderId
+  projectId: string; // 'all' or projectId or 'folder:xxx'
   team: 'Tất cả' | TeamType;
   status: 'Tất cả' | TaskStatus;
   assignee: string; // 'Tất cả' or member name

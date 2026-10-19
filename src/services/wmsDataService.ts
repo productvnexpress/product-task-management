@@ -14,12 +14,81 @@ import {
   MemberItem,
   TrashItem,
   NotificationItem,
+  FolderItem,
 } from '../types';
 import { normalizeProjectStatus } from '../utils/projectSortingUtils';
 import { deduplicateNotifications } from '../utils/notificationDeduplication';
 import { deduplicateTaskLogs } from '../utils/taskLogUtils';
+import {
+  INITIAL_FOLDERS,
+  inferProjectFolderId,
+  loadFoldersFromStorage,
+  saveFoldersToStorage,
+} from '../utils/folderUtils';
 
 export const wmsDataService = {
+  // ==========================================
+  // 0. THƯ MỤC (FOLDERS)
+  // ==========================================
+  async fetchFolders(): Promise<FolderItem[]> {
+    const localFolders = loadFoldersFromStorage();
+    try {
+      const { data, error } = await supabase
+        .from('folders')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const dbFolders: FolderItem[] = data.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          parentId: f.parent_id || undefined,
+          code: f.code || undefined,
+          description: f.description || undefined,
+          sortOrder: f.sort_order !== null ? Number(f.sort_order) : undefined,
+        }));
+        const existingIds = new Set(dbFolders.map((f) => f.id));
+        const merged = [...dbFolders];
+        for (const def of INITIAL_FOLDERS) {
+          if (!existingIds.has(def.id)) {
+            merged.push(def);
+          }
+        }
+        saveFoldersToStorage(merged);
+        return merged;
+      }
+    } catch (e) {
+      console.debug('[wmsDataService] Dùng danh sách folders cục bộ:', e);
+    }
+    return localFolders;
+  },
+
+  async saveFolders(folders: FolderItem[]): Promise<void> {
+    saveFoldersToStorage(folders);
+    try {
+      const payload = folders.map((f, idx) => ({
+        id: f.id,
+        name: f.name,
+        parent_id: f.parentId || null,
+        code: f.code || null,
+        description: f.description || null,
+        sort_order: f.sortOrder ?? idx + 1,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from('folders').upsert(payload, { onConflict: 'id' });
+    } catch (e) {
+      console.debug('[wmsDataService] Lưu folders lên Supabase (bảng có thể chưa khởi tạo):', e);
+    }
+  },
+
+  async deleteFolderFromDb(folderId: string): Promise<void> {
+    try {
+      await supabase.from('folders').delete().eq('id', folderId);
+    } catch (e) {
+      console.debug('[wmsDataService] Xóa folder trên Supabase:', e);
+    }
+  },
+
   // ==========================================
   // 1. NHÂN SỰ (MEMBERS)
   // ==========================================
@@ -154,6 +223,7 @@ export const wmsDataService = {
         id: p.id,
         name: p.name,
         code: p.code,
+        folderId: p.folder_id || inferProjectFolderId({ id: p.id, name: p.name, code: p.code }),
         description: p.description || '',
         objective: p.objective || undefined,
         productOwner: p.product_owner || undefined,
@@ -230,6 +300,7 @@ export const wmsDataService = {
       id: project.id,
       name: project.name ? project.name.trim() : 'Dự án mới',
       code: candidateCode,
+      folder_id: project.folderId || inferProjectFolderId(project),
       description: project.description || null,
       objective: project.objective || null,
       product_owner: project.productOwner || null,
@@ -266,7 +337,7 @@ export const wmsDataService = {
     // Tự động thử lại bằng cách lược bỏ các cột chưa có trong DDL của Supabase nếu gặp lỗi 42703 (undefined_column)
     if (projErr && ((projErr as any).code === '42703' || projErr.message?.toLowerCase().includes('column'))) {
       console.warn('[saveProject] Phát hiện cột chưa hỗ trợ trong bối cảnh Supabase. Đang tiến hành retry lược bỏ bớt các cột mới:', projErr.message);
-      const optionalCols = ['checklist', 'roles', 'custom_links', 'link_order_tech', 'link_chat', 'link_dashboard', 'link_report', 'link_beta', 'link_production', 'is_strategic', 'created_by'];
+      const optionalCols = ['folder_id', 'checklist', 'roles', 'custom_links', 'link_order_tech', 'link_chat', 'link_dashboard', 'link_report', 'link_beta', 'link_production', 'is_strategic', 'created_by'];
       
       for (const col of optionalCols) {
         if (projErr.message?.toLowerCase().includes(col) || (projErr as any).code === '42703') {
@@ -422,11 +493,31 @@ export const wmsDataService = {
           note: l.note || undefined,
         }));
 
+      const rawProjId = t.project_id ? String(t.project_id) : '';
+      const rawProjName = t.project_name ? String(t.project_name) : '';
+      const folderTagMatch = rawProjName.match(/^\[Folder:([^\]]+)\]\s*(.*)$/);
+      const isDirectFolder =
+        !rawProjId ||
+        rawProjId.startsWith('folder:') ||
+        Boolean(folderTagMatch);
+
+      const resolvedFolderId =
+        t.folder_id ||
+        (rawProjId.startsWith('folder:') ? rawProjId.replace(/^folder:/, '') : undefined) ||
+        (folderTagMatch ? folderTagMatch[1] : undefined);
+
+      const resolvedFolderName =
+        t.folder_name ||
+        (folderTagMatch ? folderTagMatch[2] : undefined) ||
+        (isDirectFolder ? rawProjName.replace(/^\[Folder\]\s*/i, '') : undefined);
+
       return {
         id: t.id,
         title: t.title,
-        projectId: t.project_id,
-        projectName: t.project_name,
+        folderId: resolvedFolderId,
+        folderName: resolvedFolderName,
+        projectId: isDirectFolder ? '' : rawProjId,
+        projectName: isDirectFolder ? (resolvedFolderName || rawProjName) : rawProjName,
         phaseId: t.phase_id || undefined,
         phaseName: t.phase_name || undefined,
         team: t.team,
@@ -454,14 +545,22 @@ export const wmsDataService = {
   },
 
   async saveTask(task: TaskItem, newLog?: TaskLogItem): Promise<void> {
+    const isDirectFolder = !task.projectId || task.projectId.startsWith('folder:');
+    const cleanFolderId = (task.folderId || task.projectId?.replace(/^folder:/, '') || '').trim();
+    const cleanFolderName = (task.folderName || (isDirectFolder ? task.projectName : '') || '').trim();
+
     // 1. Lưu task
     const taskPayload: any = {
       id: task.id,
       title: task.title,
-      project_id: task.projectId,
-      project_name: task.projectName,
-      phase_id: task.phaseId || null,
-      phase_name: task.phaseName || null,
+      folder_id: cleanFolderId || null,
+      folder_name: cleanFolderName || null,
+      project_id: isDirectFolder ? (cleanFolderId ? `folder:${cleanFolderId}` : null) : task.projectId,
+      project_name: isDirectFolder
+        ? cleanFolderName || task.projectName || 'VnExpress'
+        : task.projectName,
+      phase_id: isDirectFolder ? null : (task.phaseId || null),
+      phase_name: isDirectFolder ? null : (task.phaseName || null),
       team: task.team,
       assignee: task.assignee,
       product_owners: task.productOwners || [],
@@ -484,16 +583,32 @@ export const wmsDataService = {
 
     let { error: taskErr } = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
     if (taskErr && ((taskErr as any).code === '42703' || taskErr.message?.toLowerCase().includes('column'))) {
-      if (taskErr.message?.toLowerCase().includes('completed_at')) {
+      if (taskErr.message?.toLowerCase().includes('completed_at') || (taskErr as any).code === '42703') {
         delete taskPayload.completed_at;
       }
-      if (taskErr.message?.toLowerCase().includes('recurring')) {
+      if (taskErr.message?.toLowerCase().includes('recurring') || (taskErr as any).code === '42703') {
         delete taskPayload.is_recurring;
         delete taskPayload.recurring_rule_id;
         delete taskPayload.recurring_frequency;
       }
+      if (taskErr.message?.toLowerCase().includes('folder') || (taskErr as any).code === '42703') {
+        delete taskPayload.folder_id;
+        delete taskPayload.folder_name;
+      }
       const retry = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
       taskErr = retry.error;
+    }
+    if (taskErr && (taskErr as any).code === '23503' && isDirectFolder) {
+      // Nếu cột project_id có ràng buộc khóa ngoại (Foreign Key) tới bảng projects
+      taskPayload.project_id = null;
+      taskPayload.project_name = `[Folder:${cleanFolderId || 'folder-vne'}] ${cleanFolderName || 'VnExpress'}`;
+      const retryFk = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+      taskErr = retryFk.error;
+      if (taskErr && (taskErr as any).code === '23502' && taskErr.message?.toLowerCase().includes('project_id')) {
+        taskPayload.project_id = 'proj-others';
+        const retryNotNullProj = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+        taskErr = retryNotNullProj.error;
+      }
     }
     if (taskErr && (taskErr as any).code === '23502' && taskErr.message?.toLowerCase().includes('due_date')) {
       // Fallback nếu cơ sở dữ liệu có ràng buộc NOT NULL trên cột due_date
