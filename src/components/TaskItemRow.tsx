@@ -40,6 +40,7 @@ interface TaskItemRowProps {
   isMyTask?: boolean;
   onOpenProjectDetail?: (projectId: string) => void;
   onFilterByAssignee?: (assigneeName: string) => void;
+  onUpdateDueDate?: (id: string, newDueDate: string) => void;
 }
 
 export const TaskItemRow: React.FC<TaskItemRowProps> = ({
@@ -55,6 +56,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
   isMyTask = false,
   onOpenProjectDetail,
   onFilterByAssignee,
+  onUpdateDueDate,
 }) => {
   const userCanEdit = canEditTask(currentAuthUser, task, projects);
   const userCanDelete = canDeleteTask(currentAuthUser, task, projects);
@@ -72,6 +74,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
   const dueInfo = getTaskDueDateInfo(task.dueDate, task.status);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isPermanentDelete, setIsPermanentDelete] = React.useState(false);
+  const datePickerRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <div
@@ -370,31 +373,76 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
         )}
 
         {/* Thời gian */}
-        <span
-          className={`inline-flex items-center gap-1 font-ui text-[11px] ${
-            isCompleted
-              ? 'text-[#71717a]'
-              : dueInfo.status === 'overdue'
-              ? 'text-[#be123c] font-bold'
-              : dueInfo.status === 'due_today'
-              ? 'text-[#c2410c] font-bold'
-              : dueInfo.status === 'due_soon'
-              ? 'text-[#a16207] font-medium'
-              : 'text-[#71717a]'
-          }`}
-          title={`Hạn hoàn thành: ${formatDateWithEnDay(task.dueDate)}`}
-        >
-          {isCompleted ? (
-            <Calendar className="w-3 h-3 text-[#71717a]" />
-          ) : dueInfo.status === 'overdue' ? (
-            <AlertTriangle className="w-3 h-3 text-[#be123c]" />
-          ) : dueInfo.status === 'due_today' ? (
-            <Clock className="w-3 h-3 text-[#c2410c]" />
-          ) : (
-            <Calendar className="w-3 h-3 text-[#71717a]" />
-          )}
-          <span>{formatTaskDueDisplay(task.dueDate)}</span>
-        </span>
+        {!task.dueDate ? (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!userCanEdit) return;
+              try {
+                datePickerRef.current?.showPicker?.();
+              } catch (_) {
+                datePickerRef.current?.focus();
+              }
+            }}
+            className="relative inline-flex items-center cursor-pointer"
+            title={userCanEdit ? 'Bấm để chọn hạn hoàn thành cho công việc này' : 'Công việc chưa có hạn hoàn thành'}
+          >
+            <input
+              ref={datePickerRef}
+              type="date"
+              disabled={!userCanEdit}
+              onChange={(e) => {
+                const newDate = e.target.value;
+                if (newDate && onUpdateDueDate) {
+                  onUpdateDueDate(task.id, newDate);
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                try {
+                  (e.target as any).showPicker?.();
+                } catch (_) {}
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10 pointer-events-auto"
+            />
+            <span
+              className={`inline-flex items-center gap-1 font-ui text-[11px] px-2 py-0.5 rounded-[4px] border transition-all ${
+                isMyTask
+                  ? 'bg-[#fffbeb] text-[#b45309] border-[#fde68a] hover:bg-[#fef3c7] font-bold shadow-2xs'
+                  : 'bg-[#f4f4f5] text-[#71717a] border-[#e4e4e7] hover:bg-[#e4e4e7] font-medium'
+              }`}
+            >
+              <Calendar className="w-3 h-3 text-[#d97706]" />
+              <span>{userCanEdit ? 'Chưa có hạn • Chọn hạn' : 'Chưa có hạn'}</span>
+            </span>
+          </div>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 font-ui text-[11px] ${
+              isCompleted
+                ? 'text-[#71717a]'
+                : dueInfo.status === 'overdue'
+                ? 'text-[#be123c] font-bold'
+                : dueInfo.status === 'due_today'
+                ? 'text-[#c2410c] font-bold'
+                : dueInfo.status === 'due_soon'
+                ? 'text-[#a16207] font-medium'
+                : 'text-[#71717a]'
+            }`}
+            title={`Hạn hoàn thành: ${formatDateWithEnDay(task.dueDate)}`}
+          >
+            {isCompleted ? (
+              <Calendar className="w-3 h-3 text-[#71717a]" />
+            ) : dueInfo.status === 'overdue' ? (
+              <AlertTriangle className="w-3 h-3 text-[#be123c]" />
+            ) : dueInfo.status === 'due_today' ? (
+              <Clock className="w-3 h-3 text-[#c2410c]" />
+            ) : (
+              <Calendar className="w-3 h-3 text-[#71717a]" />
+            )}
+            <span>{formatTaskDueDisplay(task.dueDate)}</span>
+          </span>
+        )}
 
         {/* Mức độ ưu tiên */}
         {task.priority === 'Khẩn cấp' && (

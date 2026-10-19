@@ -7,11 +7,12 @@ import { MemberItem, NotificationItem, TaskItem } from '../types';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
 import { isSamePersonName, getProductMembers, isTaskForMember } from './memberPersonalization';
 import { workingTimeService } from '../services/workingTimeService';
+import { notificationRuleService } from '../services/notificationRuleService';
 
 /**
  * Kiểm tra và phát thông báo nhắc nhở lập kế hoạch task vào lúc 08:30 sáng các ngày làm việc
  * - Điều kiện: Ngày làm việc (loại trừ Thứ 7, CN và ngày nghỉ lễ theo workingTimeService)
- * - Mốc giờ: Từ 08:30 trở đi (hoặc preview param ?morningTaskAlert=1 hoặc ?preview0830=1)
+ * - Mốc giờ: Từ 08:30 trở đi (hoặc giờ cấu hình trong Quản lý Thông báo)
  * - Đối tượng: Toàn bộ nhân sự thuộc bộ phận Product (PM, Designer, SEO, Data)
  * - Miễn trừ: Nhân sự đang nghỉ phép hôm nay được miễn trừ hoàn toàn
  * - Tiêu chí nhắc: Chỉ nhắc nhân sự CHƯA CÓ task nào đến hạn hôm nay (tasksDueToday.length === 0)
@@ -30,18 +31,27 @@ export function checkAndDispatchDailyMorningTaskNotifications(
     return 0;
   }
 
+  // 1b. Kiểm tra quy tắc cấu hình trong Settings (nếu người dùng tắt quy tắc -> không gửi)
+  const rule = notificationRuleService.getActiveRuleForTrigger('daily_task_reminder');
+  if (rule && !rule.enabled) {
+    return 0;
+  }
+
   // 2. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày nghỉ lễ)
   if (!workingTimeService.isWorkingDay(refDate)) {
     return 0;
   }
 
-  // 3. Kiểm tra khung giờ 08:30
+  // 3. Kiểm tra khung giờ (mặc định 08:30 hoặc theo cấu hình)
+  const configuredTime = rule?.triggerConditions?.scheduledTime || '08:30';
+  const [cfgHours, cfgMinutes] = configuredTime.split(':').map(Number);
+  const targetMinutes = (isNaN(cfgHours) ? 8 : cfgHours) * 60 + (isNaN(cfgMinutes) ? 30 : cfgMinutes);
+
   const hours = refDate.getHours();
   const minutes = refDate.getMinutes();
   const timeInMinutes = hours * 60 + minutes;
 
-  // 08:30 tương đương 8 * 60 + 30 = 510 phút
-  const isAfter0830 = timeInMinutes >= 510;
+  const isAfterScheduledTime = timeInMinutes >= targetMinutes;
 
   // Hỗ trợ preview / test qua URL param
   const isPreviewParam = (() => {
@@ -53,7 +63,7 @@ export function checkAndDispatchDailyMorningTaskNotifications(
     }
   })();
 
-  if (!isAfter0830 && !isPreviewParam) {
+  if (!isAfterScheduledTime && !isPreviewParam) {
     return 0;
   }
 
@@ -128,8 +138,17 @@ export function checkAndDispatchDailyMorningTaskNotifications(
     }
 
     // Biên tập nội dung chuẩn EDITOR.md: Facts first, ngắn gọn, súc tích, thể chủ động
-    const title = 'Nhắc việc trong ngày (08:30)';
-    const content = 'Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.';
+    const defaultTitle = 'Nhắc việc trong ngày (08:30)';
+    const defaultContent = 'Bạn chưa có task đến hạn hôm nay. Vui lòng tạo việc hoặc cập nhật hạn hoàn thành.';
+
+    const vars = {
+      actorName: 'Hệ thống WMS',
+      projectName: 'Công việc',
+      time: configuredTime,
+    };
+
+    const finalTitle = rule ? notificationRuleService.interpolate(rule.titleTemplate, vars) || defaultTitle : defaultTitle;
+    const finalContent = rule ? notificationRuleService.interpolate(rule.contentTemplate, vars) || defaultContent : defaultContent;
 
     const safeKey = (member.username || member.name).toLowerCase().replace(/[\s\/\\]+/g, '_');
     const notif: NotificationItem = {
@@ -139,8 +158,8 @@ export function checkAndDispatchDailyMorningTaskNotifications(
       actorName: 'Hệ thống WMS',
       projectName: 'Công việc',
       type: 'daily_task_reminder',
-      title,
-      content,
+      title: finalTitle,
+      content: finalContent,
       isRead: false,
       createdAt: new Date().toISOString(),
     };

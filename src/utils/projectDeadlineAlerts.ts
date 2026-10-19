@@ -7,6 +7,7 @@ import { ProjectItem, TaskItem, MemberItem, NotificationItem } from '../types';
 import { getDaysDifference, getTodayDateString, normalizeDateString } from './dateUtils';
 import { formatDateWithEnDay } from './formatters';
 import { getProjectPMs, isSamePersonName } from './memberPersonalization';
+import { notificationRuleService } from '../services/notificationRuleService';
 
 export interface ProjectDeadlineAlertItem {
   id: string;
@@ -210,6 +211,16 @@ export function checkAndDispatchProjectDeadlineNotifications(
   allAlerts.forEach((alert) => {
     const pmDisplay = alert.pmNames.length > 0 ? alert.pmNames.join(', ') : 'Chưa phân công';
 
+    const notifType = alert.type === 'phase' ? 'phase_due_soon' : 'project_due_soon';
+    const rule = notificationRuleService.getActiveRuleForTrigger(notifType);
+
+    // Nếu quy tắc bị tắt bởi Admin -> Bỏ qua không phát thông báo
+    if (rule && !rule.enabled) return;
+
+    // Kiểm tra ngưỡng ngày cảnh báo tùy biến nếu có cấu hình
+    const thresholdDays = rule?.triggerConditions?.daysBefore ?? 3;
+    if (alert.diffDays > thresholdDays) return;
+
     // Bắn thông báo cho từng nhân sự tham gia dự án
     alert.allMemberNames.forEach((recipientName) => {
       const recipientMember = allMembers.find((m) => isSamePersonName(m.name, recipientName));
@@ -253,6 +264,21 @@ export function checkAndDispatchProjectDeadlineNotifications(
           title = `Deadline dự án "${alert.projectName}" đến hạn trong ${alert.diffDays} ngày (${dateFormatted})`;
         }
         content = `Dự án [${alert.projectCode}] cần hoàn thành mục tiêu. PM phụ trách: ${pmDisplay}.`;
+      }
+
+      // Áp dụng custom template từ quy tắc nếu đã được chỉnh sửa
+      if (rule && rule.titleTemplate && rule.contentTemplate) {
+        const vars = {
+          projectName: alert.projectName,
+          projectCode: alert.projectCode,
+          phaseName: alert.phaseName || 'Giai đoạn',
+          pmDisplay,
+          dueDate: dateFormatted,
+        };
+        const customTitle = notificationRuleService.interpolate(rule.titleTemplate, vars);
+        const customContent = notificationRuleService.interpolate(rule.contentTemplate, vars);
+        if (customTitle) title = customTitle;
+        if (customContent) content = customContent;
       }
 
       const safeRecipientKey = recipientName.toLowerCase().replace(/[\s\/\\]+/g, '_');

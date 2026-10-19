@@ -434,7 +434,7 @@ export const wmsDataService = {
         productOwners: t.product_owners || [],
         status: t.status,
         priority: t.priority,
-        dueDate: t.due_date,
+        dueDate: t.due_date || undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
         progress: t.progress !== null ? Number(t.progress) : 0,
@@ -467,7 +467,7 @@ export const wmsDataService = {
       product_owners: task.productOwners || [],
       status: task.status,
       priority: task.priority,
-      due_date: task.dueDate ? task.dueDate.slice(0, 10) : '2026-12-31',
+      due_date: task.dueDate ? task.dueDate.slice(0, 10) : null,
       progress: task.progress !== undefined ? task.progress : (task.status === 'Hoàn thành' ? 100 : 0),
       details: task.details || null,
       blocker_reason: task.blockerReason || null,
@@ -492,6 +492,12 @@ export const wmsDataService = {
         delete taskPayload.recurring_rule_id;
         delete taskPayload.recurring_frequency;
       }
+      const retry = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+      taskErr = retry.error;
+    }
+    if (taskErr && (taskErr as any).code === '23502' && taskErr.message?.toLowerCase().includes('due_date')) {
+      // Fallback nếu cơ sở dữ liệu có ràng buộc NOT NULL trên cột due_date
+      taskPayload.due_date = '2099-12-31';
       const retry = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
       taskErr = retry.error;
     }

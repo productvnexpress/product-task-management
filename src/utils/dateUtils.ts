@@ -59,9 +59,17 @@ export function getDaysDifference(dateStr1: string, dateStr2: string): number {
 /**
  * Calculates the due status info for a task relative to reference date (default today)
  */
-export function getTaskDueDateInfo(dueDateStr: string, status: TaskStatus, refDate: Date = new Date()): DueDateInfo {
+export function getTaskDueDateInfo(dueDateStr?: string | null, status?: TaskStatus, refDate: Date = new Date()): DueDateInfo {
   if (status === 'Hoàn thành') {
     return { status: 'completed', daysDiff: 0, label: 'Đã hoàn thành' };
+  }
+
+  if (!dueDateStr) {
+    return {
+      status: 'normal',
+      daysDiff: 999,
+      label: 'Chưa có hạn',
+    };
   }
 
   const todayStr = getTodayDateString(refDate);
@@ -101,9 +109,10 @@ export function getTaskDueDateInfo(dueDateStr: string, status: TaskStatus, refDa
  * - "Hôm qua" (nếu quá hạn 1 ngày)
  * - "Ngày mai" (nếu đến hạn ngày mai)
  * - Nằm ngoài 3 thời gian này: hiển thị chuẩn "Tue, 15 Sep 2026" (formatDateWithEnDay)
+ * - Chưa có hạn: hiển thị "Chưa có hạn"
  */
 export function formatTaskDueDisplay(dueDateStr?: string | null, refDate: Date = new Date()): string {
-  if (!dueDateStr) return '';
+  if (!dueDateStr) return 'Chưa có hạn';
   const todayStr = getTodayDateString(refDate);
   const daysDiff = getDaysDifference(dueDateStr, todayStr);
 
@@ -119,6 +128,7 @@ export function formatTaskDueDisplay(dueDateStr?: string | null, refDate: Date =
  */
 export function isTaskDueToday(task: TaskItem, refDate: Date = new Date()): boolean {
   if (task.status === 'Hoàn thành') return false;
+  if (!task.dueDate) return false;
   const todayStr = getTodayDateString(refDate);
   const taskDate = normalizeDateString(task.dueDate);
   return taskDate !== '' && taskDate === todayStr;
@@ -126,6 +136,7 @@ export function isTaskDueToday(task: TaskItem, refDate: Date = new Date()): bool
 
 export function isTaskOverdue(task: TaskItem, refDate: Date = new Date()): boolean {
   if (task.status === 'Hoàn thành') return false;
+  if (!task.dueDate) return false;
   const todayStr = getTodayDateString(refDate);
   const taskDate = normalizeDateString(task.dueDate);
   return taskDate !== '' && taskDate < todayStr;
@@ -133,6 +144,7 @@ export function isTaskOverdue(task: TaskItem, refDate: Date = new Date()): boole
 
 export function isTaskDueSoon(task: TaskItem, refDate: Date = new Date()): boolean {
   if (task.status === 'Hoàn thành') return false;
+  if (!task.dueDate) return false;
   const todayStr = getTodayDateString(refDate);
   const diff = getDaysDifference(task.dueDate, todayStr);
   return diff > 0 && diff <= 3;

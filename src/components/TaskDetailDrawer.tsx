@@ -404,20 +404,21 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   const handleAdminConfirmOnTime = () => {
     if (!task) return;
     const actor = currentActorName;
-    const targetIso = new Date(`${task.dueDate.slice(0, 10)}T17:30:00`).toISOString();
+    const targetDate = (task.dueDate ? task.dueDate.slice(0, 10) : '') || getTodayDateString();
+    const targetIso = new Date(`${targetDate}T17:30:00`).toISOString();
 
     const candidateLink = resultLink.trim() || task.resultLink || workLink.trim() || task.workLink || '';
     if (!candidateLink || !isValidUrl(candidateLink)) {
-      setAdminDateInput(task.dueDate.slice(0, 10));
+      setAdminDateInput(targetDate);
       setAdminTimeInput('17:30');
       setAdminResultLinkInput(candidateLink);
-      setAdminNoteInput(`Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(task.dueDate)}).`);
+      setAdminNoteInput(`Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(targetDate)}).`);
       setShowAdminDateDialog(true);
       return;
     }
 
     const finalLink = normalizeUrl(candidateLink);
-    const note = `Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(task.dueDate)}).`;
+    const note = `Admin ${actor} xác nhận hoàn thành đúng hạn (ngày ${formatDateWithEnDay(targetDate)}).`;
 
     const updated: TaskItem = {
       ...task,
@@ -710,7 +711,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   <span className="font-ui text-[11px] text-[#64748b]">
                     {status === 'Hoàn thành' && (completedAt || task?.completedAt)
                       ? formatLogTimestamp(completedAt || task?.completedAt, true)
-                      : `Hạn: ${formatDateWithEnDay(dueDate)}`}
+                      : (dueDate ? `Hạn: ${formatDateWithEnDay(dueDate)}` : 'Chưa có hạn')}
                   </span>
                 </div>
 
@@ -747,7 +748,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const defaultDate = currentDiscipline.completionDate || task?.dueDate.slice(0, 10) || getTodayDateString();
+                        const defaultDate = currentDiscipline.completionDate || (task?.dueDate ? task.dueDate.slice(0, 10) : '') || getTodayDateString();
                         setAdminDateInput(defaultDate);
                         setAdminTimeInput('17:30');
                         setAdminResultLinkInput(resultLink || workLink || '');
@@ -965,19 +966,78 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               {/* 8. Hạn hoàn thành */}
               <div className="space-y-1.5">
-                <label
-                  onClick={() => {
-                    try {
-                      dateInputRef.current?.showPicker?.();
-                    } catch (_) {
-                      dateInputRef.current?.focus();
-                    }
-                  }}
-                  className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5 cursor-pointer select-none"
-                >
-                  <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
-                  <span>Hạn hoàn thành:</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label
+                    onClick={() => {
+                      try {
+                        dateInputRef.current?.showPicker?.();
+                      } catch (_) {
+                        dateInputRef.current?.focus();
+                      }
+                    }}
+                    className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5 cursor-pointer select-none"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                    <span>Hạn hoàn thành:</span>
+                  </label>
+                  {!dueDate && (
+                    <span className="text-[11px] font-ui font-semibold text-[#b45309] bg-[#fffbeb] px-2 py-0.5 rounded-[4px] border border-[#fde68a]">
+                      Chưa có hạn
+                    </span>
+                  )}
+                </div>
+
+                {!dueDate && (
+                  <div className="bg-[#fffbeb] border border-[#fde68a] p-2.5 rounded-[6px] space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#92400e]">
+                      <Clock className="w-3.5 h-3.5 text-[#b45309]" />
+                      <span>Công việc này chưa có hạn hoàn thành. Vui lòng chọn hạn:</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setDueDate(getTodayDateString())}
+                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                      >
+                        Hôm nay
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 1);
+                          setDueDate(getTodayDateString(d));
+                        }}
+                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                      >
+                        Ngày mai
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 3);
+                          setDueDate(getTodayDateString(d));
+                        }}
+                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                      >
+                        +3 ngày
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + 7);
+                          setDueDate(getTodayDateString(d));
+                        }}
+                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                      >
+                        +1 tuần
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div
                   onClick={() => {
                     try {
@@ -999,11 +1059,17 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         (e.target as any).showPicker?.();
                       } catch (_) {}
                     }}
-                    className="w-full text-xs font-ui p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020] cursor-pointer"
+                    className={`w-full text-xs font-ui p-2.5 border rounded-[6px] text-[#202020] cursor-pointer ${
+                      !dueDate ? 'border-[#fde68a] bg-[#fffdfa]' : 'border-[#d6d6d6] bg-white'
+                    }`}
                   />
-                  {dueDate && (
+                  {dueDate ? (
                     <p className="text-[11px] text-[#71717a] font-ui pt-0.5 select-none hover:text-[#202020]">
                       Hiển thị chuẩn: <strong className="text-[#202020]">{formatDateWithEnDay(dueDate)}</strong>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-[#b45309] font-ui pt-0.5 select-none">
+                      * Bấm vào ô trên hoặc chọn nhanh các nút gợi ý để đặt hạn hoàn thành.
                     </p>
                   )}
                 </div>
@@ -1234,7 +1300,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const defaultDate = currentDiscipline.completionDate || task?.dueDate.slice(0, 10) || getTodayDateString();
+                        const defaultDate = currentDiscipline.completionDate || (task?.dueDate ? task.dueDate.slice(0, 10) : '') || getTodayDateString();
                         setAdminDateInput(defaultDate);
                         setAdminTimeInput('17:30');
                         setAdminResultLinkInput(resultLink || workLink || '');

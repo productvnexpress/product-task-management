@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
-import { getProductMembers } from '../utils/memberPersonalization';
+import { getProductMembers, isSamePersonName } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups, isOthersProject } from '../utils/projectSortingUtils';
 import { ProjectChecklistModal } from './ProjectChecklistModal';
@@ -40,7 +40,7 @@ interface QuickAddBarProps {
     phaseName?: string;
     team: TeamType;
     assignee: string;
-    dueDate: string;
+    dueDate?: string;
     priority: PriorityLevel;
     details?: string;
     recurringRuleId?: string;
@@ -101,6 +101,9 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = getUserRole(currentUser) === 'Admin';
+  const isAssigningToOther = Boolean(
+    currentUser?.name && assignee && !isSamePersonName(assignee, currentUser.name)
+  );
   const [isUrgent, setIsUrgent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -169,7 +172,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
-    const initialDueDate = dueDate || getTodayDateString();
+    const initialDueDate = isAssigningToOther && !dueDate ? '' : (dueDate || getTodayDateString());
 
     let recurringRuleId: string | undefined = undefined;
 
@@ -355,7 +358,13 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 <User className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
                 <select
                   value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
+                  onChange={(e) => {
+                    const newAssignee = e.target.value;
+                    setAssignee(newAssignee);
+                    if (currentUser?.name && isSamePersonName(newAssignee, currentUser.name) && !dueDate) {
+                      setDueDate(getTodayDateString());
+                    }
+                  }}
                   className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
                 >
                   {productMembers.map((m) => (
@@ -366,34 +375,68 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 </select>
               </div>
 
-              {/* Due date with full date label preview & click anywhere to open date picker */}
-              <div
-                onClick={handleTriggerDatePicker}
-                className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0] cursor-pointer hover:bg-[#f4f4f5] transition-colors"
-                title="Bấm để chọn hạn hoàn thành"
-              >
-                <Calendar className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0 pointer-events-none" />
-                <input
-                  ref={dateInputRef}
-                  type="date"
-                  min={minDueDate}
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    try {
-                      (e.target as any).showPicker?.();
-                    } catch (_) {}
-                  }}
-                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
-                />
-                {dueDate && (
-                  <span
-                    onClick={handleTriggerDatePicker}
-                    className="text-[#52525b] text-xs font-ui font-medium cursor-pointer shrink-0 select-none hover:text-[#202020]"
+              {/* Due date with full date label preview & optional deadline for others */}
+              <div className="flex items-center gap-1.5">
+                <div
+                  onClick={handleTriggerDatePicker}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] border cursor-pointer transition-colors ${
+                    !dueDate
+                      ? 'bg-[#fffbeb] border-[#fde68a] text-[#b45309]'
+                      : 'bg-[#f9f9f9] border-[#e0e0e0] text-[#202020] hover:bg-[#f4f4f5]'
+                  }`}
+                  title={dueDate ? 'Bấm để chọn hạn hoàn thành' : 'Chưa đặt hạn (người nhận sẽ tự chọn)'}
+                >
+                  <Calendar className={`w-3.5 h-3.5 shrink-0 pointer-events-none ${!dueDate ? 'text-[#b45309]' : 'text-[#7f7f7f]'}`} />
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    min={minDueDate}
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      try {
+                        (e.target as any).showPicker?.();
+                      } catch (_) {}
+                    }}
+                    className={`bg-transparent text-xs font-ui focus:outline-hidden cursor-pointer ${
+                      !dueDate ? 'w-0 opacity-0 pointer-events-none' : 'text-[#202020]'
+                    }`}
+                  />
+                  {dueDate ? (
+                    <span
+                      onClick={handleTriggerDatePicker}
+                      className="text-[#52525b] text-xs font-ui font-medium cursor-pointer shrink-0 select-none hover:text-[#202020]"
+                    >
+                      ({formatDateWithEnDay(dueDate)})
+                    </span>
+                  ) : (
+                    <span className="text-xs font-ui font-medium select-none text-[#b45309]">
+                      Chưa đặt hạn (B chọn)
+                    </span>
+                  )}
+                </div>
+
+                {/* Nút tuỳ chọn: Để người nhận chọn hạn (Chỉ hiện khi giao việc cho người khác) */}
+                {isAssigningToOther && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (dueDate) {
+                        setDueDate('');
+                      } else {
+                        setDueDate(getTodayDateString());
+                      }
+                    }}
+                    className={`text-[11px] font-ui px-2 py-1.5 rounded-[6px] border transition-colors cursor-pointer shrink-0 ${
+                      !dueDate
+                        ? 'bg-[#963861] text-white border-[#963861] font-bold shadow-2xs'
+                        : 'bg-[#f9f9f9] text-[#52525b] border-[#e0e0e0] hover:bg-[#f4f4f5]'
+                    }`}
+                    title={dueDate ? 'Bỏ chọn deadline để người nhận tự chọn' : 'Đặt lại hạn hoàn thành'}
                   >
-                    ({formatDateWithEnDay(dueDate)})
-                  </span>
+                    {!dueDate ? '✓ Để B chọn hạn' : 'Để người nhận chọn hạn'}
+                  </button>
                 )}
               </div>
 

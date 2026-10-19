@@ -61,7 +61,13 @@ import {
   Pause,
   Zap,
   ShieldCheck,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  PanelLeft,
 } from 'lucide-react';
+import { NotificationRulesTab } from './NotificationRulesTab';
+import { notificationRuleService } from '../services/notificationRuleService';
 
 interface SettingsManagerProps {
   members: MemberItem[];
@@ -70,18 +76,38 @@ interface SettingsManagerProps {
   currentAuthUser?: MemberItem | null;
   onAddTask?: (task: any, author?: string) => void;
   onUpdateMember?: (member: MemberItem) => void;
+  onSendNotification?: (notif: any) => void;
 }
 
-type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist' | 'recurring' | 'permissions';
+type SettingsTab = 'schedule' | 'holidays' | 'compensatory' | 'leaves' | 'calculator' | 'checklist' | 'recurring' | 'permissions' | 'notifications';
 
 export const SettingsManager: React.FC<SettingsManagerProps> = ({
   members,
+  tasks = [],
   projects = [],
   currentAuthUser,
   onAddTask,
   onUpdateMember,
+  onSendNotification,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SettingsTab>('schedule');
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vne_settings_sidebar_collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebarCollapse = () => {
+    setIsLeftSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('vne_settings_sidebar_collapsed', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
+  };
 
   // Chỉ sử dụng nhân sự của bộ phận Product (Product Manager, UX/UI Designer, SEO, Data)
   const productMembers = useMemo(() => {
@@ -675,7 +701,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   ];
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in pb-16">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 animate-fade-in pb-16">
       {/* Header tinh gọn theo EDITOR.md */}
       <div className="bg-white rounded-[12px] border border-[#e0e0e0] p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -688,6 +714,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                   <RotateCw className="w-4 h-4" />
                 ) : activeSubTab === 'permissions' ? (
                   <ShieldCheck className="w-4 h-4" />
+                ) : activeSubTab === 'notifications' ? (
+                  <Bell className="w-4 h-4" />
                 ) : (
                   <Clock className="w-4 h-4" />
                 )}
@@ -699,6 +727,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                   ? 'Việc chu kỳ'
                   : activeSubTab === 'permissions'
                   ? 'Phân quyền'
+                  : activeSubTab === 'notifications'
+                  ? 'Quản lý Thông báo'
                   : 'Thời gian làm việc'}
               </h1>
               <span className="bg-[#ede9fe] text-[#6d28d9] border border-[#ddd6fe] text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px]">
@@ -712,6 +742,8 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
                 ? 'Quản lý các công việc lặp lại tự động tạo lúc 08:00 AM theo chu kỳ Hàng tuần, 2 Tuần hoặc Hàng tháng.'
                 : activeSubTab === 'permissions'
                 ? 'Gán nhóm quyền Admin / Manager / Executive cho từng tài khoản Ban Sản phẩm - Công nghệ.'
+                : activeSubTab === 'notifications'
+                ? 'Quản lý nội dung thông báo và sự kiện kích hoạt (trigger, mốc giờ, điều kiện) cho từng tình huống công việc.'
                 : 'Lịch làm việc, ngày lễ, làm bù và nghỉ phép dùng tính ngày công nhân sự.'}
             </p>
           </div>
@@ -724,126 +756,236 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-5 items-start">
-        {/* Menu dọc - thay thế menu ngang cũ để tránh tràn ngang khi có nhiều tab */}
-        <aside className="w-full md:w-56 md:shrink-0 bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs p-2 space-y-1 md:sticky md:top-4">
+      <div className="flex flex-col md:flex-row gap-5 items-start relative">
+        {/* Left Sidebar neo trung tâm (Pin Left Center): Tối ưu tối đa diện tích ở giữa */}
+        <aside
+          className={`w-full transition-all duration-200 bg-white rounded-[14px] border border-[#e0e0e0] shadow-sm p-2 space-y-1 md:sticky md:top-1/2 md:-translate-y-1/2 ${
+            isLeftSidebarCollapsed ? 'md:w-[60px] md:shrink-0' : 'md:w-56 md:shrink-0'
+          }`}
+        >
+          {/* Nút thu gọn / mở rộng Sidebar để nhường diện tích cho phần nội dung */}
+          <div className="hidden md:flex items-center justify-between pb-1.5 mb-1 border-b border-[#f0f0f0] px-1">
+            {!isLeftSidebarCollapsed && (
+              <span className="text-[11px] font-ui font-bold text-[#71717a] uppercase tracking-wider">
+                Mục thiết lập
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleSidebarCollapse}
+              className={`p-1.5 rounded-[6px] text-[#71717a] hover:text-[#963861] hover:bg-[#fdf2f7] transition-colors cursor-pointer ${
+                isLeftSidebarCollapsed ? 'mx-auto' : 'ml-auto'
+              }`}
+              title={isLeftSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng (Thêm diện tích)'}
+            >
+              {isLeftSidebarCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-[#963861]" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Tab 1: Lịch làm việc */}
           <button
             onClick={() => setActiveSubTab('schedule')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'schedule'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title="Lịch làm việc"
           >
-            <Clock className="w-3.5 h-3.5 shrink-0" />
-            <span>Lịch làm việc</span>
+            <Clock className="w-4 h-4 shrink-0" />
+            {!isLeftSidebarCollapsed && <span>Lịch làm việc</span>}
           </button>
 
+          {/* Tab 2: Ngày lễ */}
           <button
             onClick={() => setActiveSubTab('holidays')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'holidays'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title={`Ngày lễ (${holidays.length})`}
           >
-            <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span>Ngày lễ ({holidays.length})</span>
+            <Calendar className="w-4 h-4 shrink-0" />
+            {!isLeftSidebarCollapsed && (
+              <span className="flex-1 text-left flex items-center justify-between">
+                <span>Ngày lễ</span>
+                <span className="text-[10px] font-num text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.2 rounded-full">
+                  {holidays.length}
+                </span>
+              </span>
+            )}
           </button>
 
+          {/* Tab 3: Làm bù */}
           <button
             onClick={() => setActiveSubTab('compensatory')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'compensatory'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title={`Làm bù (${compensatoryList.length})`}
           >
-            <Briefcase className="w-3.5 h-3.5 shrink-0 text-[#b26b00]" />
-            <span>Làm bù ({compensatoryList.length})</span>
+            <Briefcase className="w-4 h-4 shrink-0 text-[#b26b00]" />
+            {!isLeftSidebarCollapsed && (
+              <span className="flex-1 text-left flex items-center justify-between">
+                <span>Làm bù</span>
+                <span className="text-[10px] font-num text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.2 rounded-full">
+                  {compensatoryList.length}
+                </span>
+              </span>
+            )}
           </button>
 
+          {/* Tab 4: Nghỉ phép */}
           <button
             onClick={() => setActiveSubTab('leaves')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'leaves'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title={`Nghỉ phép (${leaves.length})`}
           >
-            <UserCheck className="w-3.5 h-3.5 shrink-0" />
-            <span>Nghỉ phép ({leaves.length})</span>
+            <UserCheck className="w-4 h-4 shrink-0" />
+            {!isLeftSidebarCollapsed && (
+              <span className="flex-1 text-left flex items-center justify-between">
+                <span>Nghỉ phép</span>
+                <span className="text-[10px] font-num text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.2 rounded-full">
+                  {leaves.length}
+                </span>
+              </span>
+            )}
           </button>
 
+          {/* Tab 5: Tra cứu ngày công */}
           <button
             onClick={() => setActiveSubTab('calculator')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'calculator'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title="Tra cứu ngày công"
           >
-            <Calculator className="w-3.5 h-3.5 shrink-0" />
-            <span>Tra cứu ngày công</span>
+            <Calculator className="w-4 h-4 shrink-0" />
+            {!isLeftSidebarCollapsed && <span>Tra cứu ngày công</span>}
           </button>
 
+          {/* Tab 6: Checklist */}
           <button
             onClick={() => setActiveSubTab('checklist')}
-            className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+              isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+            } ${
               activeSubTab === 'checklist'
                 ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                 : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
             }`}
+            title={`Checklist (${checklistTemplate.length})`}
           >
-            <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-            <span>Checklist ({checklistTemplate.length})</span>
+            <CheckSquare className="w-4 h-4 shrink-0" />
+            {!isLeftSidebarCollapsed && (
+              <span className="flex-1 text-left flex items-center justify-between">
+                <span>Checklist</span>
+                <span className="text-[10px] font-num text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.2 rounded-full">
+                  {checklistTemplate.length}
+                </span>
+              </span>
+            )}
           </button>
 
+          {/* Tab 7: Việc chu kỳ */}
           {isAdmin && (
             <button
               onClick={() => setActiveSubTab('recurring')}
-              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+              className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+                isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+              } ${
                 activeSubTab === 'recurring'
                   ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                   : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
               }`}
+              title={`Việc chu kỳ (${recurringRules.length})`}
             >
-              <RotateCw className="w-3.5 h-3.5 shrink-0" />
-              <span>Việc chu kỳ ({recurringRules.length})</span>
+              <RotateCw className="w-4 h-4 shrink-0" />
+              {!isLeftSidebarCollapsed && (
+                <span className="flex-1 text-left flex items-center justify-between">
+                  <span>Việc chu kỳ</span>
+                  <span className="text-[10px] font-num text-[#71717a] bg-[#f4f4f5] px-1.5 py-0.2 rounded-full">
+                    {recurringRules.length}
+                  </span>
+                </span>
+              )}
             </button>
           )}
 
           {isAdmin && (
             <>
               <div className="h-px bg-[#f0f0f0] my-1" />
+
+              {/* Tab 8: Phân quyền */}
               <button
                 onClick={() => setActiveSubTab('permissions')}
-                className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+                className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+                  isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+                } ${
                   activeSubTab === 'permissions'
                     ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
                     : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
                 }`}
+                title="Phân quyền tài khoản"
               >
-                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                <span>Phân quyền</span>
+                <ShieldCheck className="w-4 h-4 shrink-0 text-[#7c3aed]" />
+                {!isLeftSidebarCollapsed && <span>Phân quyền</span>}
+              </button>
+
+              {/* Tab 9: Quản lý Thông báo */}
+              <button
+                onClick={() => setActiveSubTab('notifications')}
+                className={`w-full px-2.5 py-2 rounded-[8px] text-xs font-ui font-bold flex items-center transition-colors cursor-pointer ${
+                  isLeftSidebarCollapsed ? 'justify-center' : 'justify-start gap-2.5'
+                } ${
+                  activeSubTab === 'notifications'
+                    ? 'bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]'
+                    : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020] border border-transparent'
+                }`}
+                title="Quản lý Thông báo"
+              >
+                <Bell className="w-4 h-4 shrink-0 text-[#963861]" />
+                {!isLeftSidebarCollapsed && <span>Quản lý Thông báo</span>}
               </button>
             </>
           )}
 
-          <div className="mt-4 pt-3 border-t border-[#f0f0f0] space-y-2">
-            <div className="text-[11px] text-[#7f7f7f] leading-snug">
-              Hệ thống tự động làm mới và dọn bộ nhớ đệm mỗi 3 giờ để cập nhật dữ liệu mới.
+          {!isLeftSidebarCollapsed && (
+            <div className="mt-3 pt-2.5 border-t border-[#f0f0f0] space-y-1.5">
+              <button
+                type="button"
+                onClick={() => autoCacheService.clearCacheAndReload()}
+                className="w-full px-2 py-1.5 rounded-[6px] text-[11px] font-ui font-medium text-[#7f7f7f] hover:text-[#963861] bg-[#f9f9f9] hover:bg-[#fdf2f7] border border-[#e0e0e0] hover:border-[#f4c2d7] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                title="Xóa bộ nhớ đệm trình duyệt và tải lại phiên bản mới nhất"
+              >
+                <RotateCw className="w-3 h-3 shrink-0" />
+                <span>Dọn cache & Làm mới</span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => autoCacheService.clearCacheAndReload()}
-              className="w-full px-2.5 py-1.5 rounded-[6px] text-xs font-ui font-medium text-[#7f7f7f] hover:text-[#963861] bg-[#f9f9f9] hover:bg-[#fdf2f7] border border-[#e0e0e0] hover:border-[#f4c2d7] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              title="Xóa bộ nhớ đệm trình duyệt và tải lại phiên bản mới nhất"
-            >
-              <RotateCw className="w-3.5 h-3.5 shrink-0" />
-              <span>Dọn cache và làm mới</span>
-            </button>
-          </div>
+          )}
         </aside>
 
         <div className="flex-1 min-w-0 space-y-6">
@@ -1817,6 +1959,46 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 9: QUẢN LÝ CẤU HÌNH THÔNG BÁO (ADMIN ONLY) */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'notifications' && isAdmin && (
+        <NotificationRulesTab
+          members={members}
+          projects={projects}
+          currentAuthUser={currentAuthUser}
+          onTestNotification={(rule) => {
+            if (onSendNotification) {
+              const testNotif = {
+                id: `notif-preview-${Date.now()}`,
+                recipientName: currentAuthUser?.name || 'Đặng Tiến Ngọc',
+                recipientId: currentAuthUser?.username || currentAuthUser?.id,
+                actorName: currentAuthUser?.name || 'Hệ thống WMS',
+                projectName: projects[0]?.name || 'Dự án VnExpress',
+                projectId: projects[0]?.id,
+                type: rule.triggerType === 'custom_event' ? 'admin_broadcast' : rule.triggerType,
+                title: rule.titleTemplate
+                  .replace('{projectName}', projects[0]?.name || 'Dự án VnExpress')
+                  .replace('{taskTitle}', 'Kiểm thử cấu hình thông báo')
+                  .replace('{actorName}', currentAuthUser?.name || 'Admin')
+                  .replace('{phaseName}', 'Giai đoạn 1')
+                  .replace('{dueDate}', 'Hôm nay'),
+                content: rule.contentTemplate
+                  .replace('{projectName}', projects[0]?.name || 'Dự án VnExpress')
+                  .replace('{taskTitle}', 'Kiểm thử cấu hình thông báo')
+                  .replace('{actorName}', currentAuthUser?.name || 'Admin')
+                  .replace('{note}', 'Nội dung ghi chú mẫu')
+                  .replace('{openCount}', '2')
+                  .replace('{pmDisplay}', 'Đặng Tiến Ngọc'),
+                isRead: false,
+                createdAt: new Date().toISOString(),
+              };
+              onSendNotification(testNotif);
+            }
+          }}
+        />
       )}
         </div>
       </div>

@@ -165,7 +165,7 @@ export interface TaskItem {
   productOwners?: string[]; // Danh sách Product Owners (Stakeholders) đại diện bài toán sản phẩm
   status: TaskStatus;
   priority: PriorityLevel;
-  dueDate: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD (hoặc rỗng khi chưa đặt hạn)
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
   details?: string;
@@ -242,6 +242,7 @@ export type NotificationType =
   | 'task_completed'
   | 'task_blocked'
   | 'task_updated'
+  | 'task_deadline_selected'
   | 'task_comment'
   | 'phase_due_soon'
   | 'project_due_soon'
@@ -305,6 +306,51 @@ export interface MemberLeaveItem {
   reason: string;             // Lý do nghỉ (Phép năm, Việc riêng, Nghỉ ốm...)
   status: 'Đã duyệt' | 'Chờ duyệt';
   createdAt: string;
+}
+
+export type NotificationTriggerType =
+  | 'task_created'
+  | 'task_assigned'
+  | 'task_completed'
+  | 'task_blocked'
+  | 'task_updated'
+  | 'task_deadline_selected'
+  | 'task_comment'
+  | 'daily_task_reminder'
+  | 'daily_close_reminder'
+  | 'phase_due_soon'
+  | 'project_due_soon'
+  | 'custom_event';
+
+export type NotificationRecipientRole =
+  | 'assignee'
+  | 'project_pms'
+  | 'project_members'
+  | 'task_creator'
+  | 'product_all'
+  | 'admin_only'
+  | 'specific_members';
+
+export interface NotificationRuleConfig {
+  id: string;
+  name: string;                               // Tên quy tắc thông báo
+  description?: string;                       // Mô tả mục đích
+  enabled: boolean;                           // Bật / Tắt quy tắc
+  triggerType: NotificationTriggerType;       // Trigger kích hoạt
+  triggerConditions?: {
+    scheduledTime?: string;                   // '08:30', '16:30' (cho daily)
+    daysBefore?: number;                      // Số ngày trước hạn (cho deadline: 3, 2, 1...)
+    projectFilter?: 'all' | string[];         // Áp dụng cho dự án cụ thể hoặc tất cả
+    priorityFilter?: 'all' | 'Khẩn cấp';      // Chỉ áp dụng khi khẩn cấp
+    statusFilter?: string;                    // Lọc trạng thái task cụ thể
+  };
+  recipientRole: NotificationRecipientRole;   // Đối tượng nhận thông báo
+  specificRecipients?: string[];              // Tên các nhân sự cụ thể (khi chọn specific_members)
+  titleTemplate: string;                      // Tiêu đề mẫu hỗ trợ biến ({taskTitle}, {projectName}, {actorName}, {time}, {date}...)
+  contentTemplate: string;                    // Nội dung mẫu hỗ trợ biến
+  isSystemDefault?: boolean;                  // Đánh dấu quy tắc mặc định hệ thống
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 

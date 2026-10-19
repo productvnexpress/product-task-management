@@ -29,7 +29,7 @@ export function createCreationLog(task: TaskItem, authorName?: string): TaskLogI
     changes: [
       { field: 'Trạng thái', newValue: task.status },
       { field: 'Người phụ trách', newValue: task.assignee },
-      { field: 'Hạn hoàn thành', newValue: formatDateWithEnDay(task.dueDate) },
+      { field: 'Hạn hoàn thành', newValue: task.dueDate ? formatDateWithEnDay(task.dueDate) : 'Chưa đặt hạn (Người nhận sẽ chọn)' },
       { field: 'Mức độ ưu tiên', newValue: task.priority },
     ],
     note: task.details ? `Ghi chú: ${task.details}` : 'Công việc mới được thêm vào hệ thống.',
@@ -79,8 +79,8 @@ export function recordTaskChanges(
   if (oldTask.dueDate !== updatedTask.dueDate) {
     changes.push({
       field: 'Hạn hoàn thành',
-      oldValue: formatDateWithEnDay(oldTask.dueDate),
-      newValue: formatDateWithEnDay(updatedTask.dueDate),
+      oldValue: oldTask.dueDate ? formatDateWithEnDay(oldTask.dueDate) : 'Chưa đặt hạn',
+      newValue: updatedTask.dueDate ? formatDateWithEnDay(updatedTask.dueDate) : 'Chưa đặt hạn',
     });
   }
 
@@ -186,7 +186,9 @@ export function recordTaskChanges(
   } else if (oldTask.assignee !== updatedTask.assignee) {
     actionTitle = `Đổi người phụ trách ➔ ${updatedTask.assignee}`;
   } else if (oldTask.dueDate !== updatedTask.dueDate) {
-    actionTitle = `Gia hạn / Đổi thời hạn ➔ ${formatDateWithEnDay(updatedTask.dueDate)}`;
+    actionTitle = !oldTask.dueDate
+      ? `Chọn hạn hoàn thành ➔ ${formatDateWithEnDay(updatedTask.dueDate)}`
+      : `Gia hạn / Đổi thời hạn ➔ ${formatDateWithEnDay(updatedTask.dueDate)}`;
   } else if (validChanges.length > 0) {
     actionTitle = `Cập nhật ${validChanges.map((c) => c.field).join(', ')}`;
   } else if (customNote) {

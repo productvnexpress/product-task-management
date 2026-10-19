@@ -133,6 +133,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             <UserCheck className="w-4 h-4" />
           </div>
         );
+      case 'task_deadline_selected':
+        return (
+          <div className="w-8 h-8 rounded-full bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe] flex items-center justify-center shrink-0">
+            <Calendar className="w-4 h-4" />
+          </div>
+        );
       case 'task_comment':
         return (
           <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7] flex items-center justify-center shrink-0">

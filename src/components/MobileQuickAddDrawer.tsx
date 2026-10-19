@@ -26,7 +26,7 @@ import {
   Check,
 } from 'lucide-react';
 import { formatDateWithEnDay } from '../utils/formatters';
-import { getProductMembers } from '../utils/memberPersonalization';
+import { getProductMembers, isSamePersonName } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
 import { getTaskCreationProjectGroups } from '../utils/projectSortingUtils';
 
@@ -45,7 +45,7 @@ export interface MobileQuickAddDrawerProps {
     phaseName?: string;
     team: TeamType;
     assignee: string;
-    dueDate: string;
+    dueDate?: string;
     priority: PriorityLevel;
     details?: string;
     recurringRuleId?: string;
@@ -157,6 +157,10 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
     }
   };
 
+  const isAssigningToOther = Boolean(
+    currentUser?.name && assignee && !isSamePersonName(assignee, currentUser.name)
+  );
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!title.trim()) {
@@ -169,7 +173,7 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
     const foundPhase = availablePhases.find((ph) => ph.id === phaseId);
     const selectedMember = members.find((m) => m.name === assignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
-    const finalDueDate = dueDate || todayStr;
+    const finalDueDate = isAssigningToOther && !dueDate ? '' : (dueDate || todayStr);
 
     onAddTask({
       title: title.trim(),
@@ -191,7 +195,7 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
 
   const isTodayActive = dueDate === todayStr;
   const isTomorrowActive = dueDate === tomorrowStr;
-  const isCustomActive = !isTodayActive && !isTomorrowActive;
+  const isCustomActive = Boolean(dueDate && !isTodayActive && !isTomorrowActive);
 
   return (
     <AnimatePresence>
@@ -272,15 +276,17 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
 
             {/* 2. Hạn hoàn thành - Quick Chips 1-tap: Hôm nay, Ngày mai, Khác */}
             <div className="space-y-1.5">
-              <label className="font-ui text-xs font-bold text-[#52525b] flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#963861]" />
-                <span>Hạn hoàn thành:</span>
+              <label className="font-ui text-xs font-bold text-[#52525b] flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#963861]" />
+                  <span>Hạn hoàn thành:</span>
+                </div>
                 <span className="text-[11px] font-semibold text-[#963861]">
-                  ({formatDateWithEnDay(dueDate)})
+                  {dueDate ? `(${formatDateWithEnDay(dueDate)})` : '(Chưa đặt hạn - Người nhận sẽ chọn)'}
                 </span>
               </label>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid ${isAssigningToOther ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                 <button
                   type="button"
                   onClick={() => handleQuickDateSelect(todayStr)}
@@ -329,6 +335,22 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer pointer-events-auto"
                   />
                 </div>
+
+                {/* Tuỳ chọn bỏ chọn hạn khi giao cho người khác */}
+                {isAssigningToOther && (
+                  <button
+                    type="button"
+                    onClick={() => setDueDate('')}
+                    className={`h-10 px-2 rounded-[8px] border text-xs font-ui font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      !dueDate
+                        ? 'bg-[#963861] text-white border-[#963861] shadow-2xs'
+                        : 'bg-[#fafafa] text-[#52525b] border-[#e4e4e7] hover:bg-[#f4f4f5]'
+                    }`}
+                  >
+                    {!dueDate && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    <span>Để người nhận chọn</span>
+                  </button>
+                )}
               </div>
             </div>
 

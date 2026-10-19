@@ -7,11 +7,12 @@ import { MemberItem, NotificationItem, TaskItem } from '../types';
 import { getTodayDateString, normalizeDateString } from './dateUtils';
 import { isSamePersonName, isTaskForMember } from './memberPersonalization';
 import { workingTimeService } from '../services/workingTimeService';
+import { notificationRuleService } from '../services/notificationRuleService';
 
 /**
  * Kiểm tra và phát thông báo nhắc đóng task hàng ngày vào lúc 16:30 cho từng account
  * - Điều kiện: Ngày làm việc (loại trừ Thứ 7, CN và ngày lễ theo workingTimeService)
- * - Mốc giờ: Từ 16:30 trở đi (hoặc preview param ?closeTaskAlert=1)
+ * - Mốc giờ: Từ 16:30 trở đi (hoặc giờ cấu hình trong Quản lý Thông báo)
  * - Nhân sự đang nghỉ phép được miễn trừ
  * - Chống trùng lặp: Lưu mã ngày vào localStorage, mỗi nhân sự chỉ nhận tối đa 1 thông báo/ngày
  * - Quy chuẩn: Nếu nhân sự đã đóng/hoàn thành hết task (openCount === 0), tuyệt đối KHÔNG nhắc lại
@@ -29,18 +30,27 @@ export function checkAndDispatchDailyCloseTaskNotifications(
     return 0;
   }
 
+  // 1b. Kiểm tra quy tắc cấu hình trong Settings (nếu người dùng tắt quy tắc -> không gửi)
+  const rule = notificationRuleService.getActiveRuleForTrigger('daily_close_reminder');
+  if (rule && !rule.enabled) {
+    return 0;
+  }
+
   // 2. Kiểm tra ngày làm việc (không gửi vào cuối tuần / ngày lễ)
   if (!workingTimeService.isWorkingDay(refDate)) {
     return 0;
   }
 
-  // 2. Kiểm tra khung giờ 16:30
+  // 3. Kiểm tra khung giờ (mặc định 16:30 hoặc theo cấu hình)
+  const configuredTime = rule?.triggerConditions?.scheduledTime || '16:30';
+  const [cfgHours, cfgMinutes] = configuredTime.split(':').map(Number);
+  const targetMinutes = (isNaN(cfgHours) ? 16 : cfgHours) * 60 + (isNaN(cfgMinutes) ? 30 : cfgMinutes);
+
   const hours = refDate.getHours();
   const minutes = refDate.getMinutes();
   const timeInMinutes = hours * 60 + minutes;
 
-  // 16:30 tương đương 16 * 60 + 30 = 990 phút
-  const isAfter1630 = timeInMinutes >= 990;
+  const isAfterScheduledTime = timeInMinutes >= targetMinutes;
 
   // Hỗ trợ preview / test qua URL param
   const isPreviewParam = (() => {
@@ -52,7 +62,7 @@ export function checkAndDispatchDailyCloseTaskNotifications(
     }
   })();
 
-  if (!isAfter1630 && !isPreviewParam) {
+  if (!isAfterScheduledTime && !isPreviewParam) {
     return 0;
   }
 
@@ -119,8 +129,18 @@ export function checkAndDispatchDailyCloseTaskNotifications(
     }
 
     // Biên tập nội dung chuẩn EDITOR.md: Facts first, ngắn gọn, súc tích, thể chủ động
-    const title = 'Đóng task trong ngày (16:30)';
-    const content = `Còn ${openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`;
+    const defaultTitle = 'Đóng task trong ngày (16:30)';
+    const defaultContent = `Còn ${openCount} việc đến hạn hôm nay chưa đóng. Hoàn thành hoặc dời hạn trước khi kết thúc ca làm việc.`;
+
+    const vars = {
+      actorName: 'Hệ thống WMS',
+      projectName: 'Công việc',
+      time: configuredTime,
+      openCount,
+    };
+
+    const finalTitle = rule ? notificationRuleService.interpolate(rule.titleTemplate, vars) || defaultTitle : defaultTitle;
+    const finalContent = rule ? notificationRuleService.interpolate(rule.contentTemplate, vars) || defaultContent : defaultContent;
 
     const safeKey = (member.username || member.name).toLowerCase().replace(/[\s\/\\]+/g, '_');
     const notif: NotificationItem = {
@@ -130,8 +150,8 @@ export function checkAndDispatchDailyCloseTaskNotifications(
       actorName: 'Hệ thống WMS',
       projectName: 'Công việc',
       type: 'daily_close_reminder',
-      title,
-      content,
+      title: finalTitle,
+      content: finalContent,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
