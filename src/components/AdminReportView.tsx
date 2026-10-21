@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TaskItem, ProjectItem, MemberItem, TeamType } from '../types';
 import {
   TimePeriod,
   generateDepartmentReport,
   TaskDisciplineResult,
   analyzeTaskDiscipline,
+  MemberProjectFocusItem,
 } from '../utils/reportUtils';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { normalizeDateString, getTodayDateString } from '../utils/dateUtils';
@@ -66,8 +67,56 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
   // 2. Navigation sub-tab — mặc định mở ngay vào Lịch
   const [subTab, setSubTab] = useState<ReportSubTab>('calendar');
 
-  // 3. Drill-down discipline filter
+  // 3. Drill-down discipline filter & project focus filter
   const [selectedDisciplineFilter, setSelectedDisciplineFilter] = useState<string>('all');
+  const [drilldownProjectFilter, setDrilldownProjectFilter] = useState<string>('all');
+
+  // Bộ chọn nhân sự cho lớp "Trọng tâm dự án" (đồng bộ mặc định với nhân sự đang chọn trên Topbar)
+  const [focusMemberName, setFocusMemberName] = useState<string>(selectedAssignee);
+  useEffect(() => {
+    setFocusMemberName(selectedAssignee);
+    setDrilldownProjectFilter('all');
+  }, [selectedAssignee]);
+
+  // Danh sách nhân sự Product phục vụ chọn nhanh
+  const productMembersList = useMemo(
+    () =>
+      members.filter(
+        (m) => m.team && ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'].includes(m.team)
+      ),
+    [members]
+  );
+
+  // Báo cáo tổng hợp cấp Ban (không khóa cứng assignee) để lớp Trọng tâm dự án có thể tra cứu bất kỳ Nhân sự A nào trong kỳ
+  const departmentWideSummary = useMemo(() => {
+    return generateDepartmentReport(tasks, projects, members, period, {
+      projectId: selectedProjectId,
+      team: selectedTeam,
+      assignee: 'Tất cả',
+      customStart: period === 'custom' ? customStart : undefined,
+      customEnd: period === 'custom' ? customEnd : undefined,
+    });
+  }, [tasks, projects, members, period, selectedProjectId, selectedTeam, customStart, customEnd]);
+
+  const focusedMemberStats = useMemo(() => {
+    if (!focusMemberName || focusMemberName === 'Tất cả') return null;
+    return (
+      departmentWideSummary.executiveStats.find((ex) =>
+        isSamePersonName(ex.member.name, focusMemberName)
+      ) || null
+    );
+  }, [departmentWideSummary.executiveStats, focusMemberName]);
+
+  const PROJECT_FOCUS_COLORS = [
+    '#963861',
+    '#2563eb',
+    '#0d9488',
+    '#d97706',
+    '#7c3aed',
+    '#db2777',
+    '#059669',
+    '#475569',
+  ];
 
   // 4. Calendar view state (tháng đang xem)
   const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
@@ -101,29 +150,54 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
 
   // Filtered tasks for Drill-down list
   const filteredDrilldownTasks = useMemo(() => {
+    let baseList = summary.tasksAnalyzed;
+    if (
+      focusMemberName !== 'Tất cả' &&
+      !isSamePersonName(focusMemberName, selectedAssignee)
+    ) {
+      baseList = departmentWideSummary.tasksAnalyzed.filter((r) =>
+        isSamePersonName(r.task.assignee, focusMemberName)
+      );
+    }
+
+    if (drilldownProjectFilter !== 'all') {
+      baseList = baseList.filter(
+        (r) =>
+          r.task.projectId === drilldownProjectFilter ||
+          r.task.projectName === drilldownProjectFilter
+      );
+    }
+
     if (selectedDisciplineFilter === 'all') {
-      return summary.tasksAnalyzed;
+      return baseList;
     }
     if (selectedDisciplineFilter === 'on_time') {
-      return summary.tasksAnalyzed.filter((r) => r.isCompleted && r.isOnTime);
+      return baseList.filter((r) => r.isCompleted && r.isOnTime);
     }
     if (selectedDisciplineFilter === 'late') {
-      return summary.tasksAnalyzed.filter((r) => r.isCompleted && !r.isOnTime);
+      return baseList.filter((r) => r.isCompleted && !r.isOnTime);
     }
     if (selectedDisciplineFilter === 'currently_overdue') {
-      return summary.tasksAnalyzed.filter(
+      return baseList.filter(
         (r) => !r.isCompleted && r.discipline === 'currently_overdue'
       );
     }
     if (selectedDisciplineFilter === 'in_progress') {
-      return summary.tasksAnalyzed.filter(
+      return baseList.filter(
         (r) => !r.isCompleted && r.discipline !== 'currently_overdue'
       );
     }
-    return summary.tasksAnalyzed.filter(
+    return baseList.filter(
       (r) => r.discipline === selectedDisciplineFilter
     );
-  }, [summary.tasksAnalyzed, selectedDisciplineFilter]);
+  }, [
+    summary.tasksAnalyzed,
+    departmentWideSummary.tasksAnalyzed,
+    selectedDisciplineFilter,
+    drilldownProjectFilter,
+    focusMemberName,
+    selectedAssignee,
+  ]);
 
   // Preset time buttons
   const timePresets: { id: TimePeriod; label: string }[] = [
@@ -675,10 +749,11 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             type="button"
             onClick={() => {
               setSelectedDisciplineFilter('all');
+              setDrilldownProjectFilter('all');
               setSubTab('task_details');
             }}
             className={`p-2.5 rounded-[8px] border text-left transition-all cursor-pointer ${
-              selectedDisciplineFilter === 'all'
+              selectedDisciplineFilter === 'all' && drilldownProjectFilter === 'all'
                 ? 'bg-[#f8fafc] border-[#cbd5e1] shadow-2xs'
                 : 'bg-[#fafafa] border-[#e0e0e0] hover:bg-white'
             }`}
@@ -695,6 +770,287 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
             </p>
           </button>
         </div>
+      </div>
+
+      {/* 4B. Lớp Thống kê Trọng tâm Dự án của Nhân sự trong Kỳ đã chọn */}
+      <div className="bg-white rounded-[12px] border border-[#e0e0e0] p-5 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#f0f0f0] pb-3.5">
+          <div>
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-[#963861]" />
+              <h2 className="text-sm font-title font-bold text-[#202020]">
+                {focusMemberName !== 'Tất cả'
+                  ? `Trọng tâm dự án — ${focusMemberName}`
+                  : 'Trọng tâm dự án theo nhân sự'}
+              </h2>
+              {focusedMemberStats && (
+                <span className="text-[11px] font-ui font-bold bg-[#fdf2f7] text-[#963861] px-2 py-0.5 rounded-full border border-[#f4c2d7]">
+                  {focusedMemberStats.projectFocus.length} dự án • {focusedMemberStats.totalTasks} việc
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-body text-[#7f7f7f] mt-0.5">
+              Thống kê tỷ trọng công việc theo dự án của nhân sự trong kỳ ({summary.periodLabel}).
+            </p>
+          </div>
+
+          {/* Bộ chọn nhân sự trực tiếp */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-ui font-bold text-[#5f5f5f] flex items-center gap-1">
+              <Users className="w-3.5 h-3.5 text-[#963861]" />
+              <span>Nhân sự:</span>
+            </span>
+            <select
+              value={focusMemberName}
+              onChange={(e) => {
+                setFocusMemberName(e.target.value);
+                setDrilldownProjectFilter('all');
+              }}
+              className="h-8 px-2.5 rounded-[6px] text-xs font-ui font-bold bg-[#f8fafc] border border-[#cbd5e1] text-[#1e293b] cursor-pointer focus:outline-hidden focus:border-[#963861]"
+            >
+              <option value="Tất cả">👥 Tất cả nhân sự Product ({productMembersList.length})</option>
+              {productMembersList.map((m) => (
+                <option key={m.id} value={m.name}>
+                  👤 {m.name} ({m.team})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {focusMemberName !== 'Tất cả' ? (
+          focusedMemberStats && focusedMemberStats.projectFocus.length > 0 ? (
+            <div className="space-y-4">
+              {/* Thanh Tỷ trọng Dự án (Stacked Progress Bar) */}
+              <div className="space-y-1.5">
+                <div className="h-3.5 w-full bg-[#f0f0f0] rounded-full overflow-hidden flex shadow-inner">
+                  {focusedMemberStats.projectFocus.map((pf, idx) => {
+                    const color = PROJECT_FOCUS_COLORS[idx % PROJECT_FOCUS_COLORS.length];
+                    const widthPct =
+                      focusedMemberStats.totalTasks > 0
+                        ? (pf.totalTasks / focusedMemberStats.totalTasks) * 100
+                        : 0;
+                    return (
+                      <div
+                        key={pf.projectId}
+                        style={{ width: `${widthPct}%`, backgroundColor: color }}
+                        className="h-full transition-all first:rounded-l-full last:rounded-r-full"
+                        title={`${pf.projectName.replace(/^Dự án\s+/i, '')}: ${pf.totalTasks} việc (${pf.sharePercent}%)`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-ui text-[#5f5f5f]">
+                  {focusedMemberStats.projectFocus.map((pf, idx) => {
+                    const color = PROJECT_FOCUS_COLORS[idx % PROJECT_FOCUS_COLORS.length];
+                    return (
+                      <span key={pf.projectId} className="inline-flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: color }}
+                        />
+                        <strong className="text-[#202020]">
+                          {pf.projectName.replace(/^Dự án\s+/i, '')}:
+                        </strong>
+                        <span>
+                          {pf.totalTasks} việc ({pf.sharePercent}%)
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Danh sách Thẻ Dự án tập trung (Sắp xếp từ cao xuống thấp) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {focusedMemberStats.projectFocus.map((pf, idx) => {
+                  const color = PROJECT_FOCUS_COLORS[idx % PROJECT_FOCUS_COLORS.length];
+                  const isFiltered = drilldownProjectFilter === pf.projectId;
+                  return (
+                    <div
+                      key={pf.projectId}
+                      className={`p-3.5 rounded-[10px] border transition-all flex flex-col justify-between gap-2.5 ${
+                        isFiltered
+                          ? 'bg-[#fdf2f7]/60 border-[#963861] shadow-xs'
+                          : 'bg-[#fafafa] border-[#e5e7eb] hover:bg-white hover:border-[#cbd5e1]'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className="w-5 h-5 rounded-full text-[10px] font-ui font-extrabold text-white flex items-center justify-center shrink-0"
+                              style={{ backgroundColor: color }}
+                            >
+                              #{idx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onSelectProject && projects.some((p) => p.id === pf.projectId)) {
+                                  onSelectProject(pf.projectId);
+                                }
+                              }}
+                              className="font-title text-xs font-bold text-[#202020] hover:text-[#963861] truncate text-left cursor-pointer"
+                              title={pf.projectName}
+                            >
+                              {pf.projectName.replace(/^Dự án\s+/i, '')}
+                            </button>
+                            {pf.isStrategic && (
+                              <span className="text-[9px] bg-[#fef3c7] text-[#92400e] px-1.5 py-0.2 rounded font-ui font-bold shrink-0">
+                                Chiến lược
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className="text-sm font-title font-bold shrink-0"
+                            style={{ color }}
+                          >
+                            {pf.sharePercent}%
+                          </span>
+                        </div>
+
+                        <div className="mt-2 w-full bg-[#e5e7eb] h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pf.sharePercent}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] font-ui text-[#5f5f5f] pt-1 border-t border-[#ececec]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-[#202020]">{pf.totalTasks} việc:</span>
+                          {pf.onTimeTasks > 0 && (
+                            <span className="text-[#166534] font-semibold">
+                              {pf.onTimeTasks} đúng hạn
+                            </span>
+                          )}
+                          {pf.lateTasks > 0 && (
+                            <span className="text-[#1d4ed8] font-semibold">
+                              {pf.lateTasks} sau hạn
+                            </span>
+                          )}
+                          {pf.inProgressTasks + pf.blockedTasks > 0 && (
+                            <span className="text-[#475569]">
+                              {pf.inProgressTasks + pf.blockedTasks} đang làm
+                            </span>
+                          )}
+                          {pf.overdueTasks > 0 && (
+                            <span className="text-[#dc2626] font-bold">
+                              {pf.overdueTasks} quá hạn
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDrilldownProjectFilter(
+                              drilldownProjectFilter === pf.projectId ? 'all' : pf.projectId
+                            );
+                            setSelectedDisciplineFilter('all');
+                            setSubTab('task_details');
+                          }}
+                          className="text-[11px] font-ui font-bold text-[#963861] hover:underline shrink-0 cursor-pointer ml-2"
+                        >
+                          {isFiltered ? 'Bỏ lọc' : 'Xem việc →'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="py-6 text-center text-xs font-ui text-[#9f9f9f] bg-[#fafafa] rounded-[8px] border border-dashed border-[#e0e0e0]">
+              {focusMemberName} chưa có công việc phát sinh trong kỳ ({summary.periodLabel}).
+            </div>
+          )
+        ) : (
+          /* Chế độ xem Toàn ban: Ma trận phân bổ dự án của tất cả nhân sự trong kỳ */
+          <div className="divide-y divide-[#f0f0f0] border border-[#e5e7eb] rounded-[10px] overflow-hidden">
+            {departmentWideSummary.executiveStats.filter((ex) => ex.totalTasks > 0).length > 0 ? (
+              departmentWideSummary.executiveStats
+                .filter((ex) => ex.totalTasks > 0)
+                .sort((a, b) => b.totalTasks - a.totalTasks)
+                .map((ex) => (
+                  <div
+                    key={ex.member.id}
+                    className="p-3 bg-white hover:bg-[#fcfcfc] transition-colors flex flex-col md:flex-row md:items-center gap-3"
+                  >
+                    <div className="md:w-52 shrink-0 flex items-center justify-between md:block">
+                      <button
+                        type="button"
+                        onClick={() => setFocusMemberName(ex.member.name)}
+                        className="font-ui text-xs font-bold text-[#202020] hover:text-[#963861] text-left cursor-pointer"
+                        title="Bấm để xem chi tiết trọng tâm dự án của nhân sự này"
+                      >
+                        {ex.member.name}
+                      </button>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] font-ui text-[#64748b] bg-[#f1f5f9] px-1.5 py-0.2 rounded">
+                          {ex.member.team}
+                        </span>
+                        <span className="text-[11px] font-ui font-bold text-[#963861]">
+                          {ex.totalTasks} việc
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-2.5 w-full bg-[#f0f0f0] rounded-full overflow-hidden flex">
+                        {ex.projectFocus.map((pf, idx) => {
+                          const color = PROJECT_FOCUS_COLORS[idx % PROJECT_FOCUS_COLORS.length];
+                          const widthPct =
+                            ex.totalTasks > 0 ? (pf.totalTasks / ex.totalTasks) * 100 : 0;
+                          return (
+                            <div
+                              key={pf.projectId}
+                              style={{ width: `${widthPct}%`, backgroundColor: color }}
+                              className="h-full"
+                              title={`${pf.projectName.replace(/^Dự án\s+/i, '')}: ${pf.totalTasks} việc (${pf.sharePercent}%)`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {ex.projectFocus.map((pf, idx) => {
+                          const color = PROJECT_FOCUS_COLORS[idx % PROJECT_FOCUS_COLORS.length];
+                          return (
+                            <button
+                              key={pf.projectId}
+                              type="button"
+                              onClick={() => {
+                                setFocusMemberName(ex.member.name);
+                                setDrilldownProjectFilter(pf.projectId);
+                                setSubTab('task_details');
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-ui bg-[#f8fafc] hover:bg-[#f1f5f9] border border-[#e2e8f0] px-2 py-0.5 rounded-[5px] text-[#334155] cursor-pointer transition-colors"
+                            >
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className="font-semibold text-[#1e293b]">
+                                {pf.projectName.replace(/^Dự án\s+/i, '')}
+                              </span>
+                              <span className="text-[#64748b]">
+                                {pf.totalTasks} ({pf.sharePercent}%)
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))
+            ) : (
+              <div className="py-6 text-center text-xs font-ui text-[#9f9f9f] bg-[#fafafa]">
+                Không có công việc phát sinh trong kỳ ({summary.periodLabel}).
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 5. Sub-tabs Navigation */}
@@ -1045,6 +1401,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 <tr>
                   <th className="py-3 px-4">Nhân sự</th>
                   <th className="py-3 px-3">Nhóm</th>
+                  <th className="py-3 px-3">Dự án tập trung</th>
                   <th className="py-3 px-3 text-center">Tổng việc</th>
                   <th className="py-3 px-3 text-center">Đúng hạn</th>
                   <th className="py-3 px-3 text-center">Sau hạn</th>
@@ -1059,9 +1416,13 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 {displayedExecutiveStats.map((ex) => (
                   <tr key={ex.member.id} className="hover:bg-[#fcfcfc] transition-colors">
                     <td className="py-3 px-4">
-                      <div className="font-ui font-bold text-[#202020]">
+                      <button
+                        type="button"
+                        onClick={() => setFocusMemberName(ex.member.name)}
+                        className="font-ui font-bold text-[#202020] hover:text-[#963861] text-left cursor-pointer"
+                      >
                         {ex.member.name}
-                      </div>
+                      </button>
                       <span className="text-[11px] text-[#7f7f7f] block">
                         {ex.member.title}
                       </span>
@@ -1070,6 +1431,23 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                       <span className="text-[11px] bg-[#f0f0f0] text-[#555] px-2 py-0.5 rounded font-ui font-medium">
                         {ex.member.team}
                       </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      {ex.projectFocus.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {ex.projectFocus.map((pf) => (
+                            <span
+                              key={pf.projectId}
+                              className="text-[11px] bg-[#f8fafc] border border-[#e2e8f0] text-[#334155] px-2 py-0.5 rounded-[4px] font-ui"
+                            >
+                              {pf.projectName.replace(/^Dự án\s+/i, '')}:{' '}
+                              <strong className="text-[#963861]">{pf.totalTasks}</strong> ({pf.sharePercent}%)
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#9f9f9f] italic">Chưa có việc</span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-center font-bold">
                       {ex.totalTasks}
@@ -1135,7 +1513,7 @@ export const AdminReportView: React.FC<AdminReportViewProps> = ({
                 ))}
                 {displayedExecutiveStats.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-8 text-center text-xs font-ui text-[#9f9f9f]">
+                    <td colSpan={11} className="py-8 text-center text-xs font-ui text-[#9f9f9f]">
                       Không tìm thấy nhân sự phù hợp.
                     </td>
                   </tr>

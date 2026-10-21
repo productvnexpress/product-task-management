@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { FolderItem, ProjectItem } from '../types';
+import { FolderItem, ProjectItem, TaskItem } from '../types';
 import { Folder, FolderPlus, Plus, Edit2, Trash2, X, Check, ChevronRight } from 'lucide-react';
 
 interface FolderManagerModalProps {
@@ -12,8 +12,10 @@ interface FolderManagerModalProps {
   onClose: () => void;
   folders: FolderItem[];
   projects: ProjectItem[];
-  onSaveFolders: (updatedFolders: FolderItem[]) => void;
+  tasks?: TaskItem[];
+  onSaveFolders?: (updatedFolders: FolderItem[]) => void;
   onDeleteFolder?: (folderId: string) => void;
+  onUpdateFolders?: (updatedFolders: FolderItem[], deletedId?: string) => void;
 }
 
 export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
@@ -21,8 +23,10 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
   onClose,
   folders,
   projects,
+  tasks = [],
   onSaveFolders,
   onDeleteFolder,
+  onUpdateFolders,
 }) => {
   const [newName, setNewName] = useState('');
   const [newParentId, setNewParentId] = useState<string>('');
@@ -31,6 +35,14 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
   const [editingParentId, setEditingParentId] = useState<string>('');
 
   if (!isOpen) return null;
+
+  const commitFolders = (updatedFolders: FolderItem[], deletedId?: string) => {
+    onSaveFolders?.(updatedFolders);
+    if (deletedId) {
+      onDeleteFolder?.(deletedId);
+    }
+    onUpdateFolders?.(updatedFolders, deletedId);
+  };
 
   const rootFolders = folders
     .filter((f) => !f.parentId)
@@ -57,7 +69,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
       sortOrder: folders.length + 1,
     };
 
-    onSaveFolders([...folders, newFolder]);
+    commitFolders([...folders, newFolder]);
     setNewName('');
   };
 
@@ -79,26 +91,28 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
           }
         : f
     );
-    onSaveFolders(updated);
+    commitFolders(updated);
     setEditingId(null);
   };
 
   const handleDelete = (folder: FolderItem) => {
     const childCount = folders.filter((f) => f.parentId === folder.id).length;
     const projCount = projects.filter((p) => p.folderId === folder.id).length;
-    if (childCount > 0 || projCount > 0) {
+    const taskCount = tasks.filter(
+      (t) => t.folderId === folder.id || t.projectId === `folder:${folder.id}`
+    ).length;
+    if (childCount > 0 || projCount > 0 || taskCount > 0) {
       alert(
-        `Thư mục "${folder.name}" đang chứa ${childCount} thư mục con và ${projCount} dự án. Vui lòng chuyển các mục sang thư mục khác trước khi xóa.`
+        `Thư mục "${folder.name}" đang chứa ${childCount} thư mục con, ${projCount} dự án và ${taskCount} công việc. Vui lòng chuyển các mục sang thư mục khác trước khi xóa.`
       );
       return;
     }
     const updated = folders.filter((f) => f.id !== folder.id);
-    onSaveFolders(updated);
-    onDeleteFolder?.(folder.id);
+    commitFolders(updated, folder.id);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
       <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#f0f0f0] flex items-center justify-between bg-[#fafafa]">

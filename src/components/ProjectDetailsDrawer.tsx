@@ -92,6 +92,7 @@ interface ProjectDetailsDrawerProps {
   isCreateMode?: boolean;
   activeProductMember?: MemberItem | null;
   currentAuthUser?: MemberItem | null;
+  onOpenFolderManager?: () => void;
 }
 
 export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
@@ -108,6 +109,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
   isCreateMode = false,
   activeProductMember,
   currentAuthUser,
+  onOpenFolderManager,
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
   const userRole = getUserRole(effectiveUser);
@@ -1452,9 +1454,20 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             {isEditing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] block">
-                    Thư mục (Folder) <span className="text-[#da1e28]">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="font-ui text-xs font-semibold text-[#303030] block">
+                      Thư mục (Folder) <span className="text-[#da1e28]">*</span>
+                    </label>
+                    {onOpenFolderManager && (
+                      <button
+                        type="button"
+                        onClick={onOpenFolderManager}
+                        className="text-[11px] font-ui font-semibold text-[#963861] hover:underline cursor-pointer"
+                      >
+                        + Thêm thư mục
+                      </button>
+                    )}
+                  </div>
                   <select
                     value={folderId}
                     onChange={(e) => setFolderId(e.target.value)}

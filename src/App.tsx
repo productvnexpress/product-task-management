@@ -3256,6 +3256,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         }}
         activeProductMember={activeProductMember}
         currentAuthUser={currentAuthUser}
+        onOpenFolderManager={() => setIsFolderManagerOpen(true)}
       />
 
       {/* Right Sidebar Personal Notifications Drawer */}

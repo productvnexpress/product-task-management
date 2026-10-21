@@ -38,6 +38,21 @@ export interface TaskDisciplineResult {
   isLateConfirmation: boolean; // Bấm hôm sau
 }
 
+export interface MemberProjectFocusItem {
+  projectId: string;
+  projectName: string;
+  projectCode?: string;
+  isStrategic?: boolean;
+  totalTasks: number;
+  sharePercent: number; // % tỷ trọng việc của nhân sự trong kỳ
+  completedTasks: number;
+  onTimeTasks: number;
+  lateTasks: number;
+  overdueTasks: number;
+  blockedTasks: number;
+  inProgressTasks: number;
+}
+
 export interface ExecutiveMemberStats {
   member: MemberItem;
   role: 'PM' | 'Executive';
@@ -55,6 +70,7 @@ export interface ExecutiveMemberStats {
   efficiencyRating: 'Xuất sắc' | 'Tốt' | 'Cần cải thiện';
   ratingReason: string;
   tasks: TaskItem[];
+  projectFocus: MemberProjectFocusItem[];
 }
 
 export interface PMLeadershipStats {
@@ -581,6 +597,72 @@ export function generateDepartmentReport(
       ratingReason = `Đúng hạn ${mOnTimeRate}%`;
     }
 
+    // Thống kê mức độ tập trung theo dự án của nhân sự trong kỳ
+    const projFocusMap = new Map<
+      string,
+      {
+        projectId: string;
+        projectName: string;
+        projectCode?: string;
+        isStrategic?: boolean;
+        totalTasks: number;
+        completedTasks: number;
+        onTimeTasks: number;
+        lateTasks: number;
+        overdueTasks: number;
+        blockedTasks: number;
+        inProgressTasks: number;
+      }
+    >();
+
+    memberTasksRes.forEach((r) => {
+      const t = r.task;
+      const matchedProj = allProjects.find(
+        (p) => p.id === t.projectId || (t.projectName && p.name === t.projectName)
+      );
+      const key = matchedProj
+        ? matchedProj.id
+        : t.projectId || t.folderId || t.projectName || 'unassigned';
+      const displayName = matchedProj
+        ? matchedProj.name
+        : t.projectName || t.folderName || 'Công việc chung';
+
+      if (!projFocusMap.has(key)) {
+        projFocusMap.set(key, {
+          projectId: matchedProj ? matchedProj.id : key,
+          projectName: displayName,
+          projectCode: matchedProj?.code,
+          isStrategic: matchedProj?.isStrategic,
+          totalTasks: 0,
+          completedTasks: 0,
+          onTimeTasks: 0,
+          lateTasks: 0,
+          overdueTasks: 0,
+          blockedTasks: 0,
+          inProgressTasks: 0,
+        });
+      }
+
+      const item = projFocusMap.get(key)!;
+      item.totalTasks++;
+      if (r.isCompleted) {
+        item.completedTasks++;
+        if (r.isOnTime) item.onTimeTasks++;
+        else item.lateTasks++;
+      } else {
+        if (r.discipline === 'currently_overdue') item.overdueTasks++;
+        else if (r.discipline === 'blocked') item.blockedTasks++;
+        else item.inProgressTasks++;
+      }
+    });
+
+    const projectFocus: MemberProjectFocusItem[] = Array.from(projFocusMap.values())
+      .map((item) => ({
+        ...item,
+        sharePercent: mTotal > 0 ? Math.round((item.totalTasks / mTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.totalTasks - a.totalTasks || b.completedTasks - a.completedTasks);
+
     return {
       member,
       role: member.team === 'Product Manager' ? 'PM' : 'Executive',
@@ -598,6 +680,7 @@ export function generateDepartmentReport(
       efficiencyRating,
       ratingReason,
       tasks: memberTasksRes.map((r) => r.task),
+      projectFocus,
     };
   });
 

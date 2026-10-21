@@ -291,15 +291,17 @@ export function isTaskMatchingFolderFilter(
  */
 export function getFlattenedFolderOptions(
   folders: FolderItem[] = INITIAL_FOLDERS
-): Array<{ folder: FolderItem; depth: number; fullPath: string }> {
+): Array<{ id: string; name: string; folder: FolderItem; depth: number; fullPath: string }> {
   const roots = folders
     .filter((f) => !f.parentId)
     .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
 
-  const result: Array<{ folder: FolderItem; depth: number; fullPath: string }> = [];
+  const result: Array<{ id: string; name: string; folder: FolderItem; depth: number; fullPath: string }> = [];
 
   for (const root of roots) {
     result.push({
+      id: root.id,
+      name: root.name,
       folder: root,
       depth: 0,
       fullPath: root.name,
@@ -309,6 +311,8 @@ export function getFlattenedFolderOptions(
       .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
     for (const child of children) {
       result.push({
+        id: child.id,
+        name: child.name,
         folder: child,
         depth: 1,
         fullPath: `${root.name} › ${child.name}`,

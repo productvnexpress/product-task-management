@@ -49,9 +49,16 @@ export const wmsDataService = {
         }));
         const existingIds = new Set(dbFolders.map((f) => f.id));
         const merged = [...dbFolders];
+        for (const localF of localFolders) {
+          if (!existingIds.has(localF.id)) {
+            merged.push(localF);
+            existingIds.add(localF.id);
+          }
+        }
         for (const def of INITIAL_FOLDERS) {
           if (!existingIds.has(def.id)) {
             merged.push(def);
+            existingIds.add(def.id);
           }
         }
         saveFoldersToStorage(merged);
