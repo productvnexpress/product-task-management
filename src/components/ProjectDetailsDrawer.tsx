@@ -57,7 +57,8 @@ import {
   History,
   Share2,
   CheckSquare,
-} from 'lucide-react';
+} from './vds/icons';
+import { VdsButton } from './vds';
 import { getProjectFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import { formatDateShort, formatDateWithEnDay, formatMemberWithPhone, formatProductMemberWithPhone, formatStakeholderMemberWithPhone, formatMemberListWithPhone } from '../utils/formatters';
 import { ProjectTimelineView } from './ProjectTimelineView';
@@ -1103,10 +1104,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkOrderTech,
       placeholder: 'https://place.fpt.com/groups/...',
       icon: FileText,
-      badgeBg: 'bg-[#fcf0f5]',
-      badgeText: 'text-[#b13460]',
-      badgeBorder: 'border-[#f3c2d4]',
-      buttonBg: 'bg-[#b13460]',
+      badgeBg: 'bg-surface-accent-faint',
+      badgeText: 'text-accent',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-accent-solid',
     },
     {
       id: 'chat',
@@ -1115,10 +1116,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkChat,
       placeholder: 'https://chat.fpt.com/group/...',
       icon: MessageSquare,
-      badgeBg: 'bg-[#e2f6e9]',
-      badgeText: 'text-[#24a148]',
-      badgeBorder: 'border-[#b8e8c4]',
-      buttonBg: 'bg-[#24a148]',
+      badgeBg: 'bg-surface-positive',
+      badgeText: 'text-positive',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-positive-solid',
     },
     {
       id: 'dashboard',
@@ -1127,10 +1128,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkDashboard,
       placeholder: 'https://app.powerbi.com/groups/...',
       icon: LayoutDashboard,
-      badgeBg: 'bg-[#fcf5e8]',
-      badgeText: 'text-[#b26b00]',
-      badgeBorder: 'border-[#f5dbb0]',
-      buttonBg: 'bg-[#b26b00]',
+      badgeBg: 'bg-surface-warning',
+      badgeText: 'text-warning',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-warning-solid',
     },
     {
       id: 'report',
@@ -1139,10 +1140,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkReport,
       placeholder: 'https://docs.google.com/presentation/...',
       icon: TrendingUp,
-      badgeBg: 'bg-[#eef4fb]',
-      badgeText: 'text-[#1d508d]',
-      badgeBorder: 'border-[#c2d7f0]',
-      buttonBg: 'bg-[#1d508d]',
+      badgeBg: 'bg-surface-support',
+      badgeText: 'text-support',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-support-solid',
     },
     {
       id: 'beta',
@@ -1151,10 +1152,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkBeta,
       placeholder: 'https://beta.vnexpress.net/...',
       icon: FlaskConical,
-      badgeBg: 'bg-[#fefce8]',
-      badgeText: 'text-[#ca8a04]',
-      badgeBorder: 'border-[#fef08a]',
-      buttonBg: 'bg-[#ca8a04]',
+      badgeBg: 'bg-surface-warning',
+      badgeText: 'text-warning',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-warning-solid',
     },
     {
       id: 'production',
@@ -1163,10 +1164,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
       setUrl: setLinkProduction,
       placeholder: 'https://vnexpress.net/...',
       icon: Globe,
-      badgeBg: 'bg-[#e2f6e9]',
-      badgeText: 'text-[#24a148]',
-      badgeBorder: 'border-[#b8e8c4]',
-      buttonBg: 'bg-[#24a148]',
+      badgeBg: 'bg-surface-positive',
+      badgeText: 'text-positive',
+      badgeBorder: 'border-line',
+      buttonBg: 'bg-positive-solid',
     },
   ];
 
@@ -1190,40 +1191,40 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-            className="relative z-10 bg-white w-full max-w-[800px] h-full shadow-2xl flex flex-col border-l border-[#d0d0d0] overflow-hidden"
+            className="relative z-10 bg-surface w-full max-w-[800px] h-full shadow-sheet flex flex-col border-l border-line overflow-hidden"
           >
             {/* Drawer Header */}
-        <div className="px-5 py-3.5 bg-[#fafafa] border-b border-[#e0e0e0] flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 py-3.5 bg-surface-100 border-b border-line flex items-center justify-between gap-3 shrink-0">
           {/* Bên trái: Tên dự án và icon History xem lịch sử điều chỉnh */}
           <div className="flex items-center gap-2.5 min-w-0">
             {isCreateMode && (
-              <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold shrink-0">
+              <div className="w-6 h-6 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold shrink-0">
                 <Plus className="w-3.5 h-3.5" />
               </div>
             )}
-            <h2 className="font-title text-base sm:text-lg font-bold text-[#202020] truncate flex items-center gap-1.5" title={name}>
+            <h2 className="font-title text-base sm:text-lg font-bold text-ink truncate flex items-center gap-1.5" title={name}>
               {isStrategic && (
-                <span className="text-[#d97706] text-base shrink-0" title="Dự án chiến lược - Toà soạn đặc biệt quan tâm">
+                <span className="text-warning text-base shrink-0" title="Dự án chiến lược - Toà soạn đặc biệt quan tâm">
                   ⭐
                 </span>
               )}
               <span className="truncate">{isCreateMode ? (name.trim() || 'Tạo dự án mới') : (name || 'Chưa đặt tên dự án')}</span>
             </h2>
             {isCreateMode ? (
-              <span className="text-[10px] font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4] shrink-0">
+              <span className="text-[10px] font-bold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line shrink-0">
                 Tạo mới
               </span>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsHistoryOpen(true)}
-                className="p-1.5 text-[#505050] hover:text-[#1d508d] hover:bg-[#eef4fb] rounded-[6px] border border-[#d0d0d0] hover:border-[#c2d7f0] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs group"
+                className="p-1.5 text-ink-lighter hover:text-support hover:bg-surface-support rounded-vds-lg border border-line hover:border-line transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer group"
                 title="Xem lịch sử điều chỉnh dự án chi tiết"
               >
-                <History className="w-4 h-4 text-[#1d508d] group-hover:rotate-[-20deg] transition-transform" />
-                <span className="text-[11px] font-ui font-semibold text-[#1d508d] hidden sm:inline">Lịch sử</span>
+                <History className="w-4 h-4 text-support group-hover:rotate-[-20deg] transition-transform" />
+                <span className="text-xs font-ui font-semibold text-support hidden sm:inline">Lịch sử</span>
                 {historyLogs.length > 0 && (
-                  <span className="font-num text-[10px] font-bold bg-[#1d508d] text-white px-1.5 py-0.2 rounded-full leading-none">
+                  <span className="font-num text-[10px] font-bold bg-support-solid text-on-color px-1.5 py-0.2 rounded-full leading-none">
                     {historyLogs.length}
                   </span>
                 )}
@@ -1234,14 +1235,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           {/* Bên phải: Tag Status, Button Close kèm text "ESC để đóng". */}
           <div className="flex items-center gap-2 shrink-0">
             {isSavedToast && (
-              <span className="text-xs font-semibold text-[#24a148] bg-[#e2f6e9] border border-[#b8e8c4] px-2.5 py-1 rounded-[6px] hidden md:flex items-center gap-1 animate-fade-in">
+              <span className="text-xs font-semibold text-positive bg-surface-positive border border-line px-2.5 py-1 rounded-vds-lg hidden md:flex items-center gap-1 animate-fade-in">
                 <Check className="w-3.5 h-3.5" /> Đã lưu!
               </span>
             )}
 
             {/* Tag Chiến lược */}
             {isStrategic && (
-              <span className="text-xs font-ui font-bold px-2.5 py-1 rounded-full border bg-[#fffbeb] text-[#b45309] border-[#fde68a] shrink-0 flex items-center gap-1">
+              <span className="text-xs font-ui font-bold px-2.5 py-1 rounded-full border bg-surface-warning text-warning border-line shrink-0 flex items-center gap-1">
                 ⭐ Chiến lược
               </span>
             )}
@@ -1250,12 +1251,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             <span
               className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
                 normalizeProjectStatus(status) === 'Chưa triển khai'
-                  ? 'bg-[#f4f4f5] text-[#52525b] border-[#e4e4e7]'
+                  ? 'bg-surface-200 text-ink-lighter border-line'
                   : normalizeProjectStatus(status) === 'Đang triển khai'
-                  ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
+                  ? 'bg-surface-support text-support border-line'
                   : normalizeProjectStatus(status) === 'Tạm dừng'
-                  ? 'bg-[#fff0f1] text-[#da1e28] border-[#ffd0d3]'
-                  : 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
+                  ? 'bg-surface-negative text-negative border-line'
+                  : 'bg-surface-positive text-positive border-line'
               }`}
             >
               ● {normalizeProjectStatus(status)}
@@ -1266,17 +1267,17 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold rounded-[6px] border transition-colors cursor-pointer shadow-2xs shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold rounded-vds-lg border transition-colors cursor-pointer shrink-0 ${
                   isCopied
-                    ? 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
-                    : 'bg-white text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] border-[#d0d0d0]'
+                    ? 'bg-surface-positive text-positive border-line'
+                    : 'bg-surface text-ink-lighter hover:text-ink hover:bg-surface-200 border-line'
                 }`}
                 title="Sao chép liên kết dự án để gửi đồng nghiệp"
               >
                 {isCopied ? (
-                  <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                  <Check className="w-3.5 h-3.5 text-positive" />
                 ) : (
-                  <Share2 className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                  <Share2 className="w-3.5 h-3.5 text-subdued" />
                 )}
                 <span>{isCopied ? 'Đã chép link' : 'Sao chép link'}</span>
               </button>
@@ -1286,24 +1287,24 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold text-[#505050] hover:text-[#202020] bg-white hover:bg-[#f0f0f0] rounded-[6px] border border-[#d0d0d0] transition-colors cursor-pointer shadow-2xs shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold text-ink-lighter hover:text-ink bg-surface hover:bg-surface-200 rounded-vds-lg border border-line transition-colors cursor-pointer shrink-0"
               title="Đóng ngăn chi tiết (Phím ESC)"
             >
-              <X className="w-4 h-4 text-[#7f7f7f]" />
+              <X className="w-4 h-4 text-subdued" />
               <span>ESC để đóng</span>
             </button>
           </div>
         </div>
 
         {/* Sub-header: Pinned Section Quick Navigation Menu */}
-        <div className="px-5 py-2 bg-[#fcfcfc] border-b border-[#e0e0e0] flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none z-10">
+        <div className="px-5 py-2 bg-surface-100 border-b border-line flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none z-10">
           <button
             type="button"
             onClick={() => scrollToSection('project-drawer-section-overview')}
-            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1.5 text-xs font-ui rounded-vds-lg transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeNav === 'project-drawer-section-overview'
-                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
-                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+                ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink hover:bg-surface-200 bg-surface border border-line font-medium'
             }`}
           >
             <FolderKanban className="w-3.5 h-3.5" />
@@ -1313,10 +1314,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           <button
             type="button"
             onClick={() => scrollToSection('project-drawer-section-phases')}
-            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1.5 text-xs font-ui rounded-vds-lg transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeNav === 'project-drawer-section-phases'
-                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
-                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+                ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink hover:bg-surface-200 bg-surface border border-line font-medium'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -1324,8 +1325,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-num font-bold ${
                 activeNav === 'project-drawer-section-phases'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-[#f0f0f0] text-[#606060]'
+                  ? 'bg-surface/20 text-on-color'
+                  : 'bg-surface-200 text-ink-lighter'
               }`}
             >
               {phases.length}
@@ -1335,10 +1336,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           <button
             type="button"
             onClick={() => scrollToSection('project-drawer-section-links')}
-            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1.5 text-xs font-ui rounded-vds-lg transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeNav === 'project-drawer-section-links'
-                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
-                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+                ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink hover:bg-surface-200 bg-surface border border-line font-medium'
             }`}
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -1348,10 +1349,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           <button
             type="button"
             onClick={() => scrollToSection('project-drawer-section-notes')}
-            className={`px-3 py-1.5 text-xs font-ui rounded-[6px] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            className={`px-3 py-1.5 text-xs font-ui rounded-vds-lg transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeNav === 'project-drawer-section-notes'
-                ? 'bg-[#b13460] text-white font-bold shadow-2xs'
-                : 'text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] bg-white border border-[#d0d0d0] font-medium'
+                ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink hover:bg-surface-200 bg-surface border border-line font-medium'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -1359,8 +1360,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             <span
               className={`text-[10px] px-1.5 py-0.2 rounded-full font-num font-bold ${
                 activeNav === 'project-drawer-section-notes'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-[#f0f0f0] text-[#606060]'
+                  ? 'bg-surface/20 text-on-color'
+                  : 'bg-surface-200 text-ink-lighter'
               }`}
             >
               {notes.length}
@@ -1369,16 +1370,16 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
         </div>
 
         {/* Drawer Body - Single Screen Scrollable Content */}
-        <div ref={scrollBodyRef} className="p-5 overflow-y-auto font-body text-xs text-[#202020] flex-1 space-y-6 scroll-smooth">
+        <div ref={scrollBodyRef} className="p-5 overflow-y-auto font-body text-xs text-ink flex-1 space-y-6 scroll-smooth">
 
           {/* ==================== SECTION 1: TỔNG QUAN ==================== */}
-          <div id="project-drawer-section-overview" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
-            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
+          <div id="project-drawer-section-overview" className="bg-surface-100 p-4 rounded-vds-lg border border-line space-y-4 scroll-mt-2">
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold">
+                <div className="w-6 h-6 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold">
                   <FolderKanban className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-title text-sm font-bold text-[#b13460]">
+                <h3 className="font-title text-sm font-bold text-accent">
                   1. Tổng quan
                 </h3>
               </div>
@@ -1386,7 +1387,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               {/* Nút Chỉnh sửa / Lưu thông tin Tổng quan */}
               <div className="flex items-center gap-1.5">
                 {isCreateMode ? (
-                  <span className="text-[11px] font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4]">
+                  <span className="text-xs font-bold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line">
                     Nhập thông tin
                   </span>
                 ) : !isEditing ? (
@@ -1394,7 +1395,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="px-3 py-1 rounded-[6px] bg-[#b13460] hover:bg-[#8f274c] text-white text-xs font-ui font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                      className="px-3 py-1 rounded-vds-lg bg-accent-solid hover:bg-accent-solid-hover text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>Chỉnh sửa</span>
@@ -1405,14 +1406,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+                      className="px-2.5 py-1 text-xs font-semibold text-ink-lighter hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer"
                     >
                       Hủy
                     </button>
                     <button
                       type="button"
                       onClick={handleSave}
-                      className="px-3 py-1 rounded-[6px] bg-[#24a148] hover:bg-[#1f873d] text-white text-xs font-ui font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                      className="px-3 py-1 rounded-vds-lg bg-positive-solid hover:bg-positive-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                     >
                       <Save className="w-3 h-3" />
                       <span>Lưu thay đổi</span>
@@ -1425,8 +1426,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             {/* Tên dự án */}
             {isEditing ? (
               <div className="space-y-1">
-                <label className="font-ui text-xs font-semibold text-[#303030] block">
-                  Tên dự án <span className="text-[#da1e28]">*</span>
+                <label className="font-ui text-xs font-semibold text-ink block">
+                  Tên dự án <span className="text-negative">*</span>
                 </label>
                 <input
                   type="text"
@@ -1440,13 +1441,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     }
                   }}
                   placeholder="Nhập tên dự án..."
-                  className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                  className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-semibold text-ink bg-surface focus:border-line-accent focus:ring-1 focus:ring-line"
                 />
               </div>
             ) : (
-              <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
-                <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Tên dự án</span>
-                <h4 className="font-title text-base font-bold text-[#202020]">{name}</h4>
+              <div className="bg-surface p-3 rounded-vds-lg border border-line">
+                <span className="text-xs text-subdued font-ui block mb-0.5">Tên dự án</span>
+                <h4 className="font-title text-base font-bold text-ink">{name}</h4>
               </div>
             )}
 
@@ -1455,14 +1456,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="font-ui text-xs font-semibold text-[#303030] block">
-                      Thư mục (Folder) <span className="text-[#da1e28]">*</span>
+                    <label className="font-ui text-xs font-semibold text-ink block">
+                      Thư mục (Folder) <span className="text-negative">*</span>
                     </label>
                     {onOpenFolderManager && (
                       <button
                         type="button"
                         onClick={onOpenFolderManager}
-                        className="text-[11px] font-ui font-semibold text-[#963861] hover:underline cursor-pointer"
+                        className="text-xs font-ui font-semibold text-accent hover:underline cursor-pointer"
                       >
                         + Thêm thư mục
                       </button>
@@ -1471,7 +1472,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <select
                     value={folderId}
                     onChange={(e) => setFolderId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white font-ui focus:border-[#b13460]"
+                    className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-semibold text-ink bg-surface font-ui focus:border-line-accent"
                   >
                     {getFlattenedFolderOptions(folders).map((opt) => (
                       <option key={opt.id} value={opt.id}>
@@ -1483,10 +1484,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="font-ui text-xs font-semibold text-[#303030] block">
-                      Mã dự án <span className="text-[#da1e28]">*</span>
+                    <label className="font-ui text-xs font-semibold text-ink block">
+                      Mã dự án <span className="text-negative">*</span>
                     </label>
-                    <span className="text-[10px] text-[#71717a] font-ui">
+                    <span className="text-[10px] text-subdued font-ui">
                       Ví dụ: VNE-XE
                     </span>
                   </div>
@@ -1498,21 +1499,21 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''));
                     }}
                     placeholder="VNE-XXX"
-                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold uppercase text-[#202020] bg-white focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                    className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-semibold text-ink bg-surface focus:border-line-accent focus:ring-1 focus:ring-line"
                   />
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
-                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Thư mục (Folder)</span>
-                  <span className="font-ui text-xs font-bold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f3c2d4] inline-flex items-center gap-1">
+                <div className="bg-surface p-3 rounded-vds-lg border border-line">
+                  <span className="text-xs text-subdued font-ui block mb-0.5">Thư mục (Folder)</span>
+                  <span className="font-ui text-xs font-bold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line inline-flex items-center gap-1">
                     📁 {getFolderPath(folderId, folders) || 'VnExpress'}
                   </span>
                 </div>
-                <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
-                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Mã dự án</span>
-                  <span className="font-ui text-xs font-bold text-[#b13460] bg-[#fcf0f5] px-2 py-0.5 rounded border border-[#f3c2d4]">
+                <div className="bg-surface p-3 rounded-vds-lg border border-line">
+                  <span className="text-xs text-subdued font-ui block mb-0.5">Mã dự án</span>
+                  <span className="font-ui text-xs font-bold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line">
                     {code || 'Chưa có mã'}
                   </span>
                 </div>
@@ -1520,20 +1521,20 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             )}
 
             {/* Dự án chiến lược (Checkbox) */}
-            <div className="bg-white p-3 rounded-[8px] border border-[#e6e6e6]">
+            <div className="bg-surface p-3 rounded-vds-lg border border-line">
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={isStrategic}
                   disabled={!isEditing}
                   onChange={(e) => setIsStrategic(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#b13460] focus:ring-[#b13460] cursor-pointer disabled:opacity-60"
+                  className="w-4 h-4 rounded text-accent focus:ring-line-accent cursor-pointer disabled:opacity-60"
                 />
                 <div className="text-xs font-ui">
-                  <span className="font-bold text-[#18181b] flex items-center gap-1">
+                  <span className="font-bold text-ink flex items-center gap-1">
                     ⭐ Dự án chiến lược
                   </span>
-                  <span className="text-[11px] text-[#71717a] block">
+                  <span className="text-xs text-subdued block">
                     Dự án chiến lược cấp Toà soạn / Công ty đặc biệt quan tâm, ưu tiên nguồn lực triển khai
                   </span>
                 </div>
@@ -1544,13 +1545,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             {isEditing ? (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] block">
+                  <label className="font-ui text-xs font-semibold text-ink block">
                     Trạng thái:
                   </label>
                   <select
                     value={normalizeProjectStatus(status)}
                     onChange={(e) => setStatus(normalizeProjectStatus(e.target.value))}
-                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020] bg-white font-ui focus:border-[#1d508d]"
+                    className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-semibold text-ink bg-surface font-ui focus:border-line-support"
                   >
                     <option value="Chưa triển khai">⚪ Chưa triển khai</option>
                     <option value="Đang triển khai">🔵 Đang triển khai</option>
@@ -1560,62 +1561,62 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-[#1d508d]" />
+                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-support" />
                     <span>Bắt đầu:</span>
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-num font-semibold text-[#202020] bg-white"
+                    className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-num font-semibold text-ink bg-surface"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1">
-                    <Target className="w-3.5 h-3.5 text-[#b13460]" />
+                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5 text-accent" />
                     <span>Hoàn thành:</span>
                   </label>
                   <input
                     type="date"
                     value={targetDate}
                     onChange={(e) => setTargetDate(e.target.value)}
-                    className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs font-num font-bold text-[#b13460] bg-white"
+                    className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs font-num font-bold text-accent bg-surface"
                   />
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0]">
-                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-1">Trạng thái</span>
+                <div className="bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="text-xs text-subdued font-ui block mb-1">Trạng thái</span>
                   <span
                     className={`inline-block text-xs font-ui font-semibold px-2.5 py-1 rounded-full border ${
                       normalizeProjectStatus(status) === 'Chưa triển khai'
-                        ? 'bg-[#f4f4f5] text-[#52525b] border-[#e4e4e7]'
+                        ? 'bg-surface-200 text-ink-lighter border-line'
                         : normalizeProjectStatus(status) === 'Đang triển khai'
-                        ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
+                        ? 'bg-surface-support text-support border-line'
                         : normalizeProjectStatus(status) === 'Tạm dừng'
-                        ? 'bg-[#fff0f1] text-[#da1e28] border-[#ffd0d3]'
-                        : 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
+                        ? 'bg-surface-negative text-negative border-line'
+                        : 'bg-surface-positive text-positive border-line'
                     }`}
                   >
                     ● {normalizeProjectStatus(status)}
                   </span>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0]">
-                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Bắt đầu</span>
-                  <span className="font-ui text-xs font-semibold text-[#202020] flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-[#1d508d]" />
+                <div className="bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="text-xs text-subdued font-ui block mb-0.5">Bắt đầu</span>
+                  <span className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-support" />
                     {formatDateShort(startDate)}
                   </span>
                 </div>
 
-                <div className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0]">
-                  <span className="text-[11px] text-[#7f7f7f] font-ui block mb-0.5">Hoàn thành</span>
-                  <span className="font-ui text-xs font-bold text-[#b13460] flex items-center gap-1">
-                    <Target className="w-3.5 h-3.5 text-[#b13460]" />
+                <div className="bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="text-xs text-subdued font-ui block mb-0.5">Hoàn thành</span>
+                  <span className="font-ui text-xs font-bold text-accent flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5 text-accent" />
                     {formatDateShort(targetDate)}
                   </span>
                 </div>
@@ -1625,8 +1626,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             {/* Mô tả & Mục tiêu */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-[#b13460]" />
+                <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-accent" />
                   <span>Mô tả:</span>
                 </label>
                 {isEditing ? (
@@ -1635,18 +1636,18 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Mô tả nội dung và phạm vi sản phẩm..."
-                    className="w-full p-2.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white leading-relaxed focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                    className="w-full p-2.5 border border-line rounded-vds-lg text-xs text-ink bg-surface leading-relaxed focus:border-line-accent focus:ring-1 focus:ring-line"
                   />
                 ) : (
-                  <div className="bg-white p-3 rounded-[6px] border border-[#e0e0e0] text-xs text-[#303030] leading-relaxed min-h-[60px]">
-                    {description || <span className="text-[#7f7f7f]">Chưa có thông tin mô tả.</span>}
+                  <div className="bg-surface p-3 rounded-vds-lg border border-line text-xs text-ink leading-relaxed min-h-[60px]">
+                    {description || <span className="text-subdued">Chưa có thông tin mô tả.</span>}
                   </div>
                 )}
               </div>
 
               <div className="space-y-1">
-                <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-[#24a148]" />
+                <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-positive" />
                   <span>Mục tiêu:</span>
                 </label>
                 {isEditing ? (
@@ -1655,25 +1656,25 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     value={objective}
                     onChange={(e) => setObjective(e.target.value)}
                     placeholder="Mục tiêu sản phẩm và chỉ số KPI kỳ vọng..."
-                    className="w-full p-2.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white leading-relaxed focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                    className="w-full p-2.5 border border-line rounded-vds-lg text-xs text-ink bg-surface leading-relaxed focus:border-line-accent focus:ring-1 focus:ring-line"
                   />
                 ) : (
-                  <div className="bg-white p-3 rounded-[6px] border border-[#e0e0e0] text-xs text-[#303030] leading-relaxed min-h-[60px]">
-                    {objective || <span className="text-[#7f7f7f]">Chưa có mục tiêu KPI.</span>}
+                  <div className="bg-surface p-3 rounded-vds-lg border border-line text-xs text-ink leading-relaxed min-h-[60px]">
+                    {objective || <span className="text-subdued">Chưa có mục tiêu KPI.</span>}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Product Owner (Stakeholder đại diện bài toán sản phẩm & nghiệm thu KPI) */}
-            <div className="space-y-2 bg-white p-3 rounded-[8px] border border-[#e0e0e0] relative">
+            <div className="space-y-2 bg-surface p-3 rounded-vds-lg border border-line relative">
               <div className="flex items-center justify-between">
-                <label className="font-ui text-xs font-bold text-[#303030] flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-[#b13460]" />
+                <label className="font-ui text-xs font-bold text-ink flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-accent" />
                   <span>Product Owner (Stakeholders):</span>
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-[#7f7f7f] hidden sm:inline">
+                  <span className="text-xs text-subdued hidden sm:inline">
                     Đại diện Tòa soạn / Nghiệp vụ
                   </span>
                   {!isEditing && canEdit && (
@@ -1683,7 +1684,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                         setIsEditing(true);
                         setIsPoDropdownOpen(true);
                       }}
-                      className="text-[11px] font-semibold text-[#b13460] hover:text-[#8f274c] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-semibold text-accent hover:text-accent hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>{selectedPoList.length > 0 ? 'Thay đổi' : '+ Chọn PO'}</span>
@@ -1708,12 +1709,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                         return (
                           <div
                             key={poName}
-                            className="inline-flex items-center gap-1.5 bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4] px-2.5 py-1 rounded-[6px] text-xs font-semibold shadow-2xs"
+                            className="inline-flex items-center gap-1.5 bg-surface-accent-faint text-accent border border-line px-2.5 py-1 rounded-vds-lg text-xs font-semibold "
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#b13460]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-accent-solid" />
                             <span className="font-bold">{displayName}</span>
                             {matchedMember && (
-                              <span className="text-[10px] text-[#8f274c] font-normal border-l border-[#f3c2d4] pl-1.5">
+                              <span className="text-[10px] text-accent font-normal border-l border-line pl-1.5">
                                 {matchedMember.title} {matchedMember.department ? `(${matchedMember.department})` : ''}
                               </span>
                             )}
@@ -1722,7 +1723,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div className="text-xs text-[#7f7f7f] font-normal bg-[#fafafa] p-2.5 rounded-[6px] border border-dashed border-[#d6d6d6] flex items-center justify-between">
+                    <div className="text-xs text-subdued font-normal bg-surface-100 p-2.5 rounded-vds-lg border border-dashed border-line flex items-center justify-between">
                       <span>Chưa phân công Product Owner cho dự án này.</span>
                       {canEdit && (
                         <button
@@ -1731,7 +1732,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             setIsEditing(true);
                             setIsPoDropdownOpen(true);
                           }}
-                          className="text-[11px] font-semibold text-[#b13460] hover:underline cursor-pointer"
+                          className="text-xs font-semibold text-accent hover:underline cursor-pointer"
                         >
                           + Phân công ngay
                         </button>
@@ -1742,7 +1743,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               ) : (
                 /* Edit Mode: Searchable & Selectable Dropdown + Badges */
                 <div className="space-y-2">
-                  <div className="p-2 bg-white border border-[#d0d0d0] focus-within:border-[#b13460] rounded-[6px] transition-colors relative">
+                  <div className="p-2 bg-surface border border-line focus-within:border-line-accent rounded-vds-lg transition-colors relative">
                     <div className="flex flex-wrap items-center gap-1.5 min-h-[32px]">
                       {selectedPoList.map((poName) => {
                         const matchedMember = members.find(
@@ -1755,18 +1756,18 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                         return (
                           <span
                             key={poName}
-                            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-[4px] bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4]"
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-vds-md bg-surface-accent-faint text-accent border border-line"
                           >
                             <span>{displayName}</span>
                             {matchedMember && (
-                              <span className="text-[10px] text-[#8f274c] opacity-80 hidden md:inline">
+                              <span className="text-[10px] text-accent opacity-80 hidden md:inline">
                                 ({matchedMember.title})
                               </span>
                             )}
                             <button
                               type="button"
                               onClick={() => handleRemovePo(poName)}
-                              className="hover:text-[#8f274c] hover:bg-[#fbdde8] p-0.5 rounded-full cursor-pointer ml-0.5"
+                              className="hover:text-accent hover:bg-surface-accent p-0.5 rounded-full cursor-pointer ml-0.5"
                               title={`Bỏ chọn ${displayName}`}
                             >
                               <X className="w-3 h-3" />
@@ -1796,14 +1797,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             ? 'Gõ tìm kiếm Stakeholder theo tên, ban, chức vụ (hoặc nhập tên mới)...'
                             : 'Thêm Stakeholder khác...'
                         }
-                        className="flex-1 min-w-[200px] text-xs font-ui bg-transparent outline-none text-[#202020] placeholder:text-[#9e9e9e] py-1"
+                        className="flex-1 min-w-[200px] text-xs font-ui bg-transparent outline-none text-ink placeholder:text-subdued-lighter py-1"
                       />
 
                       {selectedPoList.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setProductOwner('')}
-                          className="text-[11px] text-[#7f7f7f] hover:text-[#da1e28] px-1.5 py-0.5 rounded hover:bg-[#fee2e2] cursor-pointer"
+                          className="text-xs text-subdued hover:text-negative px-1.5 py-0.5 rounded hover:bg-surface-negative cursor-pointer"
                           title="Xóa tất cả Product Owners đã chọn"
                         >
                           Xóa hết
@@ -1813,23 +1814,23 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                     {/* Suggestions Dropdown */}
                     {isPoDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#d6d6d6] rounded-[8px] shadow-xl max-h-64 overflow-y-auto z-40 p-2">
+                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface border border-line rounded-vds-lg shadow-sheet max-h-64 overflow-y-auto z-40 p-2">
                         {/* Dropdown Header */}
-                        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#f0f0f0]">
-                          <span className="text-[10px] font-bold text-[#7f7f7f] uppercase tracking-wider">
+                        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-divider">
+                          <span className="text-[10px] font-bold text-subdued">
                             Danh sách Stakeholders ({availableStakeholders.length})
                           </span>
                           <button
                             type="button"
                             onClick={() => setIsPoDropdownOpen(false)}
-                            className="text-xs text-[#5f5f5f] hover:text-[#202020] font-semibold px-1.5 py-0.5 rounded hover:bg-[#f0f0f0] cursor-pointer"
+                            className="text-xs text-ink-lighter hover:text-ink font-semibold px-1.5 py-0.5 rounded hover:bg-surface-200 cursor-pointer"
                           >
                             Đóng ✕
                           </button>
                         </div>
 
                         {/* Department Filter Pills */}
-                        <div className="flex flex-wrap gap-1 mb-2 pb-1 border-b border-[#f5f5f5]">
+                        <div className="flex flex-wrap gap-1 mb-2 pb-1 border-b border-divider">
                           {stakeholderDepts.map((dept) => (
                             <button
                               key={dept}
@@ -1837,8 +1838,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                               onClick={() => setPoFilterDept(dept)}
                               className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
                                 poFilterDept === dept
-                                  ? 'bg-[#b13460] text-white'
-                                  : 'bg-[#f5f5f5] text-[#5f5f5f] hover:bg-[#e8e8e8]'
+                                  ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                  : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                               }`}
                             >
                               {dept}
@@ -1848,14 +1849,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                         {/* Allow adding custom typed value */}
                         {poSearchQuery.trim() && !candidateStakeholders.some((m) => m.name.toLowerCase() === poSearchQuery.trim().toLowerCase()) && (
-                          <div className="mb-2 p-1.5 bg-[#fcf0f5] border border-[#f3c2d4] rounded-[6px] flex items-center justify-between">
-                            <span className="text-xs text-[#b13460]">
+                          <div className="mb-2 p-1.5 bg-surface-accent-faint border border-line rounded-vds-lg flex items-center justify-between">
+                            <span className="text-xs text-accent">
                               Thêm thực thể/tên tùy chỉnh: <strong>"{poSearchQuery.trim()}"</strong>
                             </span>
                             <button
                               type="button"
                               onClick={() => handleAddPo(poSearchQuery.trim())}
-                              className="px-2 py-0.5 rounded bg-[#b13460] text-white text-[11px] font-bold hover:bg-[#8f274c] cursor-pointer"
+                              className="px-2 py-0.5 rounded bg-accent-solid text-on-color text-xs font-bold hover:bg-accent-solid-hover cursor-pointer"
                             >
                               + Thêm
                             </button>
@@ -1864,7 +1865,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
                         {/* Candidate List */}
                         {availableStakeholders.length === 0 ? (
-                          <div className="px-3 py-4 text-xs text-[#7f7f7f] text-center italic">
+                          <div className="px-3 py-4 text-xs text-subdued text-center italic">
                             Không tìm thấy Stakeholder phù hợp. Bạn có thể nhấn Enter hoặc nút "+ Thêm" để lưu tên tùy chỉnh.
                           </div>
                         ) : (
@@ -1876,23 +1877,23 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                                   key={m.id}
                                   type="button"
                                   onClick={() => handleAddPo(formalName)}
-                                  className="w-full text-left px-2.5 py-1.5 rounded-[6px] hover:bg-[#fcf0f5] hover:border-[#f3c2d4] border border-transparent flex items-center justify-between text-xs transition-colors cursor-pointer group"
+                                  className="w-full text-left px-2.5 py-1.5 rounded-vds-lg hover:bg-surface-accent-faint hover:border-line border border-transparent flex items-center justify-between text-xs transition-colors cursor-pointer group"
                                 >
                                   <div>
-                                    <div className="font-bold text-[#202020] group-hover:text-[#b13460] flex items-center gap-1.5">
+                                    <div className="font-bold text-ink group-hover:text-accent flex items-center gap-1.5">
                                       <span>{formalName}</span>
                                       {m.region && (
-                                        <span className="text-[10px] font-normal text-[#7f7f7f] bg-[#f0f0f0] px-1.5 py-0.2 rounded">
+                                        <span className="text-[10px] font-normal text-subdued bg-surface-200 px-1.5 py-0.2 rounded">
                                           {m.region}
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-[11px] text-[#5f5f5f]">
-                                      <span className="font-semibold text-[#303030]">{m.title || 'Stakeholder'}</span>
+                                    <div className="text-xs text-ink-lighter">
+                                      <span className="font-semibold text-ink">{m.title || 'Stakeholder'}</span>
                                       {m.department && <span> • {m.department}</span>}
                                     </div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-[#b13460] bg-[#fcf0f5] group-hover:bg-[#b13460] group-hover:text-white px-2 py-1 rounded transition-colors shrink-0">
+                                  <span className="text-xs font-bold text-accent bg-surface-accent-faint group-hover:bg-accent-solid group-hover:text-on-color px-2 py-1 rounded transition-colors shrink-0">
                                     + Chọn
                                   </span>
                                 </button>
@@ -1903,7 +1904,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-[#7f7f7f] italic">
+                  <p className="text-xs text-subdued italic">
                     * Tìm và chọn một hoặc nhiều đại diện Stakeholder (Ban Biên tập / Lãnh đạo ban nội dung) phụ trách bài toán sản phẩm và nghiệm thu KPI.
                   </p>
                 </div>
@@ -1912,13 +1913,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
             {/* Sản phẩm: Phân công nhân sự theo Nhóm Chuyên môn */}
             <div className="space-y-2 pt-1">
-              <label className="font-ui text-xs font-bold text-[#202020] block">
+              <label className="font-ui text-xs font-bold text-ink block">
                 Sản phẩm:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Role 1: Product Manager */}
-                <div className="space-y-1.5 bg-white p-2.5 rounded-[6px] border border-[#e6e6e6]">
-                  <span className="font-ui text-xs font-bold text-[#b13460] flex items-center gap-1">
+                <div className="space-y-1.5 bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="font-ui text-xs font-bold text-accent flex items-center gap-1">
                     <Briefcase className="w-3.5 h-3.5" />
                     <span>Product Manager:</span>
                   </span>
@@ -1931,10 +1932,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             type="button"
                             key={m.id}
                             onClick={() => toggleMemberRole(m.name, pmMembers, setPmMembers)}
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#b13460] text-white shadow-2xs'
-                                : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
+                                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                             }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
@@ -1946,20 +1947,20 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {pmMembers.length > 0 ? (
                         pmMembers.map((name) => (
-                          <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4]">
+                          <span key={name} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-accent-faint text-accent border border-line">
                             {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[#7f7f7f] text-[11px]">Chưa phân công PM</span>
+                        <span className="text-subdued text-xs">Chưa phân công PM</span>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Role 2: UX/UI Designer */}
-                <div className="space-y-1.5 bg-white p-2.5 rounded-[6px] border border-[#e6e6e6]">
-                  <span className="font-ui text-xs font-bold text-[#b26b00] flex items-center gap-1">
+                <div className="space-y-1.5 bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="font-ui text-xs font-bold text-warning flex items-center gap-1">
                     <Palette className="w-3.5 h-3.5" />
                     <span>UX/UI Designer:</span>
                   </span>
@@ -1972,10 +1973,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             type="button"
                             key={m.id}
                             onClick={() => toggleMemberRole(m.name, designerMembers, setDesignerMembers)}
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#b26b00] text-white shadow-2xs'
-                                : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
+                                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                             }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
@@ -1987,20 +1988,20 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {designerMembers.length > 0 ? (
                         designerMembers.map((name) => (
-                          <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fcf5e8] text-[#b26b00] border border-[#f5dbb0]">
+                          <span key={name} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-warning text-warning border border-line">
                             {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[#7f7f7f] text-[11px]">Chưa phân công Thiết kế</span>
+                        <span className="text-subdued text-xs">Chưa phân công Thiết kế</span>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Role 3: SEO */}
-                <div className="space-y-1.5 bg-white p-2.5 rounded-[6px] border border-[#e6e6e6]">
-                  <span className="font-ui text-xs font-bold text-[#24a148] flex items-center gap-1">
+                <div className="space-y-1.5 bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="font-ui text-xs font-bold text-positive flex items-center gap-1">
                     <Search className="w-3.5 h-3.5" />
                     <span>SEO:</span>
                   </span>
@@ -2013,10 +2014,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             type="button"
                             key={m.id}
                             onClick={() => toggleMemberRole(m.name, seoMembers, setSeoMembers)}
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#24a148] text-white shadow-2xs'
-                                : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
+                                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                             }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
@@ -2028,20 +2029,20 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {seoMembers.length > 0 ? (
                         seoMembers.map((name) => (
-                          <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#e2f6e9] text-[#24a148] border border-[#b8e8c4]">
+                          <span key={name} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-positive text-positive border border-line">
                             {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[#7f7f7f] text-[11px]">Chưa phân công SEO</span>
+                        <span className="text-subdued text-xs">Chưa phân công SEO</span>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Role 4: Data */}
-                <div className="space-y-1.5 bg-white p-2.5 rounded-[6px] border border-[#e6e6e6]">
-                  <span className="font-ui text-xs font-bold text-[#1d508d] flex items-center gap-1">
+                <div className="space-y-1.5 bg-surface p-2.5 rounded-vds-lg border border-line">
+                  <span className="font-ui text-xs font-bold text-support flex items-center gap-1">
                     <BarChart3 className="w-3.5 h-3.5" />
                     <span>Data:</span>
                   </span>
@@ -2054,10 +2055,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             type="button"
                             key={m.id}
                             onClick={() => toggleMemberRole(m.name, dataMembers, setDataMembers)}
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#1d508d] text-white shadow-2xs'
-                                : 'bg-[#f0f0f0] text-[#5f5f5f] hover:bg-[#e0e0e0]'
+                                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                             }`}
                           >
                             {isSelected ? '✓ ' : '+ '}{formatProductMemberWithPhone(m)}
@@ -2069,12 +2070,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {dataMembers.length > 0 ? (
                         dataMembers.map((name) => (
-                          <span key={name} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#eef4fb] text-[#1d508d] border border-[#c2d7f0]">
+                          <span key={name} className="px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-support text-support border border-line">
                             {formatProductMemberWithPhone(name, members)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[#7f7f7f] text-[11px]">Chưa phân công Dữ liệu</span>
+                        <span className="text-subdued text-xs">Chưa phân công Dữ liệu</span>
                       )}
                     </div>
                   )}
@@ -2084,13 +2085,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 2: GIAI ĐOẠN ==================== */}
-          <div id="project-drawer-section-phases" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
-            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
+          <div id="project-drawer-section-phases" className="bg-surface-100 p-4 rounded-vds-lg border border-line space-y-4 scroll-mt-2">
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#eef4fb] border border-[#c2d7f0] text-[#1d508d] flex items-center justify-center font-bold">
+                <div className="w-6 h-6 rounded-full bg-surface-support border border-line text-support flex items-center justify-center font-bold">
                   <Calendar className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-title text-sm font-bold text-[#1d508d]">
+                <h3 className="font-title text-sm font-bold text-support">
                   2. Giai đoạn ({phases.length})
                 </h3>
               </div>
@@ -2100,13 +2101,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAddingPhase(true)}
-                    className="px-2.5 py-1 text-xs font-semibold text-[#1d508d] bg-[#eef4fb] hover:bg-[#dbe9f8] border border-[#c2d7f0] rounded-[6px] flex items-center gap-1 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 text-xs font-semibold text-support bg-surface-support hover:bg-surface-support border border-line rounded-vds-lg flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Thêm giai đoạn</span>
                   </button>
                 ) : (
-                  <span className="text-[11px] text-[#7f7f7f] font-ui italic">
+                  <span className="text-xs text-subdued font-ui italic">
                     Chỉ Manager & Admin được thêm giai đoạn
                   </span>
                 )
@@ -2125,46 +2126,46 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
             {/* Form Thêm Phase */}
             {isAddingPhase && (
-              <div className="bg-white p-3.5 rounded-[8px] border border-[#1d508d] space-y-3 animate-fade-in shadow-2xs">
+              <div className="bg-surface p-3.5 rounded-vds-lg border border-line-support space-y-3 animate-fade-in ">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-title text-xs font-bold text-[#1d508d] flex items-center gap-1.5">
+                  <h4 className="font-title text-xs font-bold text-support flex items-center gap-1.5">
                     <Plus className="w-4 h-4" />
                     <span>Thêm Giai đoạn mới vào Lộ trình</span>
                   </h4>
-                  <span className="text-[10px] font-bold text-[#1d508d] bg-[#eef4fb] px-2 py-0.5 rounded border border-[#c2d7f0]">
+                  <span className="text-[10px] font-bold text-support bg-surface-support px-2 py-0.5 rounded border border-line">
                     Tự sinh Giai đoạn theo thời gian
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[#303030]">
-                      Nội dung giai đoạn <span className="text-[#da1e28]">*</span>
+                    <label className="text-xs font-semibold text-ink">
+                      Nội dung giai đoạn <span className="text-negative">*</span>
                     </label>
                     <input
                       type="text"
                       placeholder="VD: Khảo sát & PRD, Thiết kế UI/UX, Kiểm thử tải..."
                       value={newPhaseName}
                       onChange={(e) => setNewPhaseName(e.target.value)}
-                      className="w-full p-2 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white focus:border-[#1d508d] focus:ring-1 focus:ring-[#eef4fb]"
+                      className="w-full p-2 border border-line rounded-vds-lg text-xs text-ink bg-surface focus:border-line-support focus:ring-1 focus:ring-line"
                     />
-                    <p className="text-[10px] text-[#7f7f7f] italic">
+                    <p className="text-[10px] text-subdued italic">
                       * Không cần nhập "Giai đoạn 1, 2...", hệ thống sẽ tự động sắp xếp theo thời gian từ gần đến xa và tự gán số.
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-[#303030]">
-                      Hạn hoàn thành <span className="text-[#da1e28]">*</span>
+                    <label className="text-xs font-semibold text-ink">
+                      Hạn hoàn thành <span className="text-negative">*</span>
                     </label>
                     <input
                       type="date"
                       value={newPhaseDueDate}
                       onChange={(e) => setNewPhaseDueDate(e.target.value)}
-                      className="w-full p-2 border border-[#d0d0d0] rounded-[6px] text-xs font-num bg-white focus:border-[#1d508d] focus:ring-1 focus:ring-[#eef4fb]"
+                      className="w-full p-2 border border-line rounded-vds-lg text-xs font-num bg-surface focus:border-line-support focus:ring-1 focus:ring-line"
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-[#303030]">
+                  <label className="text-xs font-semibold text-ink">
                     Mô tả giai đoạn / Tiêu chí bàn giao (không bắt buộc):
                   </label>
                   <textarea
@@ -2172,21 +2173,21 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     placeholder="Mô tả nội dung, tiêu chí bàn giao..."
                     value={newPhaseDesc}
                     onChange={(e) => setNewPhaseDesc(e.target.value)}
-                    className="w-full p-2 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white focus:border-[#1d508d] focus:ring-1 focus:ring-[#eef4fb]"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs text-ink bg-surface focus:border-line-support focus:ring-1 focus:ring-line"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setIsAddingPhase(false)}
-                    className="px-3 py-1.5 text-xs font-semibold text-[#5f5f5f] bg-[#f0f0f0] hover:bg-[#e0e0e0] rounded-[6px] cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold text-ink-lighter bg-surface-200 hover:bg-surface-300 rounded-vds-lg cursor-pointer"
                   >
                     Hủy
                   </button>
                   <button
                     type="button"
                     onClick={handleAddPhase}
-                    className="px-4 py-1.5 text-xs font-semibold text-white bg-[#1d508d] hover:bg-[#153a66] rounded-[6px] shadow-2xs cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-1.5 text-xs font-semibold text-on-color bg-support-solid hover:bg-support-solid rounded-vds-lg cursor-pointer flex items-center gap-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Lưu giai đoạn</span>
@@ -2197,13 +2198,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 3: LIÊN KẾT ==================== */}
-          <div id="project-drawer-section-links" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
-            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5 flex-wrap gap-2">
+          <div id="project-drawer-section-links" className="bg-surface-100 p-4 rounded-vds-lg border border-line space-y-4 scroll-mt-2">
+            <div className="flex items-center justify-between border-b border-line pb-2.5 flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#e2f6e9] border border-[#b8e8c4] text-[#24a148] flex items-center justify-center font-bold">
+                <div className="w-6 h-6 rounded-full bg-surface-positive border border-line text-positive flex items-center justify-center font-bold">
                   <ExternalLink className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-title text-sm font-bold text-[#24a148]">
+                <h3 className="font-title text-sm font-bold text-positive">
                   3. Liên kết
                 </h3>
               </div>
@@ -2214,7 +2215,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEditingLinksSection(true)}
-                      className="px-2.5 py-1 rounded-[6px] bg-[#e2f6e9] hover:bg-[#d0f0db] text-[#166534] border border-[#b8e8c4] text-xs font-ui font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-vds-lg bg-surface-positive hover:bg-surface-positive text-positive border border-line text-xs font-ui font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                       title="Chỉnh sửa các liên kết của dự án (UX/UI Designer & PM)"
                     >
                       <Edit2 className="w-3 h-3" />
@@ -2225,14 +2226,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       <button
                         type="button"
                         onClick={handleCancelEditLinksSection}
-                        className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-semibold text-ink-lighter hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer"
                       >
                         Hủy
                       </button>
                       <button
                         type="button"
                         onClick={handleSaveLinksSection}
-                        className="px-2.5 py-1 rounded-[6px] bg-[#24a148] hover:bg-[#1f873d] text-white text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                        className="px-2.5 py-1 rounded-vds-lg bg-positive-solid hover:bg-positive-solid text-on-color text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer "
                       >
                         <Save className="w-3 h-3" />
                         <span>Lưu liên kết</span>
@@ -2240,7 +2241,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     </div>
                   )
                 )}
-                <span className="text-[11px] text-[#7f7f7f] font-ui hidden sm:inline">
+                <span className="text-xs text-subdued font-ui hidden sm:inline">
                   {isEditing || isEditingLinksSection ? 'Nhập đường dẫn liên kết' : 'Chọn liên kết để truy cập trực tiếp'}
                 </span>
               </div>
@@ -2254,8 +2255,8 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   const IconComp = item.icon;
                   return (
                     <div key={item.id} className="space-y-0.5">
-                      <label className="font-ui text-[11px] font-semibold text-[#5f5f5f] flex items-center gap-1">
-                        <IconComp className="w-3 h-3 text-[#b13460]" />
+                      <label className="font-ui text-xs font-semibold text-ink-lighter flex items-center gap-1">
+                        <IconComp className="w-3 h-3 text-accent" />
                         <span>{item.title}:</span>
                       </label>
                       <div className="flex gap-1">
@@ -2264,13 +2265,13 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           value={item.url}
                           onChange={(e) => item.setUrl(e.target.value)}
                           placeholder={item.placeholder}
-                          className="flex-1 px-2 py-1 border border-[#d0d0d0] rounded-[4px] text-xs text-[#202020] bg-white"
+                          className="flex-1 px-2 py-1 border border-line rounded-vds-md text-xs text-ink bg-surface"
                         />
                         {item.url && (
                           <button
                             type="button"
                             onClick={() => item.setUrl('')}
-                            className="p-1 text-[#8f8f8f] hover:text-[#da1e28] hover:bg-[#fff0f1] border border-[#e0e0e0] rounded-[4px] transition-colors cursor-pointer"
+                            className="p-1 text-subdued-lighter hover:text-negative hover:bg-surface-negative border border-line rounded-vds-md transition-colors cursor-pointer"
                             title="Xóa liên kết này"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -2281,7 +2282,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                             href={item.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-1 bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4] rounded-[4px] hover:bg-[#b13460] hover:text-white transition-colors"
+                            className="p-1 bg-surface-accent-faint text-accent border border-line rounded-vds-md hover:bg-accent-solid hover:text-on-color transition-colors"
                             title="Thử truy cập"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -2302,17 +2303,17 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className="bg-white p-2.5 rounded-[8px] border border-[#e0e0e0] flex items-center justify-between gap-2 hover:border-[#24a148] transition-all group"
+                      className="bg-surface p-2.5 rounded-vds-lg border border-line flex items-center justify-between gap-2 hover:border-line-positive transition group"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className={`p-1.5 rounded-[6px] ${item.badgeBg} ${item.badgeText} ${item.badgeBorder} border shrink-0`}>
+                        <div className={`p-1.5 rounded-vds-lg ${item.badgeBg} ${item.badgeText} ${item.badgeBorder} border shrink-0`}>
                           <IconComp className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-ui text-xs font-bold text-[#202020] block truncate">
+                          <span className="font-ui text-xs font-bold text-ink block truncate">
                             {item.title}
                           </span>
-                          <span className="text-[11px] text-[#7f7f7f] block truncate font-num">
+                          <span className="text-xs text-subdued block truncate font-num">
                             {hasUrl ? item.url : 'Chưa cập nhật liên kết'}
                           </span>
                         </div>
@@ -2323,14 +2324,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2.5 py-1 rounded-[6px] bg-[#e2f6e9] text-[#24a148] border border-[#b8e8c4] group-hover:bg-[#24a148] group-hover:text-white font-ui text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                          className="px-2.5 py-1 rounded-vds-lg bg-surface-positive text-positive border border-line group-hover:bg-positive-solid group-hover:text-on-color font-ui text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
                           title="Mở trong tab mới"
                         >
                           <span>Mở</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       ) : (
-                        <span className="text-[11px] text-[#a0a0a0] font-ui px-2 py-0.5 bg-[#f0f0f0] rounded-[4px] shrink-0">
+                        <span className="text-xs text-subdued-lighter font-ui px-2 py-0.5 bg-surface-200 rounded-vds-md shrink-0">
                           Chưa có liên kết
                         </span>
                       )}
@@ -2341,17 +2342,17 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             )}
 
             {/* Custom Links (Tự thêm liên kết theo nhu cầu gồm Title và Link) */}
-            <div className="pt-2 border-t border-[#f0f0f0] space-y-2.5">
+            <div className="pt-2 border-t border-divider space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="font-ui text-xs font-bold text-[#303030] flex items-center gap-1.5">
-                  <Link2 className="w-3.5 h-3.5 text-[#1d508d]" />
+                <span className="font-ui text-xs font-bold text-ink flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5 text-support" />
                   <span>Liên kết tùy chọn bổ sung ({customLinks.length}):</span>
                 </span>
                 {!isAddingCustomLink && canEditLinks && (
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomLink(true)}
-                    className="text-[11px] font-semibold text-[#1d508d] hover:text-[#143765] flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-semibold text-support hover:text-support flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Thêm liên kết mới</span>
@@ -2361,27 +2362,27 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
               {/* Form Thêm Custom Link */}
               {isAddingCustomLink && (
-                <div className="bg-white p-3 rounded-[8px] border border-[#1d508d] space-y-2.5 animate-fade-in shadow-xs">
-                  <div className="text-xs font-bold text-[#1d508d]">Thêm liên kết mới:</div>
+                <div className="bg-surface p-3 rounded-vds-lg border border-line-support space-y-2.5 animate-fade-in ">
+                  <div className="text-xs font-bold text-support">Thêm liên kết mới:</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="space-y-0.5">
-                      <label className="text-[11px] font-semibold text-[#505050]">Title (Tiêu đề):</label>
+                      <label className="text-xs font-semibold text-ink-lighter">Title (Tiêu đề):</label>
                       <input
                         type="text"
                         placeholder="VD: Tài liệu thiết kế Figma, API Docs..."
                         value={newCustomTitle}
                         onChange={(e) => setNewCustomTitle(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020]"
+                        className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs text-ink"
                       />
                     </div>
                     <div className="space-y-0.5">
-                      <label className="text-[11px] font-semibold text-[#505050]">Link (Đường dẫn):</label>
+                      <label className="text-xs font-semibold text-ink-lighter">Link (Đường dẫn):</label>
                       <input
                         type="url"
                         placeholder="https://..."
                         value={newCustomUrl}
                         onChange={(e) => setNewCustomUrl(e.target.value)}
-                        className="w-full px-2.5 py-1.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020]"
+                        className="w-full px-2.5 py-1.5 border border-line rounded-vds-lg text-xs text-ink"
                       />
                     </div>
                   </div>
@@ -2393,7 +2394,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                         setNewCustomTitle('');
                         setNewCustomUrl('');
                       }}
-                      className="px-2.5 py-1 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[4px] cursor-pointer"
+                      className="px-2.5 py-1 text-xs font-semibold text-ink-lighter hover:bg-surface-200 rounded-vds-md cursor-pointer"
                     >
                       Hủy
                     </button>
@@ -2401,7 +2402,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                       type="button"
                       onClick={handleAddCustomLink}
                       disabled={!newCustomTitle.trim() || !newCustomUrl.trim()}
-                      className="px-3 py-1 text-xs font-semibold text-white bg-[#1d508d] hover:bg-[#163f70] rounded-[4px] disabled:opacity-50 cursor-pointer"
+                      className="px-3 py-1 text-xs font-semibold text-on-color bg-support-solid hover:bg-support-solid rounded-vds-md disabled:opacity-50 cursor-pointer"
                     >
                       Thêm
                     </button>
@@ -2415,15 +2416,15 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   {customLinks.map((cl) => (
                     <div
                       key={cl.id}
-                      className="bg-white p-2.5 rounded-[6px] border border-[#e0e0e0] flex items-center justify-between gap-2 hover:border-[#1d508d] transition-colors"
+                      className="bg-surface p-2.5 rounded-vds-lg border border-line flex items-center justify-between gap-2 hover:border-line-support transition-colors"
                     >
                       <div className="min-w-0 flex items-center gap-2">
-                        <Link2 className="w-3.5 h-3.5 text-[#1d508d] shrink-0" />
+                        <Link2 className="w-3.5 h-3.5 text-support shrink-0" />
                         <div className="min-w-0">
-                          <span className="font-ui text-xs font-bold text-[#202020] block truncate">
+                          <span className="font-ui text-xs font-bold text-ink block truncate">
                             {cl.title}
                           </span>
-                          <span className="text-[11px] text-[#7f7f7f] block truncate font-num">
+                          <span className="text-xs text-subdued block truncate font-num">
                             {cl.url}
                           </span>
                         </div>
@@ -2433,7 +2434,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           href={cl.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2 py-0.5 rounded-[4px] bg-[#eef4fb] text-[#1d508d] border border-[#c2d7f0] hover:bg-[#1d508d] hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
+                          className="px-2 py-0.5 rounded-vds-md bg-surface-support text-support border border-line hover:bg-support-solid hover:text-on-color text-xs font-bold flex items-center gap-1 transition-colors"
                           title="Mở trong tab mới"
                         >
                           <span>Mở</span>
@@ -2443,7 +2444,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRemoveCustomLink(cl.id)}
-                            className="p-1 text-[#a0a0a0] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] transition-colors cursor-pointer"
+                            className="p-1 text-subdued-lighter hover:text-negative hover:bg-surface-negative rounded-vds-md transition-colors cursor-pointer"
                             title="Xóa liên kết"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -2455,7 +2456,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 </div>
               ) : (
                 !isAddingCustomLink && (
-                  <p className="text-[11px] text-[#7f7f7f] bg-white p-2.5 rounded-[6px] border border-dashed border-[#e0e0e0] text-center">
+                  <p className="text-xs text-subdued bg-surface p-2.5 rounded-vds-lg border border-dashed border-line text-center">
                     Chưa có liên kết tùy chọn nào. Bấm &quot;Thêm liên kết mới&quot; để bổ sung đường dẫn theo nhu cầu.
                   </p>
                 )
@@ -2464,44 +2465,44 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
           </div>
 
           {/* ==================== SECTION 4: GHI CHÚ ==================== */}
-          <div id="project-drawer-section-notes" className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs scroll-mt-2">
-            <div className="flex items-center justify-between border-b border-[#e6e6e6] pb-2.5">
+          <div id="project-drawer-section-notes" className="bg-surface-100 p-4 rounded-vds-lg border border-line space-y-4 scroll-mt-2">
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold">
+                <div className="w-6 h-6 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold">
                   <MessageSquare className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="font-title text-sm font-bold text-[#b13460]">
+                <h3 className="font-title text-sm font-bold text-accent">
                   4. Ghi chú ({notes.length})
                 </h3>
               </div>
-              <span className="text-[11px] text-[#7f7f7f] font-ui">
+              <span className="text-xs text-subdued font-ui">
                 Lưu vết thông tin trao đổi, quyết định nhanh và lưu ý dự án
               </span>
             </div>
 
             {/* Form Thêm Ghi chú */}
-            <div className="bg-white p-3.5 rounded-[8px] border border-[#e0e0e0] space-y-3 shadow-xs">
-              <h4 className="font-title text-xs font-bold text-[#202020] flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-[#b13460]" />
+            <div className="bg-surface p-3.5 rounded-vds-lg border border-line space-y-3 ">
+              <h4 className="font-title text-xs font-bold text-ink flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-accent" />
                 <span>Thêm ghi chú mới</span>
               </h4>
 
               <div className="space-y-2">
                 {/* Người ghi chú - Cố định người đang đăng nhập */}
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-[#b13460]" />
+                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-accent" />
                     <span>Người ghi chú:</span>
                   </label>
-                  <div className="px-3 py-1.5 bg-[#f8f9fa] border border-[#d0d0d0] rounded-[6px] text-xs font-semibold text-[#202020]">
+                  <div className="px-3 py-1.5 bg-surface-100 border border-line rounded-vds-lg text-xs font-semibold text-ink">
                     {currentActorName}
                   </div>
                 </div>
 
                 {/* Nội dung */}
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-[#303030] flex items-center gap-1">
-                    <FileText className="w-3.5 h-3.5 text-[#1d508d]" />
+                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5 text-support" />
                     <span>Nội dung:</span>
                   </label>
                   <textarea
@@ -2509,7 +2510,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     placeholder="Nhập nội dung ghi chú, quyết định kỹ thuật, thống nhất thiết kế hoặc lưu ý quan trọng..."
                     value={newNoteContent}
                     onChange={(e) => setNewNoteContent(e.target.value)}
-                    className="w-full p-2.5 border border-[#d0d0d0] rounded-[6px] text-xs text-[#202020] bg-white leading-relaxed focus:border-[#b13460] focus:ring-1 focus:ring-[#fcf0f5]"
+                    className="w-full p-2.5 border border-line rounded-vds-lg text-xs text-ink bg-surface leading-relaxed focus:border-line-accent focus:ring-1 focus:ring-line"
                   />
                 </div>
 
@@ -2519,7 +2520,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     type="button"
                     onClick={handleAddNote}
                     disabled={!newNoteContent.trim()}
-                    className="px-4 py-2 rounded-[6px] bg-[#b13460] hover:bg-[#8f274c] text-white text-xs font-ui font-bold flex items-center gap-1.5 shadow-2xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-4 py-2 rounded-vds-lg bg-accent-solid hover:bg-accent-solid-hover text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Thêm ghi chú</span>
@@ -2530,15 +2531,15 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
             {/* Danh sách Ghi chú */}
             <div className="space-y-2.5">
-              <h4 className="font-ui text-xs font-bold text-[#303030]">
+              <h4 className="font-ui text-xs font-bold text-ink">
                 Nhật ký ghi chú ({notes.length}):
               </h4>
 
               {notes.length === 0 ? (
-                <div className="bg-white p-5 rounded-[8px] border border-[#e0e0e0] text-center space-y-1">
-                  <MessageSquare className="w-7 h-7 text-[#b0b0b0] mx-auto" />
-                  <p className="text-xs font-semibold text-[#5f5f5f]">Chưa có ghi chú nào cho dự án này</p>
-                  <p className="text-[11px] text-[#808080]">
+                <div className="bg-surface p-5 rounded-vds-lg border border-line text-center space-y-1">
+                  <MessageSquare className="w-7 h-7 text-subdued-lighter mx-auto" />
+                  <p className="text-xs font-semibold text-ink-lighter">Chưa có ghi chú nào cho dự án này</p>
+                  <p className="text-xs text-subdued">
                     Sử dụng biểu mẫu phía trên để lưu lại trao đổi, quyết định sản phẩm hoặc lưu ý triển khai.
                   </p>
                 </div>
@@ -2553,17 +2554,17 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     return (
                       <div
                         key={note.id}
-                        className="bg-white p-3.5 rounded-[8px] border border-[#e0e0e0] space-y-2 hover:border-[#b13460]/40 transition-colors shadow-2xs"
+                        className="bg-surface p-3.5 rounded-vds-lg border border-line space-y-2 hover:border-line-accent/40 transition-colors "
                       >
-                        <div className="flex items-center justify-between gap-2 border-b border-[#f0f0f0] pb-2">
+                        <div className="flex items-center justify-between gap-2 border-b border-divider pb-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold text-xs shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold text-xs shrink-0">
                               {authorInitial}
                             </div>
-                            <span className="font-ui text-xs font-bold text-[#202020] truncate">
+                            <span className="font-ui text-xs font-bold text-ink truncate">
                               {note.author}
                             </span>
-                            <span className="text-[11px] text-[#808080] font-ui shrink-0">
+                            <span className="text-xs text-subdued font-ui shrink-0">
                               • {formattedDate}
                             </span>
                           </div>
@@ -2571,7 +2572,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRemoveNote(note.id)}
-                            className="p-1 text-[#a0a0a0] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] transition-colors cursor-pointer"
+                            className="p-1 text-subdued-lighter hover:text-negative hover:bg-surface-negative rounded-vds-md transition-colors cursor-pointer"
                             title="Xóa ghi chú này"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -2579,7 +2580,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                         </div>
 
                         {/* Nội dung ghi chú */}
-                        <div className="text-xs text-[#303030] leading-relaxed whitespace-pre-wrap">
+                        <div className="text-xs text-ink leading-relaxed whitespace-pre-wrap">
                           {note.content}
                         </div>
                       </div>
@@ -2596,21 +2597,21 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
         </div>
 
         {/* Drawer Sticky Footer */}
-        <div className="px-5 py-3 bg-[#fafafa] border-t border-[#e0e0e0] flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-[#7f7f7f] font-ui flex items-center gap-1.5">
+        <div className="px-5 py-3 bg-surface-100 border-t border-line flex items-center justify-between shrink-0">
+          <div className="text-xs text-subdued font-ui flex items-center gap-1.5">
             {isCreateMode ? (
-              <span className="text-[#b13460] font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#b13460] animate-ping"></span>
+              <span className="text-accent font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-accent-solid animate-ping"></span>
                 Tạo dự án mới — Điền thông tin và nhấn Tạo dự án mới
               </span>
             ) : isEditing ? (
-              <span className="text-[#b13460] font-bold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#b13460] animate-ping"></span>
+              <span className="text-accent font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-accent-solid animate-ping"></span>
                 Chế độ Chỉnh sửa
               </span>
             ) : (
-              <span className="text-[#1d508d] font-semibold flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5 text-[#1d508d]" />
+              <span className="text-support font-semibold flex items-center gap-1">
+                <Eye className="w-3.5 h-3.5 text-support" />
                 Chế độ Xem — Chọn liên kết để truy cập trực tiếp
               </span>
             )}
@@ -2622,14 +2623,14 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-ink-lighter hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
                   onClick={handleCreateNewProject}
-                  className="px-5 py-2 bg-[#b13460] hover:bg-[#8f274c] text-white text-xs font-ui font-bold rounded-[6px] shadow-sm flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+                  className="px-5 py-2 bg-accent-solid hover:bg-accent-solid-hover text-on-color text-xs font-ui font-bold rounded-vds-lg flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Tạo dự án mới</span>
@@ -2640,42 +2641,28 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-ink-lighter hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer"
                 >
                   Đóng
                 </button>
                 {canEdit ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-1.5 bg-[#b13460] hover:bg-[#8f274c] text-white text-xs font-semibold rounded-[6px] shadow-2xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Chỉnh sửa thông tin</span>
-                  </button>
+                  <VdsButton variant="accent" size="sm" iconLeft="Edit" onClick={() => setIsEditing(true)}>
+                    Chỉnh sửa thông tin
+                  </VdsButton>
                 ) : (
-                  <span className="text-xs text-[#71717a] font-ui bg-[#f4f4f5] px-2.5 py-1 rounded-[6px] border border-[#e4e4e7]">
+                  <span className="text-xs text-subdued font-ui bg-surface-200 px-2.5 py-1 rounded-vds-lg border border-line">
                     🔒 Chế độ xem
                   </span>
                 )}
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-[#5f5f5f] hover:bg-[#f0f0f0] rounded-[6px] transition-colors"
-                >
-                  Hủy thay đổi
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="px-4 py-1.5 bg-[#24a148] hover:bg-[#1f873d] text-white text-xs font-semibold rounded-[6px] shadow-2xs flex items-center gap-1.5 transition-transform active:scale-95"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Lưu thay đổi</span>
-                </button>
+                <VdsButton variant="ghost" size="sm" onClick={handleCancelEdit}>
+                  Huỷ thay đổi
+                </VdsButton>
+                <VdsButton variant="accent" size="sm" iconLeft="Checkmark" onClick={handleSave}>
+                  Lưu thay đổi
+                </VdsButton>
               </>
             )}
           </div>

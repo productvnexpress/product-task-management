@@ -18,7 +18,7 @@ import {
   Layers,
   User,
   X,
-} from 'lucide-react';
+} from './vds/icons';
 
 interface MondayWeeklySummaryProps {
   members: MemberItem[];
@@ -143,22 +143,22 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden transition-all">
+    <div className="bg-surface rounded-vds-lg border border-line overflow-hidden transition">
       {/* Header Bar */}
-      <div className="px-4 py-2.5 bg-[#fafafa] border-b border-[#e0e0e0] flex items-center justify-between gap-3 select-none">
+      <div className="px-4 py-2.5 bg-surface-100 border-b border-line flex items-center justify-between gap-3 select-none">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-full bg-[#1d508d]/10 text-[#1d508d] flex items-center justify-center shrink-0">
+          <div className="w-6 h-6 rounded-full bg-support-solid/10 text-support flex items-center justify-center shrink-0">
             <BarChart3 className="w-3.5 h-3.5" />
           </div>
           <div className="flex items-center gap-2 truncate">
-            <h3 className="font-title text-sm font-bold text-[#202020] truncate">
+            <h3 className="font-title text-sm font-bold text-ink truncate">
               Kết quả công việc tuần trước
             </h3>
-            <span className="text-[11px] font-ui text-[#5f5f5f] hidden sm:inline">
+            <span className="text-xs font-ui text-ink-lighter hidden sm:inline">
               ({range.label})
             </span>
             {isMonday && (
-              <span className="text-[10px] font-ui font-bold bg-[#1d508d]/10 text-[#1d508d] px-2 py-0.5 rounded-full border border-[#1d508d]/20 shrink-0">
+              <span className="text-[10px] font-ui font-bold bg-support-solid/10 text-support px-2 py-0.5 rounded-full border border-line-support/20 shrink-0">
                 Sáng thứ Hai
               </span>
             )}
@@ -168,14 +168,14 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
         {/* Phía bên phải: Chuyển phạm vi (nếu có quyền), Thu gọn, Đóng */}
         <div className="flex items-center gap-2 shrink-0">
           {canViewOverall && (
-            <div className="inline-flex items-center p-0.5 bg-[#f0f0f0] rounded-[6px] text-xs font-ui font-semibold">
+            <div className="inline-flex items-center p-0.5 bg-surface-200 rounded-vds-lg text-xs font-ui font-semibold">
               <button
                 type="button"
                 onClick={() => setScope('personal')}
-                className={`px-2.5 py-1 rounded-[4px] transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-vds-md transition cursor-pointer ${
                   scope === 'personal'
-                    ? 'bg-white text-[#202020] shadow-2xs font-bold'
-                    : 'text-[#7f7f7f] hover:text-[#202020]'
+                    ? 'bg-surface text-ink font-bold'
+                    : 'text-subdued hover:text-ink'
                 }`}
               >
                 Việc của tôi
@@ -183,10 +183,10 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
               <button
                 type="button"
                 onClick={() => setScope('department')}
-                className={`px-2.5 py-1 rounded-[4px] transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-vds-md transition cursor-pointer ${
                   scope === 'department'
-                    ? 'bg-white text-[#202020] shadow-2xs font-bold'
-                    : 'text-[#7f7f7f] hover:text-[#202020]'
+                    ? 'bg-surface text-ink font-bold'
+                    : 'text-subdued hover:text-ink'
                 }`}
               >
                 Toàn bộ phận
@@ -198,7 +198,7 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 text-[#5f5f5f] hover:text-[#202020] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer"
+            className="p-1.5 text-ink-lighter hover:text-ink hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer"
             title={isExpanded ? 'Thu gọn' : 'Mở rộng'}
           >
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -208,7 +208,7 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
           <button
             type="button"
             onClick={handleDismiss}
-            className="p-1.5 text-[#7f7f7f] hover:text-[#dc2626] hover:bg-[#fef2f2] rounded-[6px] transition-colors cursor-pointer"
+            className="p-1.5 text-subdued hover:text-negative hover:bg-surface-negative rounded-vds-lg transition-colors cursor-pointer"
             title="Đóng box thống kê tuần này"
           >
             <X className="w-4 h-4" />
@@ -218,33 +218,33 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
 
       {/* Body: 5 Thẻ KPI theo chuẩn Ảnh 2 */}
       {isExpanded && (
-        <div className="p-4 bg-white space-y-3">
+        <div className="p-4 bg-surface space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {/* KPI 1: Tổng công việc */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'total' ? null : 'total')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'total' ? 'border-[#1d508d] ring-1 ring-[#1d508d]' : 'border-[#e0e0e0]'
+              className={`bg-surface rounded-vds-lg border p-4 transition cursor-pointer hover:border-line-regular ${
+                selectedKpi === 'total' ? 'border-line-support ring-1 ring-line-support' : 'border-line'
               }`}
             >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+              <p className="text-xs font-ui font-bold text-subdued">
                 Tổng công việc
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-title font-bold text-[#202020]">
+                <span className="text-2xl font-title font-bold text-ink">
                   {summary.totalTasks}
                 </span>
-                <span className="text-xs font-ui text-[#5f5f5f]">việc</span>
+                <span className="text-xs font-ui text-ink-lighter">việc</span>
               </div>
-              <div className="mt-2 text-[11px] font-ui text-[#7f7f7f] flex items-center justify-between border-t border-[#f0f0f0] pt-1.5">
+              <div className="mt-2 text-xs font-ui text-subdued flex items-center justify-between border-t border-divider pt-1.5">
                 <span>
-                  Xong: <strong className="text-[#166534]">{summary.completedCount}</strong>
+                  Xong: <strong className="text-positive">{summary.completedCount}</strong>
                 </span>
                 <span>
                   Đang làm: <strong>{summary.inProgressCount}</strong>
                 </span>
                 <span>
-                  Nghẽn: <strong className="text-[#c2410c]">{summary.blockedCount}</strong>
+                  Nghẽn: <strong className="text-warning">{summary.blockedCount}</strong>
                 </span>
               </div>
             </div>
@@ -252,39 +252,39 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
             {/* KPI 2: Hoàn thành = (Đúng hạn + Hoàn thành sau hạn) / Tổng công việc */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'completed' ? null : 'completed')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'completed' ? 'border-[#166534] ring-1 ring-[#166534]' : 'border-[#e0e0e0]'
+              className={`bg-surface rounded-vds-lg border p-4 transition cursor-pointer hover:border-line-regular ${
+                selectedKpi === 'completed' ? 'border-line-positive ring-1 ring-line-positive' : 'border-line'
               }`}
             >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+              <p className="text-xs font-ui font-bold text-subdued">
                 Hoàn thành
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span
                   className={`text-2xl font-title font-bold ${
                     (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
-                      ? 'text-[#166534]'
+                      ? 'text-positive'
                       : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
-                      ? 'text-[#ea580c]'
-                      : 'text-[#dc2626]'
+                      ? 'text-warning'
+                      : 'text-negative'
                   }`}
                 >
                   {summary.totalTasks > 0
                     ? Math.round((summary.completedCount / summary.totalTasks) * 100)
                     : 0}%
                 </span>
-                <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+                <span className="text-xs font-ui font-bold text-ink-lighter">
                   ({summary.completedCount})
                 </span>
               </div>
-              <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
+              <div className="mt-2 w-full bg-surface-200 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 ${
+                  className={`h-full transition duration-500 ${
                     (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 85
-                      ? 'bg-[#166534]'
+                      ? 'bg-positive-solid'
                       : (summary.totalTasks > 0 ? (summary.completedCount / summary.totalTasks) * 100 : 0) >= 70
-                      ? 'bg-[#ea580c]'
-                      : 'bg-[#dc2626]'
+                      ? 'bg-warning-solid'
+                      : 'bg-negative-solid'
                   }`}
                   style={{
                     width: `${
@@ -300,39 +300,39 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
             {/* KPI 3: Đúng hạn = Đúng hạn / Tổng công việc */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'ontime' ? null : 'ontime')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'ontime' ? 'border-[#166534] ring-1 ring-[#166534]' : 'border-[#e0e0e0]'
+              className={`bg-surface rounded-vds-lg border p-4 transition cursor-pointer hover:border-line-regular ${
+                selectedKpi === 'ontime' ? 'border-line-positive ring-1 ring-line-positive' : 'border-line'
               }`}
             >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+              <p className="text-xs font-ui font-bold text-subdued">
                 Đúng hạn
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span
                   className={`text-2xl font-title font-bold ${
                     (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
-                      ? 'text-[#166534]'
+                      ? 'text-positive'
                       : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
-                      ? 'text-[#ea580c]'
-                      : 'text-[#dc2626]'
+                      ? 'text-warning'
+                      : 'text-negative'
                   }`}
                 >
                   {summary.totalTasks > 0
                     ? Math.round((summary.completedOnTimeCount / summary.totalTasks) * 100)
                     : 0}%
                 </span>
-                <span className="text-xs font-ui font-bold text-[#5f5f5f]">
+                <span className="text-xs font-ui font-bold text-ink-lighter">
                   ({summary.completedOnTimeCount})
                 </span>
               </div>
-              <div className="mt-2 w-full bg-[#f0f0f0] h-1.5 rounded-full overflow-hidden">
+              <div className="mt-2 w-full bg-surface-200 h-1.5 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-500 ${
+                  className={`h-full transition duration-500 ${
                     (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 85
-                      ? 'bg-[#166534]'
+                      ? 'bg-positive-solid'
                       : (summary.totalTasks > 0 ? (summary.completedOnTimeCount / summary.totalTasks) * 100 : 0) >= 70
-                      ? 'bg-[#ea580c]'
-                      : 'bg-[#dc2626]'
+                      ? 'bg-warning-solid'
+                      : 'bg-negative-solid'
                   }`}
                   style={{
                     width: `${
@@ -348,24 +348,24 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
             {/* KPI 4: Hoàn thành sau hạn = Hoàn thành sau hạn / Tổng công việc */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'late' ? null : 'late')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'late' ? 'border-[#1d4ed8] ring-1 ring-[#1d4ed8]' : 'border-[#e0e0e0]'
+              className={`bg-surface rounded-vds-lg border p-4 transition cursor-pointer hover:border-line-regular ${
+                selectedKpi === 'late' ? 'border-line-info ring-1 ring-line-info' : 'border-line'
               }`}
             >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+              <p className="text-xs font-ui font-bold text-subdued">
                 Hoàn thành sau hạn
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
-                <span className="text-2xl font-title font-bold text-[#1d4ed8]">
+                <span className="text-2xl font-title font-bold text-info">
                   {summary.totalTasks > 0
                     ? Math.round((summary.completedLateCount / summary.totalTasks) * 100)
                     : 0}%
                 </span>
-                <span className="text-xs font-ui font-bold text-[#1d4ed8]">
+                <span className="text-xs font-ui font-bold text-info">
                   ({summary.completedLateCount})
                 </span>
               </div>
-              <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate" title={`${summary.lateConfirmationCount} sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày`}>
+              <p className="mt-2 text-xs font-ui text-subdued border-t border-divider pt-1.5 truncate" title={`${summary.lateConfirmationCount} sau 1 ngày • ${summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày`}>
                 {summary.lateConfirmationCount} sau 1 ngày • {summary.completedLateCount - summary.lateConfirmationCount} trễ ≥ 2 ngày
               </p>
             </div>
@@ -373,27 +373,27 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
             {/* KPI 5: Đang quá hạn (Giữ nguyên) */}
             <div
               onClick={() => setSelectedKpi(selectedKpi === 'overdue' ? null : 'overdue')}
-              className={`bg-white rounded-[10px] border p-4 shadow-2xs transition-all cursor-pointer hover:border-[#b0b0b0] ${
-                selectedKpi === 'overdue' ? 'border-[#dc2626] ring-1 ring-[#dc2626]' : 'border-[#e0e0e0]'
+              className={`bg-surface rounded-vds-lg border p-4 transition cursor-pointer hover:border-line-regular ${
+                selectedKpi === 'overdue' ? 'border-line-negative ring-1 ring-line-negative' : 'border-line'
               }`}
             >
-              <p className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f] flex items-center justify-between">
+              <p className="text-xs font-ui font-bold text-subdued flex items-center justify-between">
                 <span>Đang quá hạn</span>
                 {summary.currentlyOverdueCount > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-[#dc2626] animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-negative-solid animate-pulse" />
                 )}
               </p>
               <div className="flex items-baseline gap-2 mt-1.5">
                 <span
                   className={`text-2xl font-title font-bold ${
-                    summary.currentlyOverdueCount > 0 ? 'text-[#dc2626]' : 'text-[#166534]'
+                    summary.currentlyOverdueCount > 0 ? 'text-negative' : 'text-positive'
                   }`}
                 >
                   {summary.currentlyOverdueCount}
                 </span>
-                <span className="text-xs font-ui text-[#5f5f5f]">việc</span>
+                <span className="text-xs font-ui text-ink-lighter">việc</span>
               </div>
-              <p className="mt-2 text-[11px] font-ui text-[#7f7f7f] border-t border-[#f0f0f0] pt-1.5 truncate">
+              <p className="mt-2 text-xs font-ui text-subdued border-t border-divider pt-1.5 truncate">
                 {summary.currentlyOverdueCount > 0 ? 'Chưa hoàn thành' : '0 việc quá hạn'}
               </p>
             </div>
@@ -401,9 +401,9 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
 
           {/* Drill-down list nếu click vào 1 KPI */}
           {selectedKpi && detailTasks.length > 0 && (
-            <div className="mt-3 p-3 bg-[#fafafa] rounded-[8px] border border-[#e0e0e0] space-y-2 animate-fade-in">
+            <div className="mt-3 p-3 bg-surface-100 rounded-vds-lg border border-line space-y-2 animate-fade-in">
               <div className="flex items-center justify-between text-xs font-ui">
-                <span className="font-bold text-[#202020]">
+                <span className="font-bold text-ink">
                   Danh sách công việc (
                   {selectedKpi === 'total'
                     ? 'Tổng công việc'
@@ -419,30 +419,30 @@ export const MondayWeeklySummary: React.FC<MondayWeeklySummaryProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedKpi(null)}
-                  className="text-[#7f7f7f] hover:text-[#202020] text-[11px] cursor-pointer"
+                  className="text-subdued hover:text-ink text-xs cursor-pointer"
                 >
                   Đóng danh sách
                 </button>
               </div>
 
-              <div className="divide-y divide-[#ebebeb] max-h-48 overflow-y-auto">
+              <div className="divide-y divide-divider max-h-48 overflow-y-auto">
                 {detailTasks.map((t) => (
                   <div
                     key={t.id}
                     onClick={() => onSelectTask?.(t)}
-                    className="py-1.5 flex items-center justify-between gap-2 hover:bg-white px-2 rounded cursor-pointer transition-colors"
+                    className="py-1.5 flex items-center justify-between gap-2 hover:bg-surface px-2 rounded cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-semibold text-[#202020] truncate">
+                      <span className="text-xs font-semibold text-ink truncate">
                         {t.title}
                       </span>
-                      <span className="text-[11px] text-[#7f7f7f] truncate">
+                      <span className="text-xs text-subdued truncate">
                         • {t.projectName}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 text-[11px] text-[#5f5f5f]">
+                    <div className="flex items-center gap-2 shrink-0 text-xs text-ink-lighter">
                       <span>{t.assignee}</span>
-                      <span className="font-medium text-[#202020]">{t.dueDate}</span>
+                      <span className="font-medium text-ink">{t.dueDate}</span>
                     </div>
                   </div>
                 ))}

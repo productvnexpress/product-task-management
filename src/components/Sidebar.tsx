@@ -35,8 +35,9 @@ import {
   Settings,
   BarChart3,
   CalendarDays
-} from 'lucide-react';
+} from './vds/icons';
 import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
+import { VdsButton, VdsLogo } from './vds';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -278,12 +279,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Aside element: fixed pinned at top-0 left-0 h-screen on both mobile drawer & desktop */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 md:z-30 h-screen w-80 bg-[#ffffff] border-r border-[#e0e0e0] flex flex-col shrink-0 select-none shadow-xl md:shadow-xs transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 bottom-0 z-50 md:z-30 h-screen w-80 bg-surface border-r border-line flex flex-col shrink-0 select-none shadow-sheet md:shadow-none transition-transform duration-300 ease-in-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Brand & App Title Header */}
-        <div className="p-6 border-b border-[#f0f0f0] space-y-3">
+        <div className="p-6 border-b border-divider space-y-3">
           <div className="flex items-center justify-between">
             <button
               type="button"
@@ -294,15 +295,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="flex items-center gap-2.5 text-left group cursor-pointer transition-opacity hover:opacity-90 focus:outline-none"
               title="Về công việc mặc định"
             >
-              <div className="w-9 h-9 rounded-[8px] bg-[#963861] group-hover:bg-[#80284f] text-white flex items-center justify-center font-ui font-bold text-lg shadow-xs transition-colors">
-                ✓
-              </div>
-              <div>
-                <span className="font-ui font-extrabold text-[11px] tracking-wider uppercase text-[#913257] group-hover:text-[#80284f] block transition-colors">
-                  VnExpress Product
-                </span>
-                <h1 className="font-title text-base font-bold text-[#202020] group-hover:text-[#963861] leading-snug transition-colors">
-                  Công việc
+              <div className="flex flex-col gap-1">
+                <VdsLogo className="h-[22px] w-[118px]" />
+                <h1 className="font-title text-sm font-bold text-ink-lighter group-hover:text-accent leading-snug transition-colors">
+                  Công việc · Ban Sản phẩm
                 </h1>
               </div>
             </button>
@@ -311,7 +307,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="p-1.5 rounded-full text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f5] md:hidden cursor-pointer"
+              className="p-1.5 rounded-full text-subdued hover:text-ink hover:bg-surface-200 md:hidden cursor-pointer"
               title="Đóng thanh bên"
             >
               <X className="w-5 h-5" />
@@ -320,29 +316,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Primary CTA tailored to active tab with RBAC */}
         {activeTab === 'projects' && canCreateProject(currentAuthUser) ? (
-          <button
-            onClick={onOpenAddProject || onOpenQuickAdd}
-            className="w-full h-10 rounded-[8px] bg-[#b13460] hover:bg-[#8f274c] text-white font-ui text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo dự án mới</span>
-          </button>
+          <VdsButton variant="accent" iconLeft="Add" fullWidth onClick={onOpenAddProject || onOpenQuickAdd}>
+            Tạo dự án mới
+          </VdsButton>
         ) : activeTab === 'members' && canCreateMember(currentAuthUser) ? (
-          <button
-            onClick={onOpenAddMember || onOpenQuickAdd}
-            className="w-full h-10 rounded-[8px] bg-[#24a148] hover:bg-[#1d8239] text-white font-ui text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo nhân sự mới</span>
-          </button>
+          <VdsButton variant="accent" iconLeft="Add" fullWidth onClick={onOpenAddMember || onOpenQuickAdd}>
+            Tạo nhân sự mới
+          </VdsButton>
         ) : (
-          <button
-            onClick={onOpenQuickAdd}
-            className="w-full h-10 rounded-[8px] bg-[#963861] hover:bg-[#832e52] text-white font-ui text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo việc mới</span>
-          </button>
+          <VdsButton variant="accent" iconLeft="Add" fullWidth onClick={onOpenQuickAdd}>
+            Tạo việc mới
+          </VdsButton>
         )}
       </div>
 
@@ -357,18 +341,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="flex items-center gap-1.5 text-left group cursor-pointer"
               title={isWorkspaceExpanded ? 'Thu gọn Work Space' : 'Mở rộng Work Space'}
             >
-              <Briefcase className="w-3.5 h-3.5 text-[#963861]" />
-              <span className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f] group-hover:text-[#202020] transition-colors">
+              <Briefcase className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-ui font-bold text-subdued-lighter group-hover:text-ink transition-colors">
                 Work Space
               </span>
             </button>
             <button
               type="button"
               onClick={handleToggleWorkspace}
-              className="px-1.5 py-0.5 rounded-[4px] hover:bg-[#f0f0f0] text-[#71717a] hover:text-[#202020] transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-ui"
+              className="px-1.5 py-0.5 rounded-vds-md hover:bg-surface-200 text-subdued hover:text-ink transition-colors cursor-pointer flex items-center gap-1 text-xs font-ui"
               title={isWorkspaceExpanded ? 'Thu gọn (chỉ hiển thị Công việc & Dự án)' : 'Mở rộng hiển thị tất cả các mục'}
             >
-              <span className="text-[10px] text-[#9f9f9f]">{isWorkspaceExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
+              <span className="text-[10px] text-subdued-lighter">{isWorkspaceExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
               {isWorkspaceExpanded ? (
                 <ChevronDown className="w-3.5 h-3.5" />
               ) : (
@@ -381,17 +365,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Always show Công việc */}
             <button
               onClick={() => onTabChange('tasks')}
-              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+              className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                 activeTab === 'tasks'
-                  ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]'
-                  : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                  ? 'bg-surface-accent-faint text-accent border border-line'
+                  : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <CheckSquare className="w-4 h-4 text-[#963861]" />
+                <CheckSquare className="w-4 h-4 text-accent" />
                 <span>Công việc</span>
               </div>
-              <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#e0e0e0] text-[#5f5f5f]">
+              <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-ink-lighter">
                 {totalActiveTasks}
               </span>
             </button>
@@ -399,17 +383,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Always show Dự án */}
             <button
               onClick={() => onTabChange('projects')}
-              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+              className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                 activeTab === 'projects'
-                  ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe]'
-                  : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                  ? 'bg-surface-info text-support border border-line'
+                  : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <FolderKanban className="w-4 h-4 text-[#3b629b]" />
+                <FolderKanban className="w-4 h-4 text-support" />
                 <span>Dự án</span>
               </div>
-              <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#e0e0e0] text-[#5f5f5f]">
+              <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-ink-lighter">
                 {projects.length}
               </span>
             </button>
@@ -417,14 +401,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Always show Báo cáo, ngay sau Dự án — kể cả khi Work Space đang thu gọn */}
             <button
               onClick={() => onTabChange('reports')}
-              className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+              className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                 activeTab === 'reports'
-                  ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7]'
-                  : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                  ? 'bg-surface-accent-faint text-accent border border-line'
+                  : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-4 h-4 text-[#963861]" />
+                <BarChart3 className="w-4 h-4 text-accent" />
                 <span>Báo cáo</span>
               </div>
             </button>
@@ -434,35 +418,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <button
                   onClick={() => onTabChange('members')}
-                  className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                     activeTab === 'members'
-                      ? 'bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0]'
-                      : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                      ? 'bg-surface-positive text-positive border border-line'
+                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Users className="w-4 h-4 text-[#166534]" />
+                    <Users className="w-4 h-4 text-positive" />
                     <span>Nhân sự</span>
                   </div>
-                  <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#e0e0e0] text-[#5f5f5f]">
+                  <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-ink-lighter">
                     {members ? members.length : 12}
                   </span>
                 </button>
 
                 <button
                   onClick={() => onTabChange('trash')}
-                  className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                     activeTab === 'trash'
-                      ? 'bg-[#fff1f2] text-[#be123c] border border-[#fecdd3]'
-                      : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                      ? 'bg-surface-negative text-negative border border-line'
+                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Trash2 className="w-4 h-4 text-[#be123c]" />
+                    <Trash2 className="w-4 h-4 text-negative" />
                     <span>Thùng rác</span>
                   </div>
                   {trashCount > 0 && (
-                    <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#fecdd3] text-[#be123c] font-bold">
+                    <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-negative font-bold">
                       {trashCount}
                     </span>
                   )}
@@ -471,17 +455,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {isAdmin && (
                   <button
                     onClick={() => onTabChange('settings')}
-                    className={`w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                    className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
                       activeTab === 'settings'
-                        ? 'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]'
-                        : 'text-[#5f5f5f] hover:bg-[#f5f5f5] hover:text-[#202020]'
+                        ? 'bg-surface-support text-extreme border border-line'
+                        : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Settings className="w-4 h-4 text-[#7c3aed]" />
+                      <Settings className="w-4 h-4 text-extreme" />
                       <span>Thiết lập</span>
                     </div>
-                    <span className="text-[10px] bg-[#ede9fe] text-[#6d28d9] px-1.5 py-0.5 rounded font-ui font-bold">
+                    <span className="text-[10px] bg-surface-support text-extreme px-1.5 py-0.5 rounded font-ui font-bold">
                       Admin
                     </span>
                   </button>
@@ -494,13 +478,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {activeTab === 'members' && (
                     <button
                       onClick={() => onTabChange('members')}
-                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0]"
+                      className="w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between bg-surface-positive text-positive border border-line"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Users className="w-4 h-4 text-[#166534]" />
+                        <Users className="w-4 h-4 text-positive" />
                         <span>Nhân sự</span>
                       </div>
-                      <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#bbf7d0] text-[#166534]">
+                      <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-positive">
                         {members ? members.length : 12}
                       </span>
                     </button>
@@ -508,14 +492,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {activeTab === 'trash' && (
                     <button
                       onClick={() => onTabChange('trash')}
-                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#fff1f2] text-[#be123c] border border-[#fecdd3]"
+                      className="w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between bg-surface-negative text-negative border border-line"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Trash2 className="w-4 h-4 text-[#be123c]" />
+                        <Trash2 className="w-4 h-4 text-negative" />
                         <span>Thùng rác</span>
                       </div>
                       {trashCount > 0 && (
-                        <span className="font-num text-[11px] bg-white px-2 py-0.5 rounded-full border border-[#fecdd3] text-[#be123c] font-bold">
+                        <span className="font-num text-xs bg-surface px-2 py-0.5 rounded-full border border-line text-negative font-bold">
                           {trashCount}
                         </span>
                       )}
@@ -524,13 +508,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {activeTab === 'settings' && (
                     <button
                       onClick={() => onTabChange('settings')}
-                      className="w-full px-3 py-2.5 rounded-[8px] text-xs font-ui font-bold flex items-center justify-between bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]"
+                      className="w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between bg-surface-support text-extreme border border-line"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Settings className="w-4 h-4 text-[#7c3aed]" />
+                        <Settings className="w-4 h-4 text-extreme" />
                         <span>Thiết lập</span>
                       </div>
-                      <span className="text-[10px] bg-[#ede9fe] text-[#6d28d9] px-1.5 py-0.5 rounded font-ui font-bold">
+                      <span className="text-[10px] bg-surface-support text-extreme px-1.5 py-0.5 rounded font-ui font-bold">
                         Admin
                       </span>
                     </button>
@@ -542,25 +526,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* SECTION 2: FILTERS (Always available) */}
-        <div className="pt-2 border-t border-[#f0f0f0] space-y-5">
+        <div className="pt-2 border-t border-divider space-y-5">
           {/* Search Box in Sidebar */}
           <div className="space-y-1.5">
-            <p className="px-3 text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f]">
+            <p className="px-3 text-xs font-ui font-bold text-subdued-lighter">
               Tìm kiếm
             </p>
             <div className="relative px-1">
-              <Search className="w-3.5 h-3.5 text-[#7f7f7f] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-subdued absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Tìm việc, nhân sự..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs font-body bg-[#fafafa] border border-[#d6d6d6] focus:border-[#b13460] focus:bg-white rounded-[6px] text-[#202020] placeholder-[#9f9f9f] focus:outline-hidden"
+                className="w-full pl-8 pr-7 py-1.5 text-xs font-body bg-surface-100 border border-line focus:border-line-accent focus:bg-surface rounded-vds-lg text-ink placeholder-subdued-lighter focus:outline-hidden"
               />
               {searchQuery && (
                 <button
                   onClick={() => onSearchChange('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#7f7f7f] hover:text-[#202020] p-0.5"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subdued hover:text-ink p-0.5"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -571,7 +555,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Due Date Filter */}
           {onSelectDueFilter && (
             <div className="space-y-1.5">
-              <p className="px-3 text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f]">
+              <p className="px-3 text-xs font-ui font-bold text-subdued-lighter">
                 Thời hạn
               </p>
               <div className="space-y-0.5">
@@ -579,14 +563,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectDueFilter('all');
                   }}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
                     selectedDueFilter === 'all'
-                      ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1]'
-                      : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                      ? 'bg-surface-200 text-ink border border-line'
+                      : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#475569]" />
+                    <Calendar className="w-3.5 h-3.5 text-ink-lighter" />
                     <span>Tất cả thời hạn</span>
                   </span>
                 </button>
@@ -595,18 +579,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectDueFilter('today');
                   }}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
                     selectedDueFilter === 'today'
-                      ? 'bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]'
-                      : 'text-[#c2410c] hover:bg-[#fff7ed]/70'
+                      ? 'bg-surface-warning text-warning border border-line'
+                      : 'text-warning hover:bg-surface-warning/70'
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#ea580c]" />
+                    <Clock className="w-3.5 h-3.5 text-warning" />
                     <span>Hạn hôm nay</span>
                   </span>
                   {todayCount > 0 && (
-                    <span className="text-[10px] bg-[#fed7aa] text-[#9a3412] px-1.5 py-0.2 rounded-full font-bold font-num">
+                    <span className="text-[10px] bg-surface-warning text-warning px-1.5 py-0.2 rounded-full font-bold font-num">
                       {todayCount}
                     </span>
                   )}
@@ -616,18 +600,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectDueFilter('overdue');
                   }}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
                     selectedDueFilter === 'overdue'
-                      ? 'bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca]'
-                      : 'text-[#dc2626] hover:bg-[#fef2f2]/70'
+                      ? 'bg-surface-negative text-negative border border-line'
+                      : 'text-negative hover:bg-surface-negative/70'
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#dc2626]" />
+                    <AlertTriangle className="w-3.5 h-3.5 text-negative" />
                     <span>Quá hạn</span>
                   </span>
                   {overdueCount > 0 && (
-                    <span className="text-[10px] bg-[#fecaca] text-[#991b1b] px-1.5 py-0.2 rounded-full font-bold font-num">
+                    <span className="text-[10px] bg-surface-negative text-negative px-1.5 py-0.2 rounded-full font-bold font-num">
                       {overdueCount}
                     </span>
                   )}
@@ -637,28 +621,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectDueFilter('soon');
                   }}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold text-left flex items-center justify-between transition-colors ${
                     selectedDueFilter === 'soon'
-                      ? 'bg-[#fefce8] text-[#a16207] border border-[#fef08a]'
-                      : 'text-[#a16207] hover:bg-[#fefce8]/70'
+                      ? 'bg-surface-warning text-warning border border-line'
+                      : 'text-warning hover:bg-surface-warning/70'
                   }`}
                 >
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#ca8a04]" />
+                    <Calendar className="w-3.5 h-3.5 text-warning" />
                     <span>Sắp đến hạn (3 ngày)</span>
                   </span>
                 </button>
 
                 {onSelectCustomDate && (
                   <div
-                    className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center justify-between gap-1.5 transition-colors ${
+                    className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between gap-1.5 transition-colors ${
                       selectedDueFilter === 'custom'
-                        ? 'bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]'
-                        : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                        ? 'bg-surface-info text-info border border-line'
+                        : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                     }`}
                   >
                     <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                      <CalendarDays className="w-3.5 h-3.5 text-[#3b82f6]" />
+                      <CalendarDays className="w-3.5 h-3.5 text-info" />
                       <span>Theo ngày</span>
                     </label>
                     <input
@@ -667,13 +651,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onChange={(e) => {
                         if (e.target.value) onSelectCustomDate(e.target.value);
                       }}
-                      className="min-w-0 flex-1 bg-white border border-[#e0e0e0] rounded px-1.5 py-0.5 text-[11px] font-ui text-[#202020] cursor-pointer"
+                      className="min-w-0 flex-1 bg-surface border border-line rounded px-1.5 py-0.5 text-xs font-ui text-ink cursor-pointer"
                     />
                     {selectedDueFilter === 'custom' && (
                       <button
                         type="button"
                         onClick={() => onSelectDueFilter && onSelectDueFilter('all')}
-                        className="text-[#1d4ed8] hover:text-[#1e40af] text-[10px] shrink-0"
+                        className="text-info hover:text-support text-[10px] shrink-0"
                         title="Bỏ lọc theo ngày"
                       >
                         ✕
@@ -688,7 +672,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Folder & Project Tree Selector Filter */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-3">
-              <span className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f]">
+              <span className="text-xs font-ui font-bold text-subdued-lighter">
                 Thư mục & Dự án
               </span>
               <div className="flex items-center gap-2">
@@ -696,7 +680,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     onClick={onOpenFolderManager}
-                    className="text-[10px] font-ui font-bold text-[#475569] hover:text-[#963861] flex items-center gap-0.5 cursor-pointer"
+                    className="text-[10px] font-ui font-bold text-ink-lighter hover:text-accent flex items-center gap-0.5 cursor-pointer"
                     title="Quản lý cây thư mục"
                   >
                     <FolderPlus className="w-3 h-3" />
@@ -706,7 +690,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAllProjectsInSidebar(!showAllProjectsInSidebar)}
-                  className="text-[10px] font-ui font-bold text-[#963861] hover:underline cursor-pointer normal-case"
+                  className="text-[10px] font-ui font-bold text-accent hover:underline cursor-pointer normal-case"
                 >
                   {showAllProjectsInSidebar ? 'Đang chạy' : `Tất cả (${baseProjects.length})`}
                 </button>
@@ -721,21 +705,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectFolder?.('all');
                   onSelectProject('all');
                 }}
-                className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                   (!selectedFolderId || selectedFolderId === 'all') && selectedProjectId === 'all'
-                    ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] font-bold'
-                    : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                    ? 'bg-surface-200 text-ink border border-line font-bold'
+                    : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                 }`}
               >
                 <span className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[#64748b]" />
+                  <Layers className="w-3.5 h-3.5 text-subdued" />
                   <span>Tất cả thư mục & dự án</span>
                 </span>
                 <span
                   className={`font-num text-[10px] px-1.5 py-0.2 rounded-full ${
                     (!selectedFolderId || selectedFolderId === 'all') && selectedProjectId === 'all'
-                      ? 'bg-[#e2e8f0] text-[#334155]'
-                      : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                      ? 'bg-surface-300 text-ink-lighter'
+                      : 'bg-surface-200 text-subdued'
                   }`}
                 >
                   {totalActiveTasks}
@@ -767,10 +751,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div key={root.id} className="space-y-0.5">
                     {/* Hàng Thư mục gốc (Root Folder) */}
                     <div
-                      className={`w-full px-2 py-1.5 rounded-[6px] text-xs font-ui flex items-center justify-between transition-colors ${
+                      className={`w-full px-2 py-1.5 rounded-vds-lg text-xs font-ui flex items-center justify-between transition-colors ${
                         isRootSelected
-                          ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold'
-                          : 'text-[#334155] hover:bg-[#f8fafc] hover:text-[#202020]'
+                          ? 'bg-surface-accent-faint text-accent border border-line font-bold'
+                          : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                       }`}
                     >
                       <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -778,7 +762,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <button
                             type="button"
                             onClick={(e) => toggleExpandFolder(root.id, e)}
-                            className="p-0.5 rounded hover:bg-black/5 text-[#64748b] shrink-0 cursor-pointer"
+                            className="p-0.5 rounded hover:bg-black/5 text-subdued shrink-0 cursor-pointer"
                             title={isRootExpanded ? 'Thu gọn thư mục' : 'Mở rộng thư mục'}
                           >
                             {isRootExpanded ? (
@@ -804,9 +788,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer"
                         >
                           {isRootExpanded ? (
-                            <FolderOpen className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                            <FolderOpen className="w-3.5 h-3.5 text-accent shrink-0" />
                           ) : (
-                            <Folder className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                            <Folder className="w-3.5 h-3.5 text-accent shrink-0" />
                           )}
                           <span className="truncate font-semibold">{root.name}</span>
                         </button>
@@ -815,7 +799,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {rootTaskCount > 0 && (
                         <span
                           className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                            isRootSelected ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                            isRootSelected ? 'bg-surface-accent text-accent' : 'bg-surface-200 text-subdued'
                           }`}
                         >
                           {rootTaskCount}
@@ -825,7 +809,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* Nội dung bên trong Root Folder: Sub-folders & Projects */}
                     {isRootExpanded && hasExpandableContent && (
-                      <div className="pl-3.5 ml-3 border-l border-[#e5e7eb] space-y-0.5">
+                      <div className="pl-3.5 ml-3 border-l border-line space-y-0.5">
                         {/* 1. Các Sub-folders (Thể thao, Thế giới, ...) */}
                         {subFolders.map((sub) => {
                           const subProjects = displayedProjects.filter(
@@ -843,10 +827,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           return (
                             <div key={sub.id} className="space-y-0.5">
                               <div
-                                className={`w-full px-2 py-1 rounded-[6px] text-xs font-ui flex items-center justify-between transition-colors ${
+                                className={`w-full px-2 py-1 rounded-vds-lg text-xs font-ui flex items-center justify-between transition-colors ${
                                   isSubSelected
-                                    ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold'
-                                    : 'text-[#475569] hover:bg-[#f8fafc] hover:text-[#202020]'
+                                    ? 'bg-surface-accent-faint text-accent border border-line font-bold'
+                                    : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                                 }`}
                               >
                                 <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -854,7 +838,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <button
                                       type="button"
                                       onClick={(e) => toggleExpandFolder(sub.id, e)}
-                                      className="p-0.5 rounded hover:bg-black/5 text-[#94a3b8] shrink-0 cursor-pointer"
+                                      className="p-0.5 rounded hover:bg-black/5 text-subdued-lighter shrink-0 cursor-pointer"
                                     >
                                       {isSubExpanded ? (
                                         <ChevronDown className="w-3 h-3" />
@@ -863,7 +847,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                       )}
                                     </button>
                                   ) : (
-                                    <span className="w-3.5 shrink-0 text-center text-[#cbd5e1] text-[10px]">•</span>
+                                    <span className="w-3.5 shrink-0 text-center text-icon-subdued text-[10px]">•</span>
                                   )}
 
                                   <button
@@ -875,7 +859,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     }}
                                     className="flex items-center gap-1.5 min-w-0 flex-1 text-left cursor-pointer"
                                   >
-                                    <Folder className="w-3 h-3 text-[#64748b] shrink-0" />
+                                    <Folder className="w-3 h-3 text-subdued shrink-0" />
                                     <span className="truncate">{sub.name}</span>
                                   </button>
                                 </div>
@@ -883,7 +867,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 {subTaskCount > 0 && (
                                   <span
                                     className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                                      isSubSelected ? 'bg-[#fbe5ef] text-[#913257]' : 'bg-[#f4f4f5] text-[#71717a]'
+                                      isSubSelected ? 'bg-surface-accent text-accent' : 'bg-surface-200 text-subdued'
                                     }`}
                                   >
                                     {subTaskCount}
@@ -893,7 +877,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                               {/* Các Dự án nằm trong Sub-folder */}
                               {isSubExpanded && subProjects.length > 0 && (
-                                <div className="pl-3.5 ml-2.5 border-l border-[#f1f5f9] space-y-0.5">
+                                <div className="pl-3.5 ml-2.5 border-l border-divider space-y-0.5">
                                   {subProjects.map((p) => {
                                     const isSel = selectedProjectId === p.id;
                                     const count = taskCountsByProject[p.id] || 0;
@@ -905,19 +889,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                           onSelectFolder?.(sub.id);
                                           onSelectProject(isSel ? 'all' : p.id);
                                         }}
-                                        className={`w-full px-2.5 py-1 rounded-[6px] text-[11px] font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                                        className={`w-full px-2.5 py-1 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                                           isSel
-                                            ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
-                                            : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                                            ? 'bg-surface-info text-support border border-line font-bold'
+                                            : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                                         }`}
                                       >
                                         <div className="flex items-center gap-1.5 min-w-0 pr-1.5">
-                                          <FolderKanban className="w-3 h-3 text-[#3b629b] shrink-0" />
+                                          <FolderKanban className="w-3 h-3 text-support shrink-0" />
                                           <span className="truncate" title={p.name}>
                                             {p.name.replace(/^Dự án\s+/i, '')}
                                           </span>
                                           {p.isStrategic && (
-                                            <span className="text-[#d97706] text-[10px] leading-none shrink-0" title="Dự án chiến lược">
+                                            <span className="text-warning text-[10px] leading-none shrink-0" title="Dự án chiến lược">
                                               ⭐
                                             </span>
                                           )}
@@ -925,7 +909,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         {count > 0 && (
                                           <span
                                             className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                                              isSel ? 'bg-[#dbeafe] text-[#1e609c]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                                              isSel ? 'bg-surface-info text-support' : 'bg-surface-200 text-subdued'
                                             }`}
                                           >
                                             {count}
@@ -952,19 +936,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 onSelectFolder?.(root.id);
                                 onSelectProject(isSel ? 'all' : p.id);
                               }}
-                              className={`w-full px-2.5 py-1 rounded-[6px] text-[11px] font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                              className={`w-full px-2.5 py-1 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                                 isSel
-                                  ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
-                                  : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                                  ? 'bg-surface-info text-support border border-line font-bold'
+                                  : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                               }`}
                             >
                               <div className="flex items-center gap-1.5 min-w-0 pr-1.5">
-                                <FolderKanban className="w-3 h-3 text-[#3b629b] shrink-0" />
+                                <FolderKanban className="w-3 h-3 text-support shrink-0" />
                                 <span className="truncate" title={p.name}>
                                   {p.name.replace(/^Dự án\s+/i, '')}
                                 </span>
                                 {p.isStrategic && (
-                                  <span className="text-[#d97706] text-[10px] leading-none shrink-0" title="Dự án chiến lược">
+                                  <span className="text-warning text-[10px] leading-none shrink-0" title="Dự án chiến lược">
                                     ⭐
                                   </span>
                                 )}
@@ -972,7 +956,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               {count > 0 && (
                                 <span
                                   className={`font-num text-[10px] px-1.5 py-0.2 rounded-full shrink-0 ${
-                                    isSel ? 'bg-[#dbeafe] text-[#1e609c]' : 'bg-[#f0f0f0] text-[#7f7f7f]'
+                                    isSel ? 'bg-surface-info text-support' : 'bg-surface-200 text-subdued'
                                   }`}
                                 >
                                   {count}
@@ -995,7 +979,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={handleToggleTeam}
-                className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f] hover:text-[#202020] transition-colors cursor-pointer text-left"
+                className="text-xs font-ui font-bold text-subdued-lighter hover:text-ink transition-colors cursor-pointer text-left"
                 title={isTeamExpanded ? 'Thu gọn Lọc theo Nhóm' : 'Mở rộng Lọc theo Nhóm'}
               >
                 Lọc theo Nhóm
@@ -1003,10 +987,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={handleToggleTeam}
-                className="px-1.5 py-0.5 rounded-[4px] hover:bg-[#f0f0f0] text-[#71717a] hover:text-[#202020] transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-ui"
+                className="px-1.5 py-0.5 rounded-vds-md hover:bg-surface-200 text-subdued hover:text-ink transition-colors cursor-pointer flex items-center gap-1 text-xs font-ui"
                 title={isTeamExpanded ? 'Thu gọn' : 'Mở rộng'}
               >
-                <span className="text-[10px] text-[#9f9f9f]">{isTeamExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
+                <span className="text-[10px] text-subdued-lighter">{isTeamExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
                 {isTeamExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5" />
                 ) : (
@@ -1023,10 +1007,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={t}
                       onClick={() => onSelectTeam(t)}
-                      className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                      className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                         isSel
-                          ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
-                          : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                          ? 'bg-surface-info text-support border border-line font-bold'
+                          : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                       }`}
                     >
                       <span>{t === 'Tất cả' ? 'Tất cả các nhóm' : t}</span>
@@ -1036,15 +1020,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <button
                   onClick={handleToggleTeam}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                     selectedTeam !== 'Tất cả'
-                      ? 'bg-[#edf5fd] text-[#1e609c] border border-[#cfe2fe] font-bold'
-                      : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                      ? 'bg-surface-info text-support border border-line font-bold'
+                      : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                   }`}
                   title="Nhấp để mở rộng danh sách nhóm"
                 >
                   <span>{selectedTeam === 'Tất cả' ? 'Tất cả các nhóm' : selectedTeam}</span>
-                  <ChevronRight className="w-3 h-3 text-[#9f9f9f]" />
+                  <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                 </button>
               )}
             </div>
@@ -1056,7 +1040,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={handleToggleStatus}
-                className="text-[11px] font-ui font-extrabold uppercase tracking-wider text-[#9f9f9f] hover:text-[#202020] transition-colors cursor-pointer text-left"
+                className="text-xs font-ui font-bold text-subdued-lighter hover:text-ink transition-colors cursor-pointer text-left"
                 title={isStatusExpanded ? 'Thu gọn Lọc theo Trạng thái' : 'Mở rộng Lọc theo Trạng thái'}
               >
                 Lọc theo Trạng thái
@@ -1064,10 +1048,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={handleToggleStatus}
-                className="px-1.5 py-0.5 rounded-[4px] hover:bg-[#f0f0f0] text-[#71717a] hover:text-[#202020] transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-ui"
+                className="px-1.5 py-0.5 rounded-vds-md hover:bg-surface-200 text-subdued hover:text-ink transition-colors cursor-pointer flex items-center gap-1 text-xs font-ui"
                 title={isStatusExpanded ? 'Thu gọn' : 'Mở rộng'}
               >
-                <span className="text-[10px] text-[#9f9f9f]">{isStatusExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
+                <span className="text-[10px] text-subdued-lighter">{isStatusExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
                 {isStatusExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5" />
                 ) : (
@@ -1084,17 +1068,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={st}
                       onClick={() => onSelectStatus(st)}
-                      className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                      className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                         isSel
-                          ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] font-bold'
+                          ? 'bg-surface-200 text-ink border border-line font-bold'
                           : st === 'Bị nghẽn' && blockedCount > 0
-                          ? 'text-[#be123c] font-bold hover:bg-[#fff1f2]'
-                          : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                          ? 'text-negative font-bold hover:bg-surface-negative'
+                          : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                       }`}
                     >
                       <span>{st === 'Tất cả' ? 'Tất cả trạng thái' : st}</span>
                       {st === 'Bị nghẽn' && blockedCount > 0 && (
-                        <span className="text-[10px] bg-[#ffe4e6] text-[#be123c] px-1.5 py-0.2 rounded-full font-bold">
+                        <span className="text-[10px] bg-surface-negative text-negative px-1.5 py-0.2 rounded-full font-bold">
                           {blockedCount}
                         </span>
                       )}
@@ -1104,22 +1088,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <button
                   onClick={handleToggleStatus}
-                  className={`w-full px-3 py-1.5 rounded-[6px] text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`w-full px-3 py-1.5 rounded-vds-lg text-xs font-ui text-left flex items-center justify-between transition-colors cursor-pointer ${
                     selectedStatus !== 'Tất cả'
-                      ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] font-bold'
-                      : 'text-[#5f5f5f] hover:bg-[#f8fafc] hover:text-[#202020]'
+                      ? 'bg-surface-200 text-ink border border-line font-bold'
+                      : 'text-ink-lighter hover:bg-surface-100 hover:text-ink'
                   }`}
                   title="Nhấp để mở rộng danh sách trạng thái"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{selectedStatus === 'Tất cả' ? 'Tất cả trạng thái' : selectedStatus}</span>
                     {selectedStatus === 'Bị nghẽn' && blockedCount > 0 && (
-                      <span className="text-[10px] bg-[#ffe4e6] text-[#be123c] px-1.5 py-0.2 rounded-full font-bold">
+                      <span className="text-[10px] bg-surface-negative text-negative px-1.5 py-0.2 rounded-full font-bold">
                         {blockedCount}
                       </span>
                     )}
                   </div>
-                  <ChevronRight className="w-3 h-3 text-[#9f9f9f]" />
+                  <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                 </button>
               )}
             </div>

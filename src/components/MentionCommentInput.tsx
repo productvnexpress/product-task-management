@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MemberItem } from '../types';
 import { getMentionQueryAtCursor, insertMention } from '../utils/mentionUtils';
 import { normalizePersonName, isProductMember } from '../utils/memberPersonalization';
-import { AtSign, User } from 'lucide-react';
+import { AtSign, User } from './vds/icons';
 
 interface MentionCommentInputProps {
   value: string;
@@ -200,24 +200,24 @@ export const MentionCommentInput: React.FC<MentionCommentInputProps> = ({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full text-xs font-body p-2.5 bg-white border border-[#cbd5e1] rounded-[6px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#963861] focus:ring-1 focus:ring-[#963861] transition-all resize-none leading-relaxed ${className}`}
+        className={`w-full text-xs font-body p-2.5 bg-surface border border-line rounded-vds-lg text-ink placeholder:text-subdued-lighter focus:outline-none focus:border-line-accent focus:ring-1 focus:ring-line-accent transition resize-none leading-relaxed ${className}`}
       />
 
       {/* Mention Dropdown Popup */}
       {isMentionOpen && filteredMembers.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 left-0 bottom-full mb-1.5 w-72 bg-white rounded-[8px] border border-[#e2e8f0] shadow-lg overflow-hidden animate-fade-in"
+          className="absolute z-50 left-0 bottom-full mb-1.5 w-72 bg-surface rounded-vds-lg border border-line shadow-pop overflow-hidden animate-fade-in"
         >
-          <div className="px-2.5 py-1.5 bg-[#f8fafc] border-b border-[#f1f5f9] flex items-center justify-between text-[10px] font-ui font-semibold text-[#64748b]">
-            <span className="flex items-center gap-1 text-[#963861]">
+          <div className="px-2.5 py-1.5 bg-surface-100 border-b border-divider flex items-center justify-between text-[10px] font-ui font-semibold text-subdued">
+            <span className="flex items-center gap-1 text-accent">
               <AtSign className="w-3 h-3" />
               <span>Tag nhân sự ({filteredMembers.length})</span>
             </span>
             <span>↑↓ di chuyển • ↵ chọn</span>
           </div>
 
-          <div className="max-h-52 overflow-y-auto py-1 divide-y divide-[#f8fafc]">
+          <div className="max-h-52 overflow-y-auto py-1 divide-y divide-divider">
             {filteredMembers.map((member, idx) => {
               const isSelected = idx === selectedIndex;
               return (
@@ -230,15 +230,15 @@ export const MentionCommentInput: React.FC<MentionCommentInputProps> = ({
                     handleSelectMember(member);
                   }}
                   className={`w-full px-3 py-2 flex items-center justify-between gap-2 text-left cursor-pointer transition-colors ${
-                    isSelected ? 'bg-[#fdf2f7] text-[#963861]' : 'hover:bg-[#f8fafc] text-[#1e293b]'
+                    isSelected ? 'bg-surface-accent-faint text-accent' : 'hover:bg-surface-100 text-ink'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
                         isSelected
-                          ? 'bg-[#963861] text-white'
-                          : 'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]'
+                          ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                          : 'bg-surface-200 text-ink-lighter border border-line'
                       }`}
                     >
                       {member.name ? member.name.charAt(0).toUpperCase() : <User className="w-3 h-3" />}
@@ -246,7 +246,7 @@ export const MentionCommentInput: React.FC<MentionCommentInputProps> = ({
                     <div className="min-w-0">
                       <div className="text-xs font-semibold truncate leading-tight">{member.name}</div>
                       {member.username && (
-                        <div className="text-[10px] text-[#94a3b8] font-mono leading-tight">
+                        <div className="text-[10px] text-subdued-lighter font-mono leading-tight">
                           @{member.username}
                         </div>
                       )}
@@ -254,10 +254,10 @@ export const MentionCommentInput: React.FC<MentionCommentInputProps> = ({
                   </div>
 
                   <span
-                    className={`text-[9px] font-ui font-bold px-1.5 py-0.5 rounded shrink-0 max-w-[90px] truncate ${
+                    className={`text-[10px] font-ui font-bold px-1.5 py-0.5 rounded shrink-0 max-w-[90px] truncate ${
                       isSelected
-                        ? 'bg-[#963861]/15 text-[#963861] border border-[#963861]/30'
-                        : 'bg-[#f1f5f9] text-[#64748b] border border-[#e2e8f0]'
+                        ? 'bg-accent-solid/15 text-accent border border-line-accent/30'
+                        : 'bg-surface-200 text-subdued border border-line'
                     }`}
                     title={member.department || member.team}
                   >

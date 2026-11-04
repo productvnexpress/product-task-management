@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TaskItem, TaskStatus, ProjectItem, MemberItem, TeamType, PriorityLevel, TaskLogItem, FolderItem } from '../types';
 import { formatLogTimestamp, addManualLog, deduplicateTaskLogs } from '../utils/taskLogUtils';
 import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from '../utils/formatters';
+import { checkTitleQuality } from '../utils/titleQuality';
 import { getProductMembers } from '../utils/memberPersonalization';
 import { canEditTask, canDeleteTask, getUserRole } from '../utils/rbac';
 import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
@@ -49,7 +50,8 @@ import {
   Play,
   Pause,
   Edit2,
-} from 'lucide-react';
+} from './vds/icons';
+import { VdsButton } from './vds';
 import { getTaskFriendlyUrl, copyUrlToClipboard } from '../utils/urlRouting';
 import {
   recurringTaskService,
@@ -535,6 +537,28 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
     setNewLogNote('');
   };
 
+  // Phím tắt theo mục 1.4: Ctrl/Cmd+S lưu, ESC đóng (đóng hộp thoại con trước)
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (userCanEdit && activeDrawerTab === 'details') handleSaveRef.current();
+        return;
+      }
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (isDeletingRuleConfirmOpen) return setIsDeletingRuleConfirmOpen(false);
+      if (isEditingRuleModalOpen) return setIsEditingRuleModalOpen(false);
+      if (isDeleteTaskModalOpen) return setIsDeleteTaskModalOpen(false);
+      if (showAdminDateDialog) return setShowAdminDateDialog(false);
+      onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, userCanEdit, activeDrawerTab, isDeletingRuleConfirmOpen, isEditingRuleModalOpen, isDeleteTaskModalOpen, showAdminDateDialog, onClose]);
+
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyLink = async () => {
@@ -571,14 +595,14 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-            className="relative z-10 w-full max-w-xl bg-white h-full shadow-2xl flex flex-col border-l border-[#d6d6d6] overflow-hidden"
+            className="relative z-10 w-full max-w-xl bg-surface h-full shadow-sheet flex flex-col border-l border-line overflow-hidden"
           >
             {/* Drawer Header */}
-        <div className="p-4 md:p-5 border-b border-[#e6e6e6] bg-[#fafafa] space-y-3">
+        <div className="p-4 md:p-5 border-b border-line bg-surface-100 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="w-3 h-3 rounded-full bg-[#b13460]" />
-              <h2 className="font-title text-base font-bold text-[#202020]">
+              <span className="w-3 h-3 rounded-full bg-accent-solid" />
+              <h2 className="font-title text-base font-bold text-ink">
                 Chi tiết công việc
               </h2>
             </div>
@@ -586,24 +610,24 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-ui font-semibold rounded-[6px] border transition-colors cursor-pointer shadow-2xs ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-ui font-semibold rounded-vds-lg border transition-colors cursor-pointer ${
                   isCopied
-                    ? 'bg-[#e2f6e9] text-[#24a148] border-[#b8e8c4]'
-                    : 'bg-white text-[#505050] hover:text-[#202020] hover:bg-[#f0f0f0] border-[#d0d0d0]'
+                    ? 'bg-surface-positive text-positive border-line'
+                    : 'bg-surface text-ink-lighter hover:text-ink hover:bg-surface-200 border-line'
                 }`}
                 title="Sao chép liên kết công việc để gửi đồng nghiệp"
               >
                 {isCopied ? (
-                  <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                  <Check className="w-3.5 h-3.5 text-positive" />
                 ) : (
-                  <Share2 className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                  <Share2 className="w-3.5 h-3.5 text-subdued" />
                 )}
                 <span>{isCopied ? 'Đã chép link' : 'Sao chép link'}</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full text-[#7f7f7f] hover:text-[#202020] hover:bg-[#ececec] transition-colors"
+                className="p-1.5 rounded-full text-subdued hover:text-ink hover:bg-surface-300 transition-colors"
                 title="Đóng chi tiết (ESC)"
               >
                 <X className="w-5 h-5" />
@@ -612,14 +636,14 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
           </div>
 
           {/* Drawer Navigation Tabs */}
-          <div className="flex items-center gap-2 border-b border-[#e0e0e0] pb-1 pt-1">
+          <div className="flex items-center gap-2 border-b border-line pb-1 pt-1">
             <button
               type="button"
               onClick={() => setActiveDrawerTab('details')}
-              className={`px-3.5 py-1.5 text-xs font-ui font-bold rounded-[6px] flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-ui font-bold rounded-vds-lg flex items-center gap-1.5 transition-colors ${
                 activeDrawerTab === 'details'
-                  ? 'bg-[#b13460] text-white'
-                  : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                  ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                  : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
               }`}
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -629,10 +653,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             <button
               type="button"
               onClick={() => setActiveDrawerTab('history')}
-              className={`px-3.5 py-1.5 text-xs font-ui font-bold rounded-[6px] flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-ui font-bold rounded-vds-lg flex items-center gap-1.5 transition-colors ${
                 activeDrawerTab === 'history'
-                  ? 'bg-[#b13460] text-white'
-                  : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                  ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                  : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
               }`}
             >
               <History className="w-3.5 h-3.5" />
@@ -646,28 +670,40 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
           <div className="flex-1 overflow-y-auto p-6 space-y-5 text-sm font-body">
             {/* Validation Error Alert */}
             {validationError && (
-              <div className="p-3 bg-[#fff0f1] border border-[#fbd3d6] text-[#da1e28] text-xs font-bold rounded-[8px] flex items-center gap-2 animate-shake">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-[#da1e28]" />
+              <div className="p-3 bg-surface-negative border border-line text-negative text-xs font-bold rounded-vds-lg flex items-center gap-2 animate-shake">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-negative" />
                 <span>{validationError}</span>
               </div>
             )}
 
             {/* 1. Công việc (sử dụng font Merriweather Sans) */}
             <div className="space-y-1.5">
-              <label className="font-ui text-xs font-bold text-[#5f5f5f]">
+              <label className="font-ui text-xs font-bold text-ink-lighter">
                 Công việc:
               </label>
               <textarea
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 rows={2}
-                className="w-full font-title font-bold text-base p-3 border border-[#d6d6d6] focus:border-[#b13460] rounded-[8px] text-[#202020] leading-snug"
+                className="w-full font-title font-bold text-base p-3 border border-line focus:border-line-accent rounded-vds-lg text-ink leading-snug"
               />
+              {(() => {
+                const q = checkTitleQuality(title);
+                if (!q.isVague) return null;
+                return (
+                  <div className="flex items-start gap-2 p-2.5 rounded-vds-lg bg-surface-warning border border-line text-[12px] font-ui text-warning">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-px text-warning" />
+                    <span className="leading-snug">
+                      <strong>{q.reason}</strong> {q.hint}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* 2. Trạng thái */}
             <div className="space-y-1.5">
-              <label className="font-ui text-xs font-bold text-[#5f5f5f] block">
+              <label className="font-ui text-xs font-bold text-ink-lighter block">
                 Trạng thái:
               </label>
               <select
@@ -676,7 +712,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   setStatus(e.target.value as TaskStatus);
                   setValidationError('');
                 }}
-                className="w-full font-ui text-xs font-bold bg-white border border-[#d6d6d6] px-3 py-2 rounded-[6px] text-[#202020] focus:border-[#b13460]"
+                className="w-full font-ui text-xs font-bold bg-surface border border-line px-3 py-2 rounded-vds-lg text-ink focus:border-line-accent"
               >
                 <option value="Chưa làm">⚪ Chưa làm</option>
                 <option value="Đang làm">🔵 Đang làm</option>
@@ -687,8 +723,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
             {/* Mô tả lý do bị nghẽn (Nếu Bị nghẽn) */}
             {status === 'Bị nghẽn' && (
-              <div className="bg-[#fff0f1] p-3.5 rounded-[8px] border border-[#fbd3d6] space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#da1e28]">
+              <div className="bg-surface-negative p-3.5 rounded-vds-lg border border-line space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-negative">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>Mô tả lý do bị nghẽn:</span>
                 </div>
@@ -697,45 +733,45 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   onChange={(e) => setBlockerReason(e.target.value)}
                   placeholder="Ví dụ: Chờ API backend, chờ duyệt thiết kế Figma..."
                   rows={2}
-                  className="w-full text-xs font-body p-2 bg-white border border-[#fbd3d6] rounded-[6px] focus:outline-hidden text-[#202020]"
+                  className="w-full text-xs font-body p-2 bg-surface border border-line rounded-vds-lg focus:outline-hidden text-ink"
                 />
               </div>
             )}
 
             {/* Khối Kỷ luật hoàn thành & Đặc quyền Admin */}
             {isAdmin && currentDiscipline && (
-              <div className="bg-[#fcfcfd] border border-[#e2e8f0] rounded-[8px] p-3.5 space-y-2.5">
+              <div className="bg-surface-100 border border-line rounded-vds-lg p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-ui text-xs font-bold text-[#475569]">
+                    <span className="font-ui text-xs font-bold text-ink-lighter">
                       Kỷ luật hoàn thành:
                     </span>
                     {status === 'Hoàn thành' ? (
                       currentDiscipline.isOnTime ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#15803d] bg-[#f0fdf4] border border-[#bbf7d0] px-2 py-0.5 rounded-[5px]">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#15803d]" />
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-positive bg-surface-positive border border-line px-2 py-0.5 rounded-vds-md">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-positive" />
                           <span>Hoàn thành đúng hạn</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#b45309] bg-[#fffbeb] border border-[#fde68a] px-2 py-0.5 rounded-[5px]">
-                          <AlertTriangle className="w-3.5 h-3.5 text-[#b45309]" />
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-warning bg-surface-warning border border-line px-2 py-0.5 rounded-vds-md">
+                          <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                           <span>Hoàn thành sau hạn (+{currentDiscipline.daysDiff} ngày)</span>
                         </span>
                       )
                     ) : currentDiscipline.discipline === 'currently_overdue' ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#dc2626] bg-[#fef2f2] border border-[#fecaca] px-2 py-0.5 rounded-[5px]">
-                        <AlertTriangle className="w-3.5 h-3.5 text-[#dc2626]" />
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-negative bg-surface-negative border border-line px-2 py-0.5 rounded-vds-md">
+                        <AlertTriangle className="w-3.5 h-3.5 text-negative" />
                         <span>Đang quá hạn {currentDiscipline.daysDiff} ngày</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#475569] bg-[#f1f5f9] border border-[#e2e8f0] px-2 py-0.5 rounded-[5px]">
-                        <Clock className="w-3.5 h-3.5 text-[#64748b]" />
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-ink-lighter bg-surface-200 border border-line px-2 py-0.5 rounded-vds-md">
+                        <Clock className="w-3.5 h-3.5 text-subdued" />
                         <span>{status} (Hạn: {formatDateWithEnDay(dueDate)})</span>
                       </span>
                     )}
                   </div>
 
-                  <span className="font-ui text-[11px] text-[#64748b]">
+                  <span className="font-ui text-xs text-subdued">
                     {status === 'Hoàn thành' && (completedAt || task?.completedAt)
                       ? formatLogTimestamp(completedAt || task?.completedAt, true)
                       : (dueDate ? `Hạn: ${formatDateWithEnDay(dueDate)}` : 'Chưa có hạn')}
@@ -743,15 +779,15 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 </div>
 
                 {adminSuccessMsg && (
-                  <div className="p-2 bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] text-xs font-bold rounded-[6px] flex items-center gap-1.5 animate-fade-in">
+                  <div className="p-2 bg-surface-positive border border-line text-positive text-xs font-bold rounded-vds-lg flex items-center gap-1.5 animate-fade-in">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>{adminSuccessMsg}</span>
                   </div>
                 )}
 
                 {/* Thao tác dành riêng cho Admin */}
-                <div className="pt-2 border-t border-[#f1f5f9] flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] text-[#64748b] font-medium">
+                <div className="pt-2 border-t border-divider flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs text-subdued font-medium">
                     {status !== 'Hoàn thành'
                       ? 'Xác nhận nhân sự đã xong trước hạn:'
                       : 'Đặc quyền Admin:'}
@@ -763,7 +799,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       <button
                         type="button"
                         onClick={handleAdminConfirmOnTime}
-                        className="px-2.5 py-1 bg-[#15803d] hover:bg-[#166534] text-white rounded-[5px] text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                        className="px-2.5 py-1 bg-positive-solid hover:bg-positive-solid text-on-color rounded-vds-md text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer "
                         title="Xác nhận nhân sự hoàn thành đúng hạn (đặt ngày hoàn thành theo ngày hạn)"
                       >
                         <Zap className="w-3 h-3" />
@@ -782,10 +818,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         setAdminNoteInput('');
                         setShowAdminDateDialog(true);
                       }}
-                      className="px-2.5 py-1 bg-white hover:bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[5px] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      className="px-2.5 py-1 bg-surface hover:bg-surface-100 text-ink-lighter border border-line rounded-vds-md text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
                       title="Chọn ngày hoàn thành thực tế tùy chỉnh"
                     >
-                      <Clock className="w-3 h-3 text-[#64748b]" />
+                      <Clock className="w-3 h-3 text-subdued" />
                       <span>Đổi ngày hoàn thành</span>
                     </button>
                   </div>
@@ -796,8 +832,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             {/* 3. Link làm việc (Figma, Google, Notion,...) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                  <Link className="w-3.5 h-3.5 text-[#1d508d]" />
+                <label className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5">
+                  <Link className="w-3.5 h-3.5 text-support" />
                   <span>Link làm việc (Figma, Google, Notion,...):</span>
                 </label>
                 {workLink && (
@@ -805,7 +841,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     href={workLink.startsWith('http') ? workLink : `https://${workLink}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-bold text-[#1d508d] hover:underline flex items-center gap-1"
+                    className="text-xs font-bold text-support hover:underline flex items-center gap-1"
                   >
                     <span>Mở link</span>
                     <ExternalLink className="w-3 h-3" />
@@ -817,9 +853,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 value={workLink}
                 onChange={handleWorkLinkChange}
                 placeholder="https://figma.com/... hoặc https://docs.google.com/..."
-                className="w-full text-xs font-body p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] focus:outline-hidden text-[#202020]"
+                className="w-full text-xs font-body p-2.5 bg-surface border border-line rounded-vds-lg focus:outline-hidden text-ink"
               />
-              <p className="text-[11px] font-ui text-[#963861] font-medium">
+              <p className="text-xs font-ui text-accent font-medium">
                 * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
               </p>
             </div>
@@ -827,22 +863,22 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             {/* 4. Link kết quả (Figma, Beta, Production...) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#15803d]" />
+                <label className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-positive" />
                   <span>Link hoàn thành (Figma, Beta, Staging...):</span>
-                  {status === 'Hoàn thành' && <span className="text-[#da1e28] font-bold text-sm">*</span>}
+                  {status === 'Hoàn thành' && <span className="text-negative font-bold text-sm">*</span>}
                 </label>
 
                 <div className="flex items-center gap-2.5">
                   {/* Tuỳ chọn Link hoàn thành và Link làm việc là một */}
-                  <label className="inline-flex items-center gap-1.5 text-xs text-[#555] hover:text-[#202020] cursor-pointer select-none font-medium bg-[#f8fafc] hover:bg-[#f1f5f9] px-2 py-0.5 rounded border border-[#e2e8f0] transition-colors">
+                  <label className="inline-flex items-center gap-1.5 text-xs text-ink-lighter hover:text-ink cursor-pointer select-none font-medium bg-surface-100 hover:bg-surface-200 px-2 py-0.5 rounded border border-line transition-colors">
                     <input
                       type="checkbox"
                       checked={isSameAsWorkLink}
                       onChange={(e) => handleToggleSameLink(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#15803d] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#15803d]"
+                      className="w-3.5 h-3.5 rounded border-line text-positive focus:ring-0 focus:ring-offset-0 cursor-pointer accent-positive"
                     />
-                    <span className="text-[11px] text-[#334155]">Link hoàn thành và Link làm việc là một</span>
+                    <span className="text-xs text-ink-lighter">Link hoàn thành và Link làm việc là một</span>
                   </label>
 
                   {(isSameAsWorkLink ? workLink : resultLink) && (
@@ -854,7 +890,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] font-bold text-[#15803d] hover:underline flex items-center gap-1"
+                      className="text-xs font-bold text-positive hover:underline flex items-center gap-1"
                     >
                       <span>Mở kết quả</span>
                       <ExternalLink className="w-3 h-3" />
@@ -870,9 +906,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     disabled
                     value={workLink ? workLink : ''}
                     placeholder="Chưa có Link làm việc (vui lòng nhập vào ô Link làm việc ở trên)"
-                    className="w-full text-xs font-body p-2.5 bg-[#f8fafc] border border-[#cbd5e1] rounded-[6px] text-[#475569] italic cursor-not-allowed pr-38"
+                    className="w-full text-xs font-body p-2.5 bg-surface-100 border border-line rounded-vds-lg text-ink-lighter italic cursor-not-allowed pr-38"
                   />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#15803d] bg-[#f0fdf4] px-2 py-0.5 rounded border border-[#bbf7d0] pointer-events-none select-none">
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-positive bg-surface-positive px-2 py-0.5 rounded border border-line pointer-events-none select-none">
                     Đồng bộ từ Link làm việc
                   </span>
                 </div>
@@ -885,14 +921,14 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     if (validationError) setValidationError('');
                   }}
                   placeholder="https://vnexpress.net/... hoặc https://beta.vne..."
-                  className={`w-full text-xs font-body p-2.5 bg-white border rounded-[6px] focus:outline-hidden text-[#202020] ${
+                  className={`w-full text-xs font-body p-2.5 bg-surface border rounded-vds-lg focus:outline-hidden text-ink ${
                     status === 'Hoàn thành' && !resultLink.trim()
-                      ? 'border-[#da1e28]'
-                      : 'border-[#d6d6d6]'
+                      ? 'border-line-negative'
+                      : 'border-line'
                   }`}
                 />
               )}
-              <p className="text-[11px] font-ui text-[#963861] font-medium">
+              <p className="text-xs font-ui text-accent font-medium">
                 * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
               </p>
             </div>
@@ -902,15 +938,15 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               {/* 5. Thư mục / Dự án */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5 text-[#b13460]" />
+                  <label className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-accent" />
                     <span>Thư mục / Dự án:</span>
                   </label>
                   {selectedProject && onOpenProjectDetail && (
                     <button
                       type="button"
                       onClick={() => onOpenProjectDetail(selectedProject.id)}
-                      className="text-[11px] font-bold text-[#b13460] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
                       title="Bấm để xem chi tiết dự án này trong Right Sidebar"
                     >
                       <span>Xem chi tiết</span>
@@ -921,7 +957,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 <select
                   value={projectId}
                   onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                  className="w-full text-xs font-ui p-2.5 bg-surface border border-line rounded-vds-lg text-ink"
                 >
                   {folders.length > 0 && (
                     <optgroup label="── 📁 Trực tiếp trong Thư mục (Tinh chỉnh nhỏ) ──">
@@ -947,8 +983,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               {/* 6. Giai đoạn */}
               <div className="space-y-1.5">
-                <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[#b13460]" />
+                <label className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-accent" />
                   Giai đoạn:
                 </label>
                 <select
@@ -960,7 +996,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     const foundPh = availablePhases.find((ph) => ph.id === selectedPId);
                     setPhaseName(foundPh ? foundPh.name : '');
                   }}
-                  className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020] disabled:bg-[#f5f5f5] disabled:text-[#888888]"
+                  className="w-full text-xs font-ui p-2.5 bg-surface border border-line rounded-vds-lg text-ink disabled:bg-surface-200 disabled:text-subdued"
                 >
                   <option value="">
                     {projectId.startsWith('folder:') ? '-- Công việc trực tiếp trong Thư mục --' : '-- Toàn dự án (Chung) --'}
@@ -976,8 +1012,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               {/* 7. Phụ trách */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                  <label className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-subdued" />
                     Phụ trách:
                   </label>
                   {onFilterByAssignee && assignee && (
@@ -987,7 +1023,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         onFilterByAssignee(assignee);
                         onClose();
                       }}
-                      className="text-[11px] font-ui text-[#963861] hover:underline cursor-pointer flex items-center gap-1"
+                      className="text-xs font-ui text-accent hover:underline cursor-pointer flex items-center gap-1"
                       title={`Lọc nhanh công việc của ${assignee}`}
                     >
                       <Filter className="w-3 h-3" />
@@ -998,7 +1034,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
-                  className="w-full text-xs font-ui p-2.5 bg-white border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                  className="w-full text-xs font-ui p-2.5 bg-surface border border-line rounded-vds-lg text-ink"
                 >
                   {getProductMembers(members).map((m) => (
                     <option key={m.id} value={m.name}>
@@ -1019,29 +1055,29 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         dateInputRef.current?.focus();
                       }
                     }}
-                    className="font-ui text-xs font-bold text-[#5f5f5f] flex items-center gap-1.5 cursor-pointer select-none"
+                    className="font-ui text-xs font-bold text-ink-lighter flex items-center gap-1.5 cursor-pointer select-none"
                   >
-                    <Calendar className="w-3.5 h-3.5 text-[#7f7f7f]" />
+                    <Calendar className="w-3.5 h-3.5 text-subdued" />
                     <span>Hạn hoàn thành:</span>
                   </label>
                   {!dueDate && (
-                    <span className="text-[11px] font-ui font-semibold text-[#b45309] bg-[#fffbeb] px-2 py-0.5 rounded-[4px] border border-[#fde68a]">
+                    <span className="text-xs font-ui font-semibold text-warning bg-surface-warning px-2 py-0.5 rounded-vds-md border border-line">
                       Chưa có hạn
                     </span>
                   )}
                 </div>
 
                 {!dueDate && (
-                  <div className="bg-[#fffbeb] border border-[#fde68a] p-2.5 rounded-[6px] space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#92400e]">
-                      <Clock className="w-3.5 h-3.5 text-[#b45309]" />
+                  <div className="bg-surface-warning border border-line p-2.5 rounded-vds-lg space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-warning">
+                      <Clock className="w-3.5 h-3.5 text-warning" />
                       <span>Công việc này chưa có hạn hoàn thành. Vui lòng chọn hạn:</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setDueDate(getTodayDateString())}
-                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                        className="text-xs font-ui px-2.5 py-1 rounded-vds-md bg-surface border border-line text-warning hover:bg-surface-warning font-semibold cursor-pointer transition-colors"
                       >
                         Hôm nay
                       </button>
@@ -1052,7 +1088,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                           d.setDate(d.getDate() + 1);
                           setDueDate(getTodayDateString(d));
                         }}
-                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                        className="text-xs font-ui px-2.5 py-1 rounded-vds-md bg-surface border border-line text-warning hover:bg-surface-warning font-semibold cursor-pointer transition-colors"
                       >
                         Ngày mai
                       </button>
@@ -1063,7 +1099,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                           d.setDate(d.getDate() + 3);
                           setDueDate(getTodayDateString(d));
                         }}
-                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                        className="text-xs font-ui px-2.5 py-1 rounded-vds-md bg-surface border border-line text-warning hover:bg-surface-warning font-semibold cursor-pointer transition-colors"
                       >
                         +3 ngày
                       </button>
@@ -1074,7 +1110,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                           d.setDate(d.getDate() + 7);
                           setDueDate(getTodayDateString(d));
                         }}
-                        className="text-xs font-ui px-2.5 py-1 rounded-[4px] bg-white border border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7] font-semibold cursor-pointer shadow-2xs transition-colors"
+                        className="text-xs font-ui px-2.5 py-1 rounded-vds-md bg-surface border border-line text-warning hover:bg-surface-warning font-semibold cursor-pointer transition-colors"
                       >
                         +1 tuần
                       </button>
@@ -1103,16 +1139,16 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         (e.target as any).showPicker?.();
                       } catch (_) {}
                     }}
-                    className={`w-full text-xs font-ui p-2.5 border rounded-[6px] text-[#202020] cursor-pointer ${
-                      !dueDate ? 'border-[#fde68a] bg-[#fffdfa]' : 'border-[#d6d6d6] bg-white'
+                    className={`w-full text-xs font-ui p-2.5 border rounded-vds-lg text-ink cursor-pointer ${
+                      !dueDate ? 'border-line bg-surface-100' : 'border-line bg-surface'
                     }`}
                   />
                   {dueDate ? (
-                    <p className="text-[11px] text-[#71717a] font-ui pt-0.5 select-none hover:text-[#202020]">
-                      Hiển thị chuẩn: <strong className="text-[#202020]">{formatDateWithEnDay(dueDate)}</strong>
+                    <p className="text-xs text-subdued font-ui pt-0.5 select-none hover:text-ink">
+                      Hiển thị chuẩn: <strong className="text-ink">{formatDateWithEnDay(dueDate)}</strong>
                     </p>
                   ) : (
-                    <p className="text-[11px] text-[#b45309] font-ui pt-0.5 select-none">
+                    <p className="text-xs text-warning font-ui pt-0.5 select-none">
                       * Bấm vào ô trên hoặc chọn nhanh các nút gợi ý để đặt hạn hoàn thành.
                     </p>
                   )}
@@ -1122,12 +1158,12 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
             {/* 9. Ưu tiên = Khẩn cấp (Checkbox) */}
             <div className="pt-1">
-              <label className="inline-flex items-center gap-2 cursor-pointer font-ui text-xs font-bold text-[#202020]">
+              <label className="inline-flex items-center gap-2 cursor-pointer font-ui text-xs font-bold text-ink">
                 <input
                   type="checkbox"
                   checked={priority === 'Khẩn cấp'}
                   onChange={(e) => setPriority(e.target.checked ? 'Khẩn cấp' : 'Bình thường')}
-                  className="w-4 h-4 text-[#b13460] rounded border-[#d6d6d6] focus:ring-[#b13460] cursor-pointer"
+                  className="w-4 h-4 text-accent rounded border-line focus:ring-line-accent cursor-pointer"
                 />
                 <span>Ưu tiên = Khẩn cấp (Cần ưu tiên thực hiện)</span>
               </label>
@@ -1135,23 +1171,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
             {/* 9.1 Quản lý Chu kỳ lặp lại (Chỉnh sửa / Tạm dừng / Xoá quy tắc) */}
             {task.isRecurring && (
-              <div className="p-3 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] space-y-2.5 text-xs font-ui animate-fade-in">
+              <div className="p-3 bg-surface-100 border border-line rounded-vds-lg space-y-2.5 text-xs font-ui animate-fade-in">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <RotateCw className="w-4 h-4 text-[#963861] shrink-0" />
+                    <RotateCw className="w-4 h-4 text-accent shrink-0" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#963861]">Công việc định kỳ</span>
-                        <span className="text-[10px] bg-[#963861] text-white px-1.5 py-0.2 rounded font-bold">
+                        <span className="font-bold text-accent">Công việc định kỳ</span>
+                        <span className="text-[10px] bg-accent-solid text-on-color px-1.5 py-0.2 rounded font-bold">
                           {task.recurringFrequency ? formatFrequencyLabel(task.recurringFrequency) : 'Chu kỳ'}
                         </span>
                         {associatedRecurringRule?.status === 'paused' && (
-                          <span className="text-[10px] bg-[#f4f4f5] text-[#71717a] border border-[#d4d4d8] px-1.5 py-0.2 rounded font-medium">
+                          <span className="text-[10px] bg-surface-200 text-subdued border border-line px-1.5 py-0.2 rounded font-medium">
                             Đang tạm dừng
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-[#52525b] mt-0.5 truncate">
+                      <p className="text-xs text-ink-lighter mt-0.5 truncate">
                         Tự động tạo lúc {associatedRecurringRule?.nextRunTime || '08:00'} · Chu kỳ tới: {associatedRecurringRule?.nextRunDate || 'Chưa định'}
                       </p>
                     </div>
@@ -1163,10 +1199,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       <button
                         type="button"
                         onClick={handleTogglePauseRecurringRule}
-                        className={`p-1.5 rounded-[4px] border transition-colors cursor-pointer text-xs flex items-center gap-1 ${
+                        className={`p-1.5 rounded-vds-md border transition-colors cursor-pointer text-xs flex items-center gap-1 ${
                           associatedRecurringRule.status === 'paused'
-                            ? 'border-[#bbf7d0] text-[#16a34a] hover:bg-[#f0fdf4]'
-                            : 'border-[#e4e4e7] text-[#52525b] hover:text-[#d97706] hover:bg-[#fffbeb]'
+                            ? 'border-line text-positive hover:bg-surface-positive'
+                            : 'border-line text-ink-lighter hover:text-warning hover:bg-surface-warning'
                         }`}
                         title={associatedRecurringRule.status === 'paused' ? 'Tiếp tục chạy quy tắc' : 'Tạm dừng quy tắc'}
                       >
@@ -1186,7 +1222,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       <button
                         type="button"
                         onClick={handleOpenEditRecurringRule}
-                        className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#3b82f6] text-[#52525b] hover:text-[#2563eb] hover:bg-[#eff6ff] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                        className="p-1.5 rounded-vds-md border border-line hover:border-line-info text-ink-lighter hover:text-info hover:bg-surface-info transition-colors cursor-pointer text-xs flex items-center gap-1"
                         title="Sửa chu kỳ hoặc ngày chạy"
                       >
                         <Edit2 className="w-3 h-3" />
@@ -1196,7 +1232,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       <button
                         type="button"
                         onClick={() => setIsDeletingRuleConfirmOpen(true)}
-                        className="p-1.5 rounded-[4px] border border-[#e4e4e7] hover:border-[#fda4af] text-[#52525b] hover:text-[#e11d48] hover:bg-[#fff1f2] transition-colors cursor-pointer text-xs flex items-center gap-1"
+                        className="p-1.5 rounded-vds-md border border-line hover:border-line text-ink-lighter hover:text-negative hover:bg-surface-negative transition-colors cursor-pointer text-xs flex items-center gap-1"
                         title="Xoá bỏ quy tắc lặp"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -1209,19 +1245,19 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             )}
 
             {/* 10. Bình luận & Trao đổi */}
-            <div className="p-4 bg-white rounded-[8px] border border-[#e2e8f0] space-y-3 shadow-2xs">
-              <div className="flex items-center justify-between gap-2 border-b border-[#f1f5f9] pb-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#0f172a]">
-                  <MessageSquare className="w-4 h-4 text-[#963861]" />
+            <div className="p-4 bg-surface rounded-vds-lg border border-line space-y-3 ">
+              <div className="flex items-center justify-between gap-2 border-b border-divider pb-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
+                  <MessageSquare className="w-4 h-4 text-accent" />
                   <span>Bình luận & Trao đổi</span>
                   {commentLogs.length > 0 && (
-                    <span className="text-[10px] font-ui font-bold px-1.5 py-0.2 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7]">
+                    <span className="text-[10px] font-ui font-bold px-1.5 py-0.2 rounded-full bg-surface-accent-faint text-accent border border-line">
                       {commentLogs.length}
                     </span>
                   )}
                 </div>
 
-                <span className="text-[10px] font-ui font-semibold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f4c2d7] inline-flex items-center gap-1">
+                <span className="text-[10px] font-ui font-semibold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line inline-flex items-center gap-1">
                   <AtSign className="w-3 h-3" />
                   <span>Gõ @ để tag nhân sự</span>
                 </span>
@@ -1239,10 +1275,10 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 />
 
                 <div className="flex items-center justify-between gap-2 pt-0.5">
-                  <div className="text-[11px] text-[#64748b] flex items-center gap-1">
-                    <User className="w-3 h-3 text-[#963861]" />
+                  <div className="text-xs text-subdued flex items-center gap-1">
+                    <User className="w-3 h-3 text-accent" />
                     <span>
-                      Người gửi: <strong className="text-[#0f172a]">{currentActorName}</strong>
+                      Người gửi: <strong className="text-ink">{currentActorName}</strong>
                     </span>
                   </div>
 
@@ -1250,7 +1286,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     type="button"
                     onClick={handleSendQuickComment}
                     disabled={!customUpdateNote.trim() || isSendingComment}
-                    className="px-3 py-1.5 bg-[#963861] hover:bg-[#7a2b4e] text-white rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors shadow-2xs cursor-pointer"
+                    className="px-3 py-1.5 bg-accent-solid hover:bg-accent-solid-hover text-on-color rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer"
                     title="Gửi bình luận ngay lập tức (Ctrl+Enter)"
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -1260,16 +1296,16 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
               </div>
 
               {/* Lịch sử trao đổi / bình luận */}
-              <div className="space-y-2 pt-2 border-t border-[#f1f5f9]">
-                <div className="flex items-center justify-between text-[11px] font-ui font-bold text-[#64748b]">
+              <div className="space-y-2 pt-2 border-t border-divider">
+                <div className="flex items-center justify-between text-xs font-ui font-bold text-subdued">
                   <span>Lịch sử trao đổi {commentLogs.length > 0 ? `(${commentLogs.length})` : ''}</span>
                   {commentLogs.length > 0 && (
-                    <span className="text-[10px] font-normal text-[#94a3b8]">Mới nhất trước</span>
+                    <span className="text-[10px] font-normal text-subdued-lighter">Mới nhất trước</span>
                   )}
                 </div>
 
                 {commentLogs.length === 0 ? (
-                  <div className="py-3 px-3 text-center bg-[#fafafa] rounded-[6px] border border-dashed border-[#e2e8f0] text-[11px] text-[#94a3b8]">
+                  <div className="py-3 px-3 text-center bg-surface-100 rounded-vds-lg border border-dashed border-line text-xs text-subdued-lighter">
                     Chưa có trao đổi nào. Nhập nội dung phía trên và gõ @ để tag đồng nghiệp.
                   </div>
                 ) : (
@@ -1277,23 +1313,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     {commentLogs.map((log) => (
                       <div
                         key={log.id}
-                        className="p-2.5 bg-[#f8fafc] rounded-[6px] border border-[#e2e8f0] space-y-1.5 text-xs hover:border-[#cbd5e1] transition-colors"
+                        className="p-2.5 bg-surface-100 rounded-vds-lg border border-line space-y-1.5 text-xs hover:border-line transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-[#0f172a] flex items-center gap-1.5 text-[11px]">
-                            <span className="w-5 h-5 rounded-full bg-[#963861] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                          <span className="font-bold text-ink flex items-center gap-1.5 text-xs">
+                            <span className="w-5 h-5 rounded-full bg-accent-solid text-on-color flex items-center justify-center text-[10px] font-bold shrink-0">
                               {log.author ? log.author.charAt(0).toUpperCase() : 'U'}
                             </span>
                             <span>{log.author}</span>
                           </span>
 
-                          <span className="text-[10px] text-[#94a3b8] font-ui flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5 text-[#94a3b8]" />
+                          <span className="text-[10px] text-subdued-lighter font-ui flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 text-subdued-lighter" />
                             <span>{formatLogTimestamp(log.timestamp)}</span>
                           </span>
                         </div>
 
-                        <div className="text-[#334155] font-body text-xs whitespace-pre-wrap leading-relaxed pl-6.5">
+                        <div className="text-ink-lighter font-body text-xs whitespace-pre-wrap leading-relaxed pl-6.5">
                           {renderCommentWithMentions(log.note || '', members)}
                         </div>
                       </div>
@@ -1307,25 +1343,25 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
         {/* Drawer Body - TAB 2: LOGS & HISTORY */}
         {activeDrawerTab === 'history' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm font-body bg-[#fafafa]">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm font-body bg-surface-100">
             {/* Cảnh báo kỷ luật & Xử lý Admin trên Tab Lịch sử */}
             {isAdmin && currentDiscipline && (status !== 'Hoàn thành' || !currentDiscipline.isOnTime) && (
-              <div className="bg-[#fffbeb] border border-[#fde68a] rounded-[8px] p-3.5 space-y-2.5">
+              <div className="bg-surface-warning border border-line rounded-vds-lg p-3.5 space-y-2.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#b45309]">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-[#b45309]" />
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-warning">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-warning" />
                       <span>
                         {status === 'Hoàn thành'
                           ? `Ghi nhận: Hoàn thành sau hạn (+${currentDiscipline.daysDiff} ngày)`
                           : `Công việc ${currentDiscipline.discipline === 'currently_overdue' ? `đang quá hạn ${currentDiscipline.daysDiff} ngày` : 'chưa hoàn thành'}`}
                       </span>
                     </div>
-                    <p className="text-[11px] text-[#78350f]">
+                    <p className="text-xs text-warning">
                       {status === 'Hoàn thành' ? (
-                        <>Thời điểm bấm: <strong className="text-[#451a03]">{formatLogTimestamp(completedAt || task?.completedAt, true)}</strong> (Hạn: {formatDateWithEnDay(dueDate)})</>
+                        <>Thời điểm bấm: <strong className="text-warning">{formatLogTimestamp(completedAt || task?.completedAt, true)}</strong> (Hạn: {formatDateWithEnDay(dueDate)})</>
                       ) : (
-                        <>Hạn công việc: <strong className="text-[#451a03]">{formatDateWithEnDay(dueDate)}</strong>. Admin có thể xác nhận đã hoàn thành từ trước.</>
+                        <>Hạn công việc: <strong className="text-warning">{formatDateWithEnDay(dueDate)}</strong>. Admin có thể xác nhận đã hoàn thành từ trước.</>
                       )}
                     </p>
                   </div>
@@ -1334,7 +1370,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     <button
                       type="button"
                       onClick={handleAdminConfirmOnTime}
-                      className="px-2.5 py-1 bg-[#15803d] hover:bg-[#166534] text-white rounded-[5px] text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                      className="px-2.5 py-1 bg-positive-solid hover:bg-positive-solid text-on-color rounded-vds-md text-xs font-ui font-bold flex items-center gap-1 transition-colors cursor-pointer "
                       title="Xác nhận nhân sự hoàn thành đúng hạn (đặt ngày hoàn thành theo ngày hạn)"
                     >
                       <Zap className="w-3.5 h-3.5" />
@@ -1351,17 +1387,17 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                         setAdminNoteInput('');
                         setShowAdminDateDialog(true);
                       }}
-                      className="px-2 py-1 bg-white hover:bg-[#f8fafc] text-[#334155] border border-[#cbd5e1] rounded-[5px] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      className="px-2 py-1 bg-surface hover:bg-surface-100 text-ink-lighter border border-line rounded-vds-md text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
                       title="Điều chỉnh ngày hoàn thành cụ thể"
                     >
-                      <Clock className="w-3 h-3 text-[#64748b]" />
+                      <Clock className="w-3 h-3 text-subdued" />
                       <span>Đổi ngày</span>
                     </button>
                   </div>
                 </div>
 
                 {adminSuccessMsg && (
-                  <div className="p-2 bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] text-xs font-bold rounded-[6px] flex items-center gap-1.5 animate-fade-in">
+                  <div className="p-2 bg-surface-positive border border-line text-positive text-xs font-bold rounded-vds-lg flex items-center gap-1.5 animate-fade-in">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>{adminSuccessMsg}</span>
                   </div>
@@ -1370,13 +1406,13 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             )}
 
             {/* Quick Add Manual Progress Note Box */}
-            <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-2xs space-y-3">
+            <div className="bg-surface p-4 rounded-vds-lg border border-line space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#202020]">
-                  <MessageSquare className="w-4 h-4 text-[#963861]" />
+                <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                  <MessageSquare className="w-4 h-4 text-accent" />
                   <span>Thêm bình luận / Trao đổi mới</span>
                 </div>
-                <span className="text-[10px] font-ui font-semibold text-[#963861] bg-[#fdf2f7] px-2 py-0.5 rounded border border-[#f4c2d7] inline-flex items-center gap-1">
+                <span className="text-[10px] font-ui font-semibold text-accent bg-surface-accent-faint px-2 py-0.5 rounded border border-line inline-flex items-center gap-1">
                   <AtSign className="w-3 h-3" />
                   <span>Gõ @ để tag</span>
                 </span>
@@ -1393,14 +1429,14 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 />
 
                 <div className="flex items-center justify-between gap-2 pt-0.5">
-                  <span className="text-[11px] text-[#5f5f5f]">
-                    Người gửi: <strong className="text-[#202020]">{currentActorName}</strong>
+                  <span className="text-xs text-ink-lighter">
+                    Người gửi: <strong className="text-ink">{currentActorName}</strong>
                   </span>
                   <button
                     type="button"
                     onClick={handleAddManualNote}
                     disabled={!newLogNote.trim()}
-                    className="px-3 py-1.5 bg-[#963861] hover:bg-[#7a2b4e] text-white rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer shadow-2xs"
+                    className="px-3 py-1.5 bg-accent-solid hover:bg-accent-solid-hover text-on-color rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer "
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Gửi bình luận</span>
@@ -1410,56 +1446,56 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
             </div>
 
             {/* Timeline History Header */}
-            <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
-              <span className="text-xs font-bold text-[#5f5f5f] uppercase tracking-wider">
+            <div className="flex items-center justify-between border-b border-line pb-2">
+              <span className="text-xs font-bold text-ink-lighter">
                 Nhật ký thay đổi chi tiết ({logList.length})
               </span>
-              <span className="text-[11px] text-[#7f7f7f]">
+              <span className="text-xs text-subdued">
                 Lưu lại tự động: Ai thay? Khi nào? Thay nội dung gì?
               </span>
             </div>
 
             {/* Timeline Entries */}
             {logList.length === 0 ? (
-              <div className="p-8 text-center bg-white rounded-[8px] border border-dashed border-[#d6d6d6] text-xs text-[#7f7f7f] space-y-1">
-                <History className="w-8 h-8 text-[#d6d6d6] mx-auto" />
+              <div className="p-8 text-center bg-surface rounded-vds-lg border border-dashed border-line text-xs text-subdued space-y-1">
+                <History className="w-8 h-8 text-icon-subdued mx-auto" />
                 <p className="font-bold">Chưa có lịch sử thay đổi</p>
                 <p>Các chỉnh sửa về trạng thái, thời hạn, người phụ trách sẽ tự động lưu lại tại đây.</p>
               </div>
             ) : (
-              <div className="space-y-4 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-[2px] before:bg-[#e2e8f0]">
+              <div className="space-y-4 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-[2px] before:bg-surface-300">
                 {logList.map((log) => (
                   <div
                     key={log.id}
                     className="relative pl-8 space-y-1.5 group"
                   >
                     {/* Timeline Node Icon */}
-                    <div className="absolute left-1.5 top-1 -translate-x-1/2 w-5 h-5 rounded-full bg-white border-2 border-[#b13460] flex items-center justify-center z-10 shadow-2xs">
-                      <Clock className="w-2.5 h-2.5 text-[#b13460]" />
+                    <div className="absolute left-1.5 top-1 -translate-x-1/2 w-5 h-5 rounded-full bg-surface border-2 border-line-accent flex items-center justify-center z-10 ">
+                      <Clock className="w-2.5 h-2.5 text-accent" />
                     </div>
 
                     {/* Log Card */}
-                    <div className="bg-white p-3.5 rounded-[8px] border border-[#e2e8f0] shadow-2xs space-y-2 hover:border-[#cbd5e1] transition-colors">
+                    <div className="bg-surface p-3.5 rounded-vds-lg border border-line space-y-2 hover:border-line transition-colors">
                       {/* Log Top Info */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f1f5f9] pb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-divider pb-2">
                         <div className="flex items-center gap-2">
                           {/* Author - Ai thay? */}
-                          <span className="font-bold text-xs text-[#0f172a] flex items-center gap-1">
-                            <User className="w-3 h-3 text-[#b13460]" />
+                          <span className="font-bold text-xs text-ink flex items-center gap-1">
+                            <User className="w-3 h-3 text-accent" />
                             {formatMemberWithPhone(log.author, members)}
                           </span>
 
-                          <span className="text-[#cbd5e1]">•</span>
+                          <span className="text-icon-subdued">•</span>
 
                           {/* Action Title */}
-                          <span className="text-[11px] font-bold text-[#3b82f6] bg-[#eff6ff] px-2 py-0.5 rounded-[4px] border border-[#bfdbfe]">
+                          <span className="text-xs font-bold text-info bg-surface-info px-2 py-0.5 rounded-vds-md border border-line">
                             {log.action}
                           </span>
                         </div>
 
                         {/* Timestamp - Khi nào? */}
-                        <span className="text-[11px] font-ui text-[#64748b] flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-[#94a3b8]" />
+                        <span className="text-xs font-ui text-subdued flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-subdued-lighter" />
                           {formatLogTimestamp(log.timestamp)}
                         </span>
                       </div>
@@ -1467,29 +1503,29 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       {/* Log Changes - Thay nội dung gì? */}
                       {log.changes && log.changes.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[11px] font-bold text-[#64748b] block">
+                          <span className="text-xs font-bold text-subdued block">
                             Chi tiết thay đổi:
                           </span>
                           <div className="space-y-1 text-xs">
                             {log.changes.map((c, idx) => (
                               <div
                                 key={idx}
-                                className="bg-[#f8fafc] p-2 rounded-[5px] border border-[#f1f5f9] flex flex-wrap items-center gap-2 text-xs"
+                                className="bg-surface-100 p-2 rounded-vds-md border border-divider flex flex-wrap items-center gap-2 text-xs"
                               >
-                                <span className="font-bold text-[#334155] min-w-[110px]">
+                                <span className="font-bold text-ink-lighter min-w-[110px]">
                                   {c.field}:
                                 </span>
 
                                 {c.oldValue !== undefined && (
                                   <>
-                                    <span className="line-through text-[#94a3b8] bg-[#f1f5f9] px-1.5 py-0.5 rounded text-[11px]">
+                                    <span className="line-through text-subdued-lighter bg-surface-200 px-1.5 py-0.5 rounded text-xs">
                                       {c.oldValue || '(Trống)'}
                                     </span>
-                                    <ArrowRight className="w-3 h-3 text-[#94a3b8]" />
+                                    <ArrowRight className="w-3 h-3 text-subdued-lighter" />
                                   </>
                                 )}
 
-                                <span className="font-bold text-[#0f172a] bg-[#e2e8f0] px-1.5 py-0.5 rounded text-[11px]">
+                                <span className="font-bold text-ink bg-surface-300 px-1.5 py-0.5 rounded text-xs">
                                   {c.newValue || '(Trống)'}
                                 </span>
                               </div>
@@ -1500,11 +1536,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
                       {/* Log Note / Comment */}
                       {log.note && (
-                        <div className="bg-[#fcf0f5] p-2.5 rounded-[6px] border border-[#fbd3e1] text-xs text-[#832e52] mt-2 space-y-1">
-                          <span className="font-bold block text-[11px] text-[#963861]">
+                        <div className="bg-surface-accent-faint p-2.5 rounded-vds-lg border border-line text-xs text-accent mt-2 space-y-1">
+                          <span className="font-bold block text-xs text-accent">
                             {log.action === 'Bình luận' ? 'Nội dung bình luận:' : 'Ghi chú / Bình luận:'}
                           </span>
-                          <div className="whitespace-pre-wrap leading-relaxed text-[#334155]">
+                          <div className="whitespace-pre-wrap leading-relaxed text-ink-lighter">
                             {renderCommentWithMentions(log.note, members)}
                           </div>
                         </div>
@@ -1518,40 +1554,34 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         )}
 
         {/* Drawer Footer */}
-        <div className="p-4 border-t border-[#e6e6e6] bg-[#fafafa] flex items-center justify-between">
+        <div className="p-4 border-t border-line bg-surface-100 flex items-center justify-between">
           <div>
             {userCanDelete && (
-              <button
+              <VdsButton
+                variant="negative-uncontained"
+                size="sm"
+                iconLeft="Delete"
                 onClick={() => {
                   setIsPermanentDeleteTask(false);
                   setIsDeleteTaskModalOpen(true);
                 }}
-                className="text-xs font-ui font-bold text-[#da1e28] hover:bg-[#fff0f1] px-3 py-2 rounded-[6px] transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Xoá</span>
-              </button>
+                Xoá
+              </VdsButton>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-[#d6d6d6] bg-white text-[#202020] text-xs font-ui font-bold rounded-[6px] hover:bg-[#ececec] cursor-pointer"
-            >
+            <VdsButton variant="ghost" size="sm" onClick={onClose}>
               Đóng
-            </button>
+            </VdsButton>
             {activeDrawerTab === 'details' && (
               userCanEdit ? (
-                <button
-                  onClick={handleSave}
-                  className="px-5 py-2 bg-[#b13460] text-white text-xs font-ui font-bold rounded-[6px] hover:bg-[#8f274c] transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Lưu thay đổi</span>
-                </button>
+                <VdsButton variant="accent" size="sm" iconLeft="Checkmark" onClick={handleSave}>
+                  Lưu thay đổi
+                </VdsButton>
               ) : (
-                <span className="text-xs text-[#71717a] font-ui bg-[#f4f4f5] px-2.5 py-1.5 rounded-[6px] border border-[#e4e4e7]">
+                <span className="text-xs text-subdued font-ui bg-surface-200 px-2.5 py-1.5 rounded-vds-lg border border-line">
                   🔒 Chế độ xem (Không có quyền sửa)
                 </span>
               )
@@ -1562,16 +1592,16 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Modal Admin điều chỉnh ngày hoàn thành */}
         {showAdminDateDialog && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
-            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
-              <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+            <div className="bg-surface rounded-vds-lg border border-line shadow-sheet w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center justify-between border-b border-divider pb-3">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#963861]" />
-                  <h3 className="font-bold text-sm text-[#202020]">Điều chỉnh thời điểm hoàn thành</h3>
+                  <Clock className="w-4 h-4 text-accent" />
+                  <h3 className="font-bold text-sm text-ink">Điều chỉnh thời điểm hoàn thành</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAdminDateDialog(false)}
-                  className="p-1 text-[#71717a] hover:text-[#202020] rounded-[6px] hover:bg-[#f4f4f5] cursor-pointer"
+                  className="p-1 text-subdued hover:text-ink rounded-vds-lg hover:bg-surface-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1579,45 +1609,45 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               <div className="space-y-3 text-xs">
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Ngày hoàn thành thực tế:
                   </label>
                   <input
                     type="date"
                     value={adminDateInput}
                     onChange={(e) => setAdminDateInput(e.target.value)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                   />
                   {adminDateInput && (
-                    <p className="text-[11px] text-[#71717a] pt-0.5">
+                    <p className="text-xs text-subdued pt-0.5">
                       Hiển thị: <strong>{formatDateWithEnDay(adminDateInput)}</strong>
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Giờ hoàn thành:
                   </label>
                   <input
                     type="time"
                     value={adminTimeInput}
                     onChange={(e) => setAdminTimeInput(e.target.value)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                   />
                 </div>
 
                 {/* Ô nhập Link kết quả */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-[#5f5f5f] block">
+                    <label className="font-bold text-ink-lighter block">
                       Link kết quả hoàn thành:
                     </label>
                     {workLink && !adminResultLinkInput && (
                       <button
                         type="button"
                         onClick={() => setAdminResultLinkInput(workLink)}
-                        className="text-[11px] text-[#963861] hover:underline cursor-pointer"
+                        className="text-xs text-accent hover:underline cursor-pointer"
                       >
                         Dùng link làm việc
                       </button>
@@ -1628,15 +1658,15 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     value={adminResultLinkInput}
                     onChange={(e) => setAdminResultLinkInput(e.target.value)}
                     placeholder="https://figma.com/... hoặc vnexpress.net/..."
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                   />
-                  <p className="text-[10px] text-[#963861]">
+                  <p className="text-[10px] text-accent">
                     * Lưu ý: Đảm bảo các thành viên Product có thể truy cập link.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Ghi chú xác nhận của Admin:
                   </label>
                   <input
@@ -1644,23 +1674,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     value={adminNoteInput}
                     onChange={(e) => setAdminNoteInput(e.target.value)}
                     placeholder="Lý do xác nhận (ví dụ: Thành viên xong hôm trước nhưng quên bấm)"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setShowAdminDateDialog(false)}
-                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                  className="px-3 py-1.5 border border-line text-ink-lighter hover:text-ink rounded-vds-lg text-xs font-bold cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   type="button"
                   onClick={handleAdminSaveCustomDate}
-                  className="px-3.5 py-1.5 bg-[#963861] hover:bg-[#802f52] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                  className="px-3.5 py-1.5 bg-accent-solid hover:bg-accent-solid-hover text-on-color rounded-vds-lg text-xs font-bold cursor-pointer "
                 >
                   Lưu & Cập nhật kỷ luật
                 </button>
@@ -1672,16 +1702,16 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Modal Chỉnh sửa Quy tắc Chu kỳ từ Task Drawer */}
         {isEditingRuleModalOpen && associatedRecurringRule && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
-            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
-              <div className="flex items-center justify-between border-b border-[#f0f0f0] pb-3">
+            <div className="bg-surface rounded-vds-lg border border-line shadow-sheet w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center justify-between border-b border-divider pb-3">
                 <div className="flex items-center gap-2">
-                  <RotateCw className="w-4 h-4 text-[#963861]" />
-                  <h3 className="font-bold text-sm text-[#202020]">Chỉnh sửa Quy tắc Chu kỳ</h3>
+                  <RotateCw className="w-4 h-4 text-accent" />
+                  <h3 className="font-bold text-sm text-ink">Chỉnh sửa Quy tắc Chu kỳ</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsEditingRuleModalOpen(false)}
-                  className="p-1 text-[#71717a] hover:text-[#202020] rounded-[6px] hover:bg-[#f4f4f5] cursor-pointer"
+                  className="p-1 text-subdued hover:text-ink rounded-vds-lg hover:bg-surface-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1689,13 +1719,13 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
               <form onSubmit={handleSaveRecurringRuleUpdates} className="space-y-3 text-xs">
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Tần suất lặp lại:
                   </label>
                   <select
                     value={ruleModalFreq}
                     onChange={(e) => setRuleModalFreq(e.target.value as RecurrenceFrequency)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui bg-white font-semibold text-[#963861]"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui bg-surface font-semibold text-accent"
                   >
                     <option value="weekly">Hàng tuần (Weekly)</option>
                     <option value="biweekly">2 tuần một lần (Biweekly)</option>
@@ -1704,7 +1734,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Ngày chạy chu kỳ tiếp theo:
                   </label>
                   <input
@@ -1712,23 +1742,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     required
                     value={ruleModalNextRunDate}
                     onChange={(e) => setRuleModalNextRunDate(e.target.value)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                   />
                   {ruleModalNextRunDate && (
-                    <p className="text-[11px] text-[#71717a] pt-0.5">
+                    <p className="text-xs text-subdued pt-0.5">
                       Dự kiến tạo tiếp: <strong>{formatDateWithEnDay(ruleModalNextRunDate)}</strong> lúc {associatedRecurringRule.nextRunTime || '08:00'}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-[#5f5f5f] block">
+                  <label className="font-bold text-ink-lighter block">
                     Kết thúc lặp:
                   </label>
                   <select
                     value={ruleModalEndType}
                     onChange={(e) => setRuleModalEndType(e.target.value as RecurrenceEndType)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui bg-white"
+                    className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui bg-surface"
                   >
                     <option value="never">Không bao giờ (Never)</option>
                     <option value="specific_date">Chọn ngày kết thúc</option>
@@ -1736,8 +1766,8 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 </div>
 
                 {ruleModalEndType === 'specific_date' && (
-                  <div className="space-y-1 p-2.5 bg-[#fafafa] rounded-[6px] border border-[#e4e4e7]">
-                    <label className="font-bold text-[#5f5f5f] block">
+                  <div className="space-y-1 p-2.5 bg-surface-100 rounded-vds-lg border border-line">
+                    <label className="font-bold text-ink-lighter block">
                       Ngày kết thúc:
                     </label>
                     <input
@@ -1745,22 +1775,22 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                       required
                       value={ruleModalEndDate}
                       onChange={(e) => setRuleModalEndDate(e.target.value)}
-                      className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-xs font-ui"
+                      className="w-full p-2 border border-line rounded-vds-lg text-xs font-ui"
                     />
                   </div>
                 )}
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
                   <button
                     type="button"
                     onClick={() => setIsEditingRuleModalOpen(false)}
-                    className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                    className="px-3 py-1.5 border border-line text-ink-lighter hover:text-ink rounded-vds-lg text-xs font-bold cursor-pointer"
                   >
                     Huỷ
                   </button>
                   <button
                     type="submit"
-                    className="px-3.5 py-1.5 bg-[#963861] hover:bg-[#802f52] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                    className="px-3.5 py-1.5 bg-accent-solid hover:bg-accent-solid-hover text-on-color rounded-vds-lg text-xs font-bold cursor-pointer "
                   >
                     Lưu thay đổi
                   </button>
@@ -1773,28 +1803,28 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Modal Xác nhận Xoá Quy tắc Chu kỳ từ Task Drawer */}
         {isDeletingRuleConfirmOpen && associatedRecurringRule && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
-            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
-              <div className="flex items-center gap-2 text-[#e11d48]">
+            <div className="bg-surface rounded-vds-lg border border-line shadow-sheet w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center gap-2 text-negative">
                 <Trash2 className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-sm text-[#202020]">Xoá Quy tắc Lặp chu kỳ?</h3>
+                <h3 className="font-bold text-sm text-ink">Xoá Quy tắc Lặp chu kỳ?</h3>
               </div>
 
-              <p className="text-xs text-[#52525b] leading-relaxed">
+              <p className="text-xs text-ink-lighter leading-relaxed">
                 Hệ thống sẽ dừng hoàn toàn và xoá vĩnh viễn quy tắc lặp <strong>"{associatedRecurringRule.title}"</strong>. Không tự động tạo thêm công việc mới trong tương lai.
               </p>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setIsDeletingRuleConfirmOpen(false)}
-                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                  className="px-3 py-1.5 border border-line text-ink-lighter hover:text-ink rounded-vds-lg text-xs font-bold cursor-pointer"
                 >
                   Huỷ
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmDeleteRecurringRule}
-                  className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                  className="px-3.5 py-1.5 bg-negative-solid hover:bg-negative-solid text-on-color rounded-vds-lg text-xs font-bold cursor-pointer "
                 >
                   Xác nhận xoá
                 </button>
@@ -1806,36 +1836,36 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Modal Xác nhận Xoá Task kèm tùy chọn Xoá vĩnh viễn */}
         {isDeleteTaskModalOpen && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-2xs animate-fade-in">
-            <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-sm p-5 space-y-4 font-ui">
-              <div className="flex items-center gap-2 text-[#e11d48]">
+            <div className="bg-surface rounded-vds-lg border border-line shadow-sheet w-full max-w-sm p-5 space-y-4 font-ui">
+              <div className="flex items-center gap-2 text-negative">
                 <Trash2 className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-sm text-[#202020]">Xác nhận xoá công việc</h3>
+                <h3 className="font-bold text-sm text-ink">Xác nhận xoá công việc</h3>
               </div>
 
-              <p className="text-xs text-[#52525b] leading-relaxed">
+              <p className="text-xs text-ink-lighter leading-relaxed">
                 Bạn có chắc chắn muốn xoá công việc <strong>"{task.title}"</strong>?
               </p>
 
-              <label className="flex items-start gap-2.5 p-2.5 rounded-[8px] bg-[#fff1f2]/60 border border-[#fecdd3] cursor-pointer hover:bg-[#fff1f2] transition-colors select-none">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-vds-lg bg-surface-negative/60 border border-line cursor-pointer hover:bg-surface-negative transition-colors select-none">
                 <input
                   type="checkbox"
                   checked={isPermanentDeleteTask}
                   onChange={(e) => setIsPermanentDeleteTask(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-[#e11d48] border-[#f43f5e] focus:ring-[#e11d48] cursor-pointer"
+                  className="mt-0.5 w-4 h-4 rounded text-negative border-line-negative focus:ring-line-negative cursor-pointer"
                 />
                 <div className="text-xs">
-                  <span className="font-bold text-[#be123c] block">Xoá vĩnh viễn</span>
-                  <span className="text-[11px] text-[#71717a] block leading-tight">
+                  <span className="font-bold text-negative block">Xoá vĩnh viễn</span>
+                  <span className="text-xs text-subdued block leading-tight">
                     Xoá thẳng khỏi hệ thống, không lưu vào Thùng rác
                   </span>
                 </div>
               </label>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setIsDeleteTaskModalOpen(false)}
-                  className="px-3 py-1.5 border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] rounded-[6px] text-xs font-bold cursor-pointer"
+                  className="px-3 py-1.5 border border-line text-ink-lighter hover:text-ink rounded-vds-lg text-xs font-bold cursor-pointer"
                 >
                   Huỷ
                 </button>
@@ -1846,7 +1876,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                     setIsDeleteTaskModalOpen(false);
                     onClose();
                   }}
-                  className="px-3.5 py-1.5 bg-[#e11d48] hover:bg-[#be123c] text-white rounded-[6px] text-xs font-bold cursor-pointer shadow-2xs"
+                  className="px-3.5 py-1.5 bg-negative-solid hover:bg-negative-solid text-on-color rounded-vds-lg text-xs font-bold cursor-pointer "
                 >
                   {isPermanentDeleteTask ? 'Xoá vĩnh viễn' : 'Xoá công việc'}
                 </button>

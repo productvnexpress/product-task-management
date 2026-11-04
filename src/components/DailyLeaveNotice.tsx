@@ -8,7 +8,7 @@ import { MemberItem, MemberLeaveItem, LeaveSession, HolidayItem } from '../types
 import { workingTimeService } from '../services/workingTimeService';
 import { getTodayDateString } from '../utils/dateUtils';
 import { formatDateWithEnDay } from '../utils/formatters';
-import { CheckCircle2, ChevronDown, ChevronUp, UserX, Calendar } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, UserX, Calendar } from './vds/icons';
 
 /**
  * Hook tổng hợp danh sách nghỉ phép và kỳ nghỉ lễ sắp tới của nhân sự Product
@@ -152,28 +152,28 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
   // 2. Nếu không có các box khác (isSingleLine = true): Thu gọn thành 1 dòng duy nhất để tiết kiệm diện tích
   if (isSingleLine) {
     return (
-      <div className="bg-[#fffdfd] border border-[#f3c2d4] rounded-[8px] px-3.5 py-2 shadow-2xs text-xs font-ui flex items-center justify-between gap-3 min-h-[38px] transition-all">
+      <div className="bg-surface-100 border border-line rounded-vds-lg px-3.5 py-2 text-xs font-ui flex items-center justify-between gap-3 min-h-[38px] transition">
         <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
-          <div className="w-5 h-5 rounded-full bg-[#963861]/12 text-[#963861] flex items-center justify-center shrink-0">
-            <UserX className="w-3 h-3 text-[#963861]" />
+          <div className="w-5 h-5 rounded-full bg-accent-solid/12 text-accent flex items-center justify-center shrink-0">
+            <UserX className="w-3 h-3 text-accent" />
           </div>
 
-          <span className="font-title font-bold text-[#963861] shrink-0 text-xs">
+          <span className="font-title font-bold text-accent shrink-0 text-xs">
             Lịch nghỉ:
           </span>
 
           {hasTodayLeaves && (
             <div className="flex items-center gap-1.5 min-w-0 truncate">
-              <span className="text-[#963861] font-semibold shrink-0">Hôm nay:</span>
-              <div className="flex items-center gap-1 text-[#202020] truncate">
+              <span className="text-accent font-semibold shrink-0">Hôm nay:</span>
+              <div className="flex items-center gap-1 text-ink truncate">
                 {todayLeaves.map((l, idx) => {
                   const mObj = productMemberMap.get((l.memberName || '').trim().toLowerCase());
                   const displayName = mObj ? getMemberDisplayName(mObj) : l.memberName;
                   return (
                     <span key={l.id} className="inline-flex items-center">
-                      <strong className="font-semibold text-[#202020]">{displayName}</strong>
-                      <span className="text-[#71717a]">{renderSessionText(l.session)}</span>
-                      {idx < todayLeaves.length - 1 && <span className="text-[#d4d4d8] mx-1">•</span>}
+                      <strong className="font-semibold text-ink">{displayName}</strong>
+                      <span className="text-subdued">{renderSessionText(l.session)}</span>
+                      {idx < todayLeaves.length - 1 && <span className="text-icon-subdued mx-1">•</span>}
                     </span>
                   );
                 })}
@@ -181,11 +181,11 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
             </div>
           )}
 
-          {hasTodayLeaves && hasUpcomingLeaves && <span className="text-[#d4d4d8] mx-1 shrink-0">•</span>}
+          {hasTodayLeaves && hasUpcomingLeaves && <span className="text-icon-subdued mx-1 shrink-0">•</span>}
 
           {hasUpcomingLeaves && (
-            <div className="flex items-center gap-1.5 min-w-0 truncate text-[#52525b]">
-              <span className="font-semibold text-[#52525b] shrink-0">3 ngày tới:</span>
+            <div className="flex items-center gap-1.5 min-w-0 truncate text-ink-lighter">
+              <span className="font-semibold text-ink-lighter shrink-0">3 ngày tới:</span>
               <div className="flex items-center gap-1 truncate">
                 {upcomingLeaves.map((item, idx) => {
                   const displayName = item.memberObj
@@ -194,9 +194,9 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
                   const dateStr = formatLeaveDate(item.date, item.leave.session);
                   return (
                     <span key={`${item.leave.id}-${item.date}`} className="inline-flex items-center">
-                      <span className="text-[#202020] font-medium">{displayName}</span>
-                      <span className="text-[#71717a] ml-0.5">({dateStr})</span>
-                      {idx < upcomingLeaves.length - 1 && <span className="text-[#d4d4d8] mx-1">•</span>}
+                      <span className="text-ink font-medium">{displayName}</span>
+                      <span className="text-subdued ml-0.5">({dateStr})</span>
+                      {idx < upcomingLeaves.length - 1 && <span className="text-icon-subdued mx-1">•</span>}
                     </span>
                   );
                 })}
@@ -214,46 +214,46 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
     : `Lịch nghỉ: ${upcomingLeaves.length} sắp nghỉ`;
 
   return (
-    <div className="h-full flex flex-col bg-[#fffdfd] border border-[#f3c2d4] rounded-[10px] shadow-2xs overflow-hidden transition-all text-xs font-ui">
+    <div className="h-full flex flex-col bg-surface-100 border border-line rounded-vds-lg overflow-hidden transition text-xs font-ui">
       {/* Header Banner - Tông hồng nhẹ VnExpress, min-h-[44px] đồng bộ */}
       <div
-        className="px-3.5 py-2.5 bg-[#fdf4f8] flex items-center justify-between gap-2 cursor-pointer select-none min-h-[44px] border-b border-[#f8d7e3]"
+        className="px-3.5 py-2.5 bg-surface-accent-faint flex items-center justify-between gap-2 cursor-pointer select-none min-h-[44px] border-b border-line"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-full bg-[#963861]/12 text-[#963861] flex items-center justify-center shrink-0">
-            <UserX className="w-3.5 h-3.5 text-[#963861]" />
+          <div className="w-6 h-6 rounded-full bg-accent-solid/12 text-accent flex items-center justify-center shrink-0">
+            <UserX className="w-3.5 h-3.5 text-accent" />
           </div>
-          <h4 className="font-title text-[13px] font-semibold text-[#963861] truncate">
+          <h4 className="font-title text-[13px] font-semibold text-accent truncate">
             {headerTitle}
           </h4>
         </div>
 
         <button
           type="button"
-          className="p-1 text-[#963861] hover:bg-[#fae6ee] rounded-[4px] transition-colors shrink-0 cursor-pointer"
+          className="p-1 text-accent hover:bg-surface-accent rounded-vds-md transition-colors shrink-0 cursor-pointer"
           title={isExpanded ? 'Thu gọn' : 'Mở rộng'}
         >
           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Body: Đồng bộ chiều cao flex-1, border-t border-[#f8d7e3], padding px-3.5 py-2.5 */}
+      {/* Body: Đồng bộ chiều cao flex-1, border-t border-line, padding px-3.5 py-2.5 */}
       {isExpanded && (
-        <div className="flex-1 px-3.5 py-2.5 bg-white space-y-2 flex flex-col justify-start">
+        <div className="flex-1 px-3.5 py-2.5 bg-surface space-y-2 flex flex-col justify-start">
           {/* Dòng 1: Hôm nay (chỉ hiện nếu có người nghỉ hôm nay) */}
           {hasTodayLeaves && (
             <div className="text-xs leading-relaxed">
-              <div className="text-[#963861] font-bold mb-0.5">Hôm nay:</div>
-              <div className="flex flex-wrap items-center gap-1 text-[#202020]">
+              <div className="text-accent font-bold mb-0.5">Hôm nay:</div>
+              <div className="flex flex-wrap items-center gap-1 text-ink">
                 {todayLeaves.map((l, idx) => {
                   const mObj = productMemberMap.get((l.memberName || '').trim().toLowerCase());
                   const displayName = mObj ? getMemberDisplayName(mObj) : l.memberName;
                   return (
                     <span key={l.id} className="inline-flex items-center">
-                      <span className="text-[#202020] font-normal">{displayName}</span>
-                      <span className="text-[#71717a]">{renderSessionText(l.session)}</span>
-                      {idx < todayLeaves.length - 1 && <span className="text-[#d4d4d8] mx-1">•</span>}
+                      <span className="text-ink font-normal">{displayName}</span>
+                      <span className="text-subdued">{renderSessionText(l.session)}</span>
+                      {idx < todayLeaves.length - 1 && <span className="text-icon-subdued mx-1">•</span>}
                     </span>
                   );
                 })}
@@ -263,8 +263,8 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
 
           {/* Dòng 2: 3 ngày làm việc tới (chỉ hiện nếu có người sắp nghỉ) */}
           {hasUpcomingLeaves && (
-            <div className={`text-xs leading-relaxed ${hasTodayLeaves ? 'pt-1.5 border-t border-[#f4f4f5]' : ''}`}>
-              <div className="text-[#52525b] font-bold mb-0.5">3 ngày tới:</div>
+            <div className={`text-xs leading-relaxed ${hasTodayLeaves ? 'pt-1.5 border-t border-divider' : ''}`}>
+              <div className="text-ink-lighter font-bold mb-0.5">3 ngày tới:</div>
               <div className="space-y-1">
                 {upcomingLeaves.map((item) => {
                   const displayName = item.memberObj
@@ -274,8 +274,8 @@ export const DailyLeaveNotice: React.FC<DailyLeaveNoticeProps> = ({
 
                   return (
                     <div key={`${item.leave.id}-${item.date}`} className="text-xs leading-snug">
-                      <span className="text-[#202020] font-normal">{displayName}</span>
-                      <span className="text-[#71717a] ml-1">({dateStr})</span>
+                      <span className="text-ink font-normal">{displayName}</span>
+                      <span className="text-subdued ml-1">({dateStr})</span>
                     </div>
                   );
                 })}

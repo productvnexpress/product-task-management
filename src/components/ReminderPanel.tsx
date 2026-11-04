@@ -27,7 +27,7 @@ import {
   Flame,
   CheckCircle2,
   Filter,
-} from 'lucide-react';
+} from './vds/icons';
 
 interface ReminderPanelProps {
   tasks: TaskItem[];
@@ -116,26 +116,26 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden transition-all">
+    <div className="bg-surface rounded-vds-lg border border-line overflow-hidden transition">
       {/* Quick Filter Selector Tabs Bar */}
-      <div className="bg-[#f8f9fa] px-4 py-2.5 border-b border-[#e0e0e0] flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-surface-100 px-4 py-2.5 border-b border-line flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1">
-          <span className="text-xs font-ui text-[#5f5f5f] mr-1 flex items-center gap-1 font-bold shrink-0">
-            <Filter className="w-3.5 h-3.5 text-[#5f5f5f]" />
+          <span className="text-xs font-ui text-ink-lighter mr-1 flex items-center gap-1 font-bold shrink-0">
+            <Filter className="w-3.5 h-3.5 text-ink-lighter" />
             Lọc thời hạn:
           </span>
 
         {/* Option 1: Tất cả */}
         <button
           onClick={() => onSelectDueFilter('all')}
-          className={`px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+          className={`px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 transition shrink-0 ${
             activeDueFilter === 'all'
-              ? 'bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] shadow-2xs'
-              : 'bg-white text-[#5f5f5f] border border-[#d6d6d6] hover:bg-[#f8fafc]'
+              ? 'bg-surface-200 text-ink border border-line '
+              : 'bg-surface text-ink-lighter border border-line hover:bg-surface-100'
           }`}
         >
           <span>Tất cả</span>
-          <span className={`text-[10px] font-num px-1.5 py-0.2 rounded-full ${activeDueFilter === 'all' ? 'bg-[#e2e8f0] text-[#334155]' : 'bg-[#f0f0f0] text-[#7f7f7f]'}`}>
+          <span className={`text-[10px] font-num px-1.5 py-0.2 rounded-full ${activeDueFilter === 'all' ? 'bg-surface-300 text-ink-lighter' : 'bg-surface-200 text-subdued'}`}>
             {tasks.length}
           </span>
         </button>
@@ -143,12 +143,12 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
         {/* Option 2: Cần hoàn thành trong ngày (Today) */}
         <button
           onClick={() => onSelectDueFilter('today')}
-          className={`px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+          className={`px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 transition shrink-0 ${
             activeDueFilter === 'today'
-              ? 'bg-[#ea580c] text-white shadow-2xs'
+              ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
               : todayTasks.length > 0
-              ? 'bg-[#fff7ed] text-[#ea580c] border border-[#ffedd5] hover:bg-[#ffedd5]'
-              : 'bg-white text-[#5f5f5f] border border-[#d6d6d6] hover:bg-[#f0f0f0]'
+              ? 'bg-surface-warning text-warning border border-line hover:bg-surface-warning'
+              : 'bg-surface text-ink-lighter border border-line hover:bg-surface-200'
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
@@ -156,8 +156,8 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
           <span
             className={`text-[10px] font-num px-1.5 py-0.2 rounded-full font-extrabold ${
               activeDueFilter === 'today'
-                ? 'bg-white/25 text-white'
-                : 'bg-[#ea580c] text-white'
+                ? 'bg-surface/25 text-on-color'
+                : 'bg-warning-solid text-on-color'
             }`}
           >
             {todayTasks.length}
@@ -167,12 +167,12 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
         {/* Option 3: Quá hạn (Overdue) */}
         <button
           onClick={() => onSelectDueFilter('overdue')}
-          className={`px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+          className={`px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 transition shrink-0 ${
             activeDueFilter === 'overdue'
-              ? 'bg-[#da1e28] text-white shadow-2xs'
+              ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
               : overdueTasks.length > 0
-              ? 'bg-[#fff0f1] text-[#da1e28] border border-[#fbd3d6] hover:bg-[#fbd3d6]/50'
-              : 'bg-white text-[#5f5f5f] border border-[#d6d6d6] hover:bg-[#f0f0f0]'
+              ? 'bg-surface-negative text-negative border border-line hover:bg-surface-negative/50'
+              : 'bg-surface text-ink-lighter border border-line hover:bg-surface-200'
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
@@ -180,8 +180,8 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
           <span
             className={`text-[10px] font-num px-1.5 py-0.2 rounded-full font-extrabold ${
               activeDueFilter === 'overdue'
-                ? 'bg-white/25 text-white'
-                : 'bg-[#da1e28] text-white'
+                ? 'bg-surface/25 text-on-color'
+                : 'bg-negative-solid text-on-color'
             }`}
           >
             {overdueTasks.length}
@@ -191,12 +191,12 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
         {/* Option 4: Sắp đến hạn (Soon - 3 days) */}
         <button
           onClick={() => onSelectDueFilter('soon')}
-          className={`px-3 py-1.5 rounded-[6px] text-xs font-ui font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+          className={`px-3 py-1.5 rounded-vds-lg text-xs font-ui font-bold flex items-center gap-1.5 transition shrink-0 ${
             activeDueFilter === 'soon'
-              ? 'bg-[#ca8a04] text-white shadow-2xs'
+              ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
               : soonTasks.length > 0
-              ? 'bg-[#fefce8] text-[#ca8a04] border border-[#fef08a] hover:bg-[#fef08a]/50'
-              : 'bg-white text-[#5f5f5f] border border-[#d6d6d6] hover:bg-[#f0f0f0]'
+              ? 'bg-surface-warning text-warning border border-line hover:bg-warning-solid/50'
+              : 'bg-surface text-ink-lighter border border-line hover:bg-surface-200'
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />
@@ -204,8 +204,8 @@ export const ReminderPanel: React.FC<ReminderPanelProps> = ({
           <span
             className={`text-[10px] font-num px-1.5 py-0.2 rounded-full font-extrabold ${
               activeDueFilter === 'soon'
-                ? 'bg-white/25 text-white'
-                : 'bg-[#ca8a04] text-white'
+                ? 'bg-surface/25 text-on-color'
+                : 'bg-warning-solid text-on-color'
             }`}
           >
             {soonTasks.length}

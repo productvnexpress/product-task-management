@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   TaskItem,
@@ -39,18 +39,17 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { ActiveFiltersBar } from './components/ActiveFiltersBar';
 import { QuickAddBar } from './components/QuickAddBar';
+import { TaskViewBar, GroupModeTabs, QuickView } from './components/tasks/TaskViewBar';
+import { TaskGroupMode, groupTasksByDue, sortTasksByUrgency, DueBucketKey } from './utils/taskViewUtils';
 import { MobileQuickAddDrawer } from './components/MobileQuickAddDrawer';
+import { CommandPalette, PaletteCommand } from './components/CommandPalette';
+import { MobileTabBar } from './components/MobileTabBar';
+import { UndoToast, UndoToastState } from './components/UndoToast';
 import { TaskItemRow } from './components/TaskItemRow';
 import { TaskDetailDrawer } from './components/TaskDetailDrawer';
-import { ProjectDetailsDrawer } from './components/ProjectDetailsDrawer';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { NotificationToastContainer } from './components/NotificationToastContainer';
 import { WebPushPromptBanner } from './components/WebPushPromptBanner';
-import { ProjectsManager } from './components/ProjectsManager';
-import { MembersManager } from './components/MembersManager';
-import { TrashManager } from './components/TrashManager';
-import { SettingsManager } from './components/SettingsManager';
-import { AdminReportView } from './components/AdminReportView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { StandupModal } from './components/StandupModal';
 import { LoginView } from './components/LoginView';
@@ -73,8 +72,8 @@ import { checkAndDispatchDailyCloseTaskNotifications } from './utils/dailyCloseT
 import { checkAndDispatchDailyMorningTaskNotifications } from './utils/dailyMorningTaskAlerts';
 import { parseCurrentRoute, updateBrowserUrl, ParsedRoute } from './utils/urlRouting';
 import { TaskPersonalScope } from './components/PersonalizationBanner';
-import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs } from './utils/memberPersonalization';
-import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString } from './utils/dateUtils';
+import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSamePersonName, getProjectPMs, getProductMembers } from './utils/memberPersonalization';
+import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString, formatTaskDueDisplay } from './utils/dateUtils';
 import { formatDateWithEnDay } from './utils/formatters';
 import { extractMentions, getTaskThreadParticipants } from './utils/mentionUtils';
 import { isValidUrl, normalizeUrl } from './utils/urlValidator';
@@ -89,7 +88,8 @@ import {
   showWebPushNotification,
   isWebPushEnabledByUser,
 } from './utils/webPushNotifications';
-import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder, CheckCircle2 } from 'lucide-react';
+import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder, CheckCircle2, ChevronRight, Bell, BarChart3, FolderKanban, Sun, AlertOctagon, CalendarClock, User as UserIcon, Users as UsersIcon } from './components/vds/icons';
+import { VdsButton } from './components/vds';
 
 export function App() {
   // Current time state
@@ -230,6 +230,39 @@ export function App() {
 // 1. Admin: Toàn bộ phận
 // 2. Manager: Dự án của tôi
 // 3. Executive: Của tôi
+// Các trang ít dùng hơn được tải khi cần để trang Công việc mở nhanh trên mobile
+const ProjectsManager = lazy(() => import('./components/ProjectsManager').then((m) => ({ default: m.ProjectsManager })));
+const MembersManager = lazy(() => import('./components/MembersManager').then((m) => ({ default: m.MembersManager })));
+const TrashManager = lazy(() => import('./components/TrashManager').then((m) => ({ default: m.TrashManager })));
+const SettingsManager = lazy(() => import('./components/SettingsManager').then((m) => ({ default: m.SettingsManager })));
+const ProjectDetailsDrawer = lazy(() =>
+  import('./components/ProjectDetailsDrawer').then((m) => ({ default: m.ProjectDetailsDrawer }))
+);
+const AdminReportView = lazy(() => import('./components/AdminReportView').then((m) => ({ default: m.AdminReportView })));
+
+// Tải trước các gói phụ khi trình duyệt rảnh để chuyển trang không phải chờ
+const prefetchSecondaryViews = () => {
+  const run = () => {
+    import('./components/ProjectsManager');
+    import('./components/ProjectDetailsDrawer');
+    import('./components/AdminReportView');
+    import('./components/MembersManager');
+    import('./components/TrashManager');
+    import('./components/SettingsManager');
+  };
+  const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(run);
+  else window.setTimeout(run, 1500);
+};
+
+const ViewFallback = () => (
+  <div className="space-y-3 animate-pulse" aria-busy="true" aria-label="Đang tải">
+    <div className="h-24 rounded-vds-lg bg-surface border border-divider" />
+    <div className="h-40 rounded-vds-lg bg-surface border border-divider" />
+    <div className="h-40 rounded-vds-lg bg-surface border border-divider" />
+  </div>
+);
+
 const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   if (!user) {
     return {
@@ -310,6 +343,40 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
   // Mobile sidebar drawer state (Hamburger menu)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  // Drawer Dự án chỉ được tải & gắn vào DOM từ lần mở đầu tiên (giữ lại để có hiệu ứng đóng)
+  const [hasOpenedProjectDrawer, setHasOpenedProjectDrawer] = useState(false);
+  useEffect(() => {
+    prefetchSecondaryViews();
+  }, []);
+  const [undoToast, setUndoToast] = useState<UndoToastState | null>(null);
+  const dismissUndoToast = useCallback(() => setUndoToast(null), []);
+
+  // Cách nhóm danh sách việc: theo hạn (mặc định cho Chuyên viên) hoặc theo dự án
+  const [groupMode, setGroupMode] = useState<TaskGroupMode>(() => {
+    try {
+      const saved = localStorage.getItem('wms_task_group_mode');
+      if (saved === 'due' || saved === 'project') return saved;
+    } catch {}
+    return getUserRole(currentAuthUser) === 'Executive' ? 'due' : 'project';
+  });
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('wms_task_group_mode')) return;
+    } catch {}
+    if (currentAuthUser) setGroupMode(getUserRole(currentAuthUser) === 'Executive' ? 'due' : 'project');
+  }, [currentAuthUser]);
+  const handleGroupModeChange = (mode: TaskGroupMode) => {
+    setGroupMode(mode);
+    try {
+      localStorage.setItem('wms_task_group_mode', mode);
+    } catch {}
+  };
+
+  // Khối "Đã hoàn thành" thu gọn mặc định để danh sách việc cần làm luôn ở trên cùng
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [completedLimit, setCompletedLimit] = useState(15);
 
   const handleOpenProfile = (tab: 'profile' | 'password' = 'profile') => {
     setProfileModalInitialTab(tab);
@@ -486,6 +553,39 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   const [selectedProjectIdForDrawer, setSelectedProjectIdForDrawer] = useState<string | null>(null);
   const [isProjectDrawerOpen, setIsProjectDrawerOpen] = useState(false);
   const [isCreateProjectDrawer, setIsCreateProjectDrawer] = useState(false);
+  useEffect(() => {
+    if (isProjectDrawerOpen) setHasOpenedProjectDrawer(true);
+  }, [isProjectDrawerOpen]);
+
+  // Phím tắt toàn cục: ⌘K / Ctrl+K hoặc "/" mở bảng lệnh, "N" thêm việc nhanh
+  useEffect(() => {
+    const isTyping = (el: EventTarget | null) => {
+      const node = el as HTMLElement | null;
+      if (!node) return false;
+      const tag = node.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable;
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen((v) => !v);
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+      const anyOverlayOpen = isDrawerOpen || isProjectDrawerOpen || isNotificationDrawerOpen || isMobileQuickAddOpen;
+      if (e.key === '/' && !anyOverlayOpen) {
+        e.preventDefault();
+        setIsPaletteOpen(true);
+      } else if ((e.key === 'n' || e.key === 'N') && !anyOverlayOpen && !isPaletteOpen) {
+        e.preventDefault();
+        setActiveTab('tasks');
+        if (window.innerWidth < 768) setIsMobileQuickAddOpen(true);
+        else setTimeout(() => document.getElementById('quick-add-input')?.focus(), 80);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isDrawerOpen, isProjectDrawerOpen, isNotificationDrawerOpen, isMobileQuickAddOpen, isPaletteOpen]);
 
   const selectedProjectForDrawer = useMemo(() => {
     if (!selectedProjectIdForDrawer) return null;
@@ -895,9 +995,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   // Helper dispatching targeted notifications based on project roles
   const createAndDispatchNotifications = (
     newOrUpdatedTask: TaskItem,
-    actionType: 'created' | 'status_changed' | 'reassigned' | 'updated' | 'comment',
+    actionType: 'created' | 'status_changed' | 'reassigned' | 'updated' | 'comment' | 'deadline_selected',
     actorName: string,
-    extra?: { oldAssignee?: string; oldStatus?: string; note?: string }
+    extra?: { oldAssignee?: string; oldStatus?: string; note?: string; oldDueDate?: string; newDueDate?: string }
   ) => {
     const proj = projects.find(
       (p) => p.id === newOrUpdatedTask.projectId || p.name === newOrUpdatedTask.projectName
@@ -2283,6 +2383,49 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     return scopedTasksForDue.filter((t) => isTaskOverdue(t)).length;
   }, [scopedTasksForDue]);
 
+  // Bộ đếm cho thanh lọc nhanh (theo phạm vi đang xem, không tính bộ lọc thời hạn/trạng thái)
+  const quickViewCounts = useMemo(() => {
+    const active = scopedTasksForDue.filter((t) => t.status !== 'Hoàn thành');
+    return {
+      all: active.length,
+      overdue: active.filter((t) => isTaskOverdue(t)).length,
+      today: active.filter((t) => isTaskDueToday(t)).length,
+      soon: active.filter((t) => isTaskDueSoon(t)).length,
+      blocked: active.filter((t) => t.status === 'Bị nghẽn').length,
+    };
+  }, [scopedTasksForDue]);
+
+  const activeQuickView: QuickView | 'custom' = useMemo(() => {
+    if (filterState.dueFilter === 'custom') return 'custom';
+    if (filterState.status === 'Bị nghẽn' && filterState.dueFilter === 'all') return 'blocked';
+    if (filterState.dueFilter === 'overdue') return 'overdue';
+    if (filterState.dueFilter === 'today') return 'today';
+    if (filterState.dueFilter === 'soon') return 'soon';
+    return 'all';
+  }, [filterState.dueFilter, filterState.status]);
+
+  const handleSelectQuickView = useCallback((view: QuickView) => {
+    setFilterState((f) => ({
+      ...f,
+      dueFilter: view === 'overdue' || view === 'today' || view === 'soon' ? view : 'all',
+      customDueDate: undefined,
+      status: view === 'blocked' ? 'Bị nghẽn' : 'Tất cả',
+    }));
+  }, []);
+
+  // Nhóm theo dự án: việc gấp nhất lên đầu mỗi nhóm, nhóm có việc gấp nhất lên trước
+  const sortedProjectGroups = useMemo(() => {
+    return Object.entries(activeTasksByProject)
+      .map(([key, list]) => [key, sortTasksByUrgency(list)] as [string, TaskItem[]])
+      .sort(([, a], [, b]) => {
+        const dueA = normalizeDateString(a[0]?.dueDate) || '9999-12-31';
+        const dueB = normalizeDateString(b[0]?.dueDate) || '9999-12-31';
+        return dueA.localeCompare(dueB);
+      });
+  }, [activeTasksByProject]);
+
+  const dueBuckets = useMemo(() => groupTasksByDue(activeTasks), [activeTasks]);
+
   const activeTabTitles: Record<ActiveTab, string> = {
     tasks: 'Công việc',
     projects: 'Dự án',
@@ -2303,8 +2446,176 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     );
   }
 
+  const openTaskDetail = (t: TaskItem) => {
+    setSelectedTask(t);
+    setIsDrawerOpen(true);
+  };
+
+  const openQuickAdd = () => {
+    setActiveTab('tasks');
+    if (window.innerWidth < 768) {
+      setIsMobileQuickAddOpen(true);
+    } else {
+      setTimeout(() => document.getElementById('quick-add-input')?.focus(), 80);
+    }
+  };
+
+  // Thao tác nhanh trên hàng việc: luôn kèm Hoàn tác để người dùng thao tác mạnh tay mà không sợ nhầm
+  const showUndo = (message: string, onUndo?: () => void) =>
+    setUndoToast({ id: Date.now(), message, onUndo });
+
+  const quickUpdateDueDate = (taskId: string, newDate: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const oldDate = task.dueDate || '';
+    handleUpdateTaskDueDate(taskId, newDate);
+    showUndo(`Dời sang ${formatTaskDueDisplay(newDate)}: ${task.title}`, () =>
+      handleUpdateTaskDueDate(taskId, oldDate)
+    );
+  };
+
+  const quickToggleComplete = (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const willComplete = task.status !== 'Hoàn thành';
+    const needsLink = willComplete && (!task.resultLink || !isValidUrl(task.resultLink));
+    handleToggleComplete(taskId);
+    if (needsLink) return; // Mở hộp nhập link kết quả, chưa đổi trạng thái
+    showUndo(willComplete ? `Đã xong: ${task.title}` : `Mở lại: ${task.title}`, () =>
+      handleUpdateTaskStatus(taskId, task.status)
+    );
+  };
+
+  const quickUpdateStatus = (taskId: string, newStatus: TaskStatus) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === newStatus) return;
+    const needsLink = newStatus === 'Hoàn thành' && (!task.resultLink || !isValidUrl(task.resultLink));
+    handleUpdateTaskStatus(taskId, newStatus);
+    if (needsLink) return;
+    showUndo(`${newStatus}: ${task.title}`, () => handleUpdateTaskStatus(taskId, task.status));
+  };
+
+  const renderTaskRow = (task: TaskItem, showProjectBadge = false) => (
+    <TaskItemRow
+      key={task.id}
+      task={task}
+      members={members}
+      projects={projects}
+      currentAuthUser={currentAuthUser}
+      isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
+      onToggleComplete={quickToggleComplete}
+      onSelectTask={openTaskDetail}
+      onUpdateStatus={quickUpdateStatus}
+      onDeleteTask={handleDeleteTask}
+      onOpenProjectDetail={handleOpenProjectDetail}
+      showProjectBadge={showProjectBadge}
+      onFilterByAssignee={handleFilterByAssignee}
+      onUpdateDueDate={quickUpdateDueDate}
+    />
+  );
+
+  const paletteCommands: PaletteCommand[] = [
+    { id: 'add', label: 'Thêm việc mới', icon: Plus, shortcut: 'N', keywords: 'tao them cong viec task new', run: openQuickAdd },
+    {
+      id: 'today',
+      label: 'Việc hạn hôm nay',
+      hint: `${quickViewCounts.today} việc`,
+      icon: Sun,
+      keywords: 'hom nay today han',
+      run: () => {
+        setActiveTab('tasks');
+        handleSelectQuickView('today');
+      },
+    },
+    {
+      id: 'overdue',
+      label: 'Việc quá hạn',
+      hint: `${quickViewCounts.overdue} việc`,
+      icon: AlertOctagon,
+      keywords: 'qua han tre overdue',
+      run: () => {
+        setActiveTab('tasks');
+        handleSelectQuickView('overdue');
+      },
+    },
+    {
+      id: 'mine',
+      label: 'Chỉ xem việc của tôi',
+      icon: UserIcon,
+      keywords: 'cua toi minh ca nhan',
+      run: () => {
+        setActiveTab('tasks');
+        handlePerspectiveChange('my_tasks', currentAuthUser);
+      },
+    },
+    {
+      id: 'all',
+      label: 'Xem toàn bộ phận',
+      icon: UsersIcon,
+      keywords: 'toan ban tat ca bo phan',
+      run: () => {
+        setActiveTab('tasks');
+        handlePerspectiveChange('all', null);
+      },
+    },
+    {
+      id: 'group-due',
+      label: groupMode === 'due' ? 'Nhóm việc theo dự án' : 'Nhóm việc theo hạn',
+      icon: CalendarClock,
+      keywords: 'nhom sap xep group',
+      run: () => handleGroupModeChange(groupMode === 'due' ? 'project' : 'due'),
+    },
+    { id: 'projects', label: 'Đi tới Dự án', icon: FolderKanban, keywords: 'du an project', run: () => setActiveTab('projects') },
+    { id: 'reports', label: 'Đi tới Báo cáo', icon: BarChart3, keywords: 'bao cao report lich', run: () => setActiveTab('reports') },
+    {
+      id: 'notifs',
+      label: 'Mở thông báo',
+      hint: unreadNotificationsCount ? `${unreadNotificationsCount} chưa đọc` : undefined,
+      icon: Bell,
+      keywords: 'thong bao chuong notification',
+      run: () => setIsNotificationDrawerOpen(true),
+    },
+  ];
+
+  const DUE_BUCKET_STYLE: Record<DueBucketKey, { dot: string; text: string }> = {
+    overdue: { dot: 'bg-negative-solid', text: 'text-negative' },
+    today: { dot: 'bg-warning-solid', text: 'text-warning' },
+    tomorrow: { dot: 'bg-warning-solid', text: 'text-warning' },
+    week: { dot: 'bg-support-solid', text: 'text-support' },
+    later: { dot: 'bg-icon-subdued', text: 'text-ink-lighter' },
+    none: { dot: 'bg-surface-300', text: 'text-subdued' },
+  };
+
+  const hasNarrowingFilters =
+    filterState.projectId !== 'all' ||
+    (filterState.folderId && filterState.folderId !== 'all') ||
+    filterState.team !== 'Tất cả' ||
+    filterState.status !== 'Tất cả' ||
+    filterState.dueFilter !== 'all' ||
+    Boolean(filterState.searchQuery);
+
+  const emptyStateCopy = (() => {
+    if (filterState.searchQuery) return { title: `Không thấy việc khớp “${filterState.searchQuery}”`, sub: 'Thử từ khoá khác hoặc xoá bộ lọc.' };
+    switch (activeQuickView) {
+      case 'overdue':
+        return { title: 'Không còn việc quá hạn', sub: 'Mọi việc đều trong hạn. Giữ nhịp này nhé.' };
+      case 'today':
+        return { title: 'Hôm nay không còn việc đến hạn', sub: 'Có thể kéo việc của ngày mai lên làm trước.' };
+      case 'soon':
+        return { title: '3 ngày tới chưa có việc đến hạn', sub: 'Lên kế hoạch sớm để tránh dồn việc.' };
+      case 'blocked':
+        return { title: 'Không có việc bị nghẽn', sub: 'Tất cả việc đang thông suốt.' };
+      case 'custom':
+        return { title: 'Ngày này không có việc đến hạn', sub: 'Chọn ngày khác hoặc bỏ lọc theo ngày.' };
+      default:
+        return hasNarrowingFilters
+          ? { title: 'Không có việc khớp bộ lọc', sub: 'Bỏ bớt bộ lọc để xem thêm.' }
+          : { title: 'Chưa có việc cần làm', sub: 'Thêm việc đầu tiên để bắt đầu ngày làm việc.' };
+    }
+  })();
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#202020] flex flex-row antialiased font-body w-full max-w-full overflow-x-clip">
+    <div className="min-h-screen bg-surface-100 text-ink flex flex-row antialiased font-body w-full max-w-full overflow-x-clip">
       {/* 1. LEFT SIDEBAR (Pinned Fixed Left Sidebar with Folders & Projects Tree) */}
       <Sidebar
         activeTab={activeTab}
@@ -2367,11 +2678,12 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen w-full">
         {/* Sticky Header & Active Filters Bar Container (Luôn được ghim ở đầu trang khi cuộn) */}
-        <div className="sticky top-0 z-20 bg-white shadow-2xs">
+        <div className="sticky top-0 z-20 bg-surface ">
           {/* Header Bar */}
           <Header
             currentDate={currentDate}
             onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+            onOpenSearch={() => setIsPaletteOpen(true)}
             onOpenStandup={() => setIsStandupOpen(true)}
             onOpenQuickAdd={() => {
               setActiveTab('tasks');
@@ -2442,10 +2754,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
         {/* Main Body */}
         <main
-          className={`flex-1 px-4 md:px-6 py-6 md:py-8 w-full mx-auto transition-all ${
+          className={`flex-1 px-4 md:px-6 pt-4 pb-28 md:py-8 w-full mx-auto ${
             activeTab === 'settings' ? 'max-w-[1440px]' : 'max-w-[1040px]'
           }`}
         >
+          <Suspense fallback={<ViewFallback />}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -2553,129 +2866,34 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         }}
                       />
 
-                      {/* Active Tasks Section Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
-                        <div className="flex items-center gap-2">
-                          <CheckSquare className="w-5 h-5 text-[#963861]" />
-                          <h3 className="font-title text-base font-normal text-[#202020]">
-                            Công việc đang thực hiện ({activeTasks.length})
-                          </h3>
-                        </div>
-
-                        {/* Active Filter Badges */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          {filterState.folderId && filterState.folderId !== 'all' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fdf2f7] text-[#963861] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
-                              <span>📁 Thư mục: {getFolderPath(filterState.folderId, folders)}</span>
-                              <button
-                                onClick={() => setFilterState((f) => ({ ...f, folderId: 'all' }))}
-                                className="hover:text-[#8f274c] text-[10px] ml-1 cursor-pointer"
-                                title="Bỏ lọc theo thư mục"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {filterState.projectId !== 'all' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fcf0f5] text-[#b13460] px-3 py-1 rounded-full border border-[#f3c2d4] font-bold">
+                      {/* Thanh lọc nhanh 1 chạm + chuyển cách nhóm */}
+                      <div className="space-y-2.5 pt-1">
+                        <div className="flex items-center justify-between gap-3 px-0.5">
+                          <div className="flex items-baseline gap-2 min-w-0">
+                            <h3 className="vds-text-heading-xs text-ink shrink-0">
+                              Cần làm <span className="font-num text-subdued font-normal">{activeTasks.length}</span>
+                            </h3>
+                            {filterState.searchQuery && (
                               <button
                                 type="button"
-                                onClick={() => handleOpenProjectDetail(filterState.projectId)}
-                                className="hover:underline flex items-center gap-1 cursor-pointer"
-                                title="Bấm để xem chi tiết dự án này"
+                                onClick={() => setFilterState((f) => ({ ...f, searchQuery: '' }))}
+                                className="text-xs font-ui text-link underline underline-offset-2 cursor-pointer truncate"
                               >
-                                <span>Dự án: {projects.find((p) => p.id === filterState.projectId)?.name}</span>
-                                <span className="text-[10px] text-[#b13460]">↗</span>
+                                Tìm “{filterState.searchQuery}” ✕
                               </button>
-                              <button
-                                onClick={() => setFilterState((f) => ({ ...f, projectId: 'all' }))}
-                                className="hover:text-[#8f274c] text-[10px] ml-1"
-                                title="Bỏ lọc theo dự án"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {filterState.assignee && filterState.assignee !== 'Tất cả' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f0f8f1] text-[#24a148] px-3 py-1 rounded-full border border-[#c3e6cb] font-bold">
-                              <span>Nhân sự: {filterState.assignee}</span>
-                              <button
-                                onClick={() => setFilterState((f) => ({ ...f, assignee: 'Tất cả' }))}
-                                className="hover:text-[#187230] text-[10px]"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {filterState.team !== 'Tất cả' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#eef4fb] text-[#1d508d] px-3 py-1 rounded-full border border-[#c3d9f0] font-bold">
-                              <span>Nhóm: {filterState.team}</span>
-                              <button
-                                onClick={() => setFilterState((f) => ({ ...f, team: 'Tất cả' }))}
-                                className="hover:text-[#133763] text-[10px]"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {filterState.status !== 'Tất cả' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#f4f4f4] text-[#202020] px-3 py-1 rounded-full border border-[#d6d6d6] font-bold">
-                              <span>Trạng thái: {filterState.status}</span>
-                              <button
-                                onClick={() => setFilterState((f) => ({ ...f, status: 'Tất cả' }))}
-                                className="hover:text-[#000000] text-[10px]"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {filterState.dueFilter !== 'all' && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-ui bg-[#fff7ed] text-[#ea580c] px-3 py-1 rounded-full border border-[#fed7aa] font-bold">
-                              <span>
-                                Thời hạn:{' '}
-                                {filterState.dueFilter === 'today'
-                                  ? 'Hạn hôm nay'
-                                  : filterState.dueFilter === 'overdue'
-                                  ? 'Quá hạn'
-                                  : filterState.dueFilter === 'custom'
-                                  ? `Ngày ${
-                                      filterState.customDueDate
-                                        ? formatDateWithEnDay(filterState.customDueDate)
-                                        : ''
-                                    }`
-                                  : 'Sắp đến hạn'}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  setFilterState((f) => ({ ...f, dueFilter: 'all', customDueDate: undefined }))
-                                }
-                                className="hover:text-[#c2410c] text-[10px]"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          )}
-
-                          {(filterState.projectId !== 'all' ||
-                            (filterState.folderId && filterState.folderId !== 'all') ||
-                            filterState.assignee !== 'Tất cả' ||
-                            filterState.team !== 'Tất cả' ||
-                            filterState.status !== 'Tất cả' ||
-                            filterState.dueFilter !== 'all' ||
-                            filterState.searchQuery) && (
-                            <button
-                              onClick={handleResetToDefaultView}
-                              className="text-[11px] font-ui text-[#b13460] hover:underline px-1 font-bold cursor-pointer"
-                            >
-                              Xóa tất cả bộ lọc
-                            </button>
-                          )}
+                            )}
+                          </div>
+                          <GroupModeTabs value={groupMode} onChange={handleGroupModeChange} />
                         </div>
+                        <TaskViewBar
+                          activeView={activeQuickView}
+                          counts={quickViewCounts}
+                          customLabel={
+                            filterState.customDueDate ? `Ngày ${formatDateWithEnDay(filterState.customDueDate)}` : undefined
+                          }
+                          onSelectView={handleSelectQuickView}
+                          onClearCustom={() => setFilterState((f) => ({ ...f, dueFilter: 'all', customDueDate: undefined }))}
+                        />
                       </div>
                     </div>
                   </div>
@@ -2685,23 +2903,67 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                       <div className="hidden md:block w-48 lg:w-52 shrink-0" />
                       <div className="w-full max-w-[800px]">
-                        <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs p-12 text-center space-y-3">
-                          <div className="w-12 h-12 rounded-full bg-[#f4f4f4] text-[#7f7f7f] flex items-center justify-center mx-auto text-xl">
-                            ✓
+                        <div className="bg-surface rounded-vds-lg border border-line px-6 py-10 text-center">
+                          <div className="w-11 h-11 rounded-full bg-surface-positive text-positive flex items-center justify-center mx-auto">
+                            <CheckCircle2 className="w-5 h-5" />
                           </div>
-                          <p className="font-title text-base font-bold text-[#202020]">
-                            Không có công việc nào trong danh sách
-                          </p>
-                          <p className="text-xs font-body text-[#7f7f7f] max-w-md mx-auto">
-                            Hãy tạo công việc mới hoặc thử bỏ các bộ lọc trên thanh bên (sidebar).
-                          </p>
+                          <p className="mt-3 font-title text-[15px] font-semibold text-ink">{emptyStateCopy.title}</p>
+                          <p className="mt-1 text-[13px] font-ui text-subdued">{emptyStateCopy.sub}</p>
+                          <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                            <VdsButton variant="accent" size="sm" iconLeft="Add" onClick={openQuickAdd}>
+                              Thêm việc
+                            </VdsButton>
+                            {hasNarrowingFilters && (
+                              <button
+                                type="button"
+                                onClick={handleResetToDefaultView}
+                                className="h-9 px-3.5 rounded-vds-lg border border-line bg-surface hover:bg-surface-100 text-ink-lighter text-[13px] font-ui font-semibold cursor-pointer"
+                              >
+                                Xoá bộ lọc
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    </div>
+                  ) : groupMode === 'due' ? (
+                    // Nhóm theo hạn: Quá hạn → Hôm nay → Ngày mai → 7 ngày tới → Sau đó → Chưa có hạn
+                    <div className="space-y-5 md:space-y-8">
+                      {dueBuckets.map((bucket, idx) => {
+                        const style = DUE_BUCKET_STYLE[bucket.key];
+                        return (
+                          <section
+                            key={bucket.key}
+                            aria-label={bucket.label}
+                            className={idx > 0 ? 'md:border-t md:border-line md:pt-8' : ''}
+                          >
+                            <div className="flex flex-col md:flex-row items-start gap-2 md:gap-4 lg:gap-6">
+                              <div className="flex md:hidden items-center gap-2 w-full px-0.5">
+                                <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+                                <span className={`font-title text-[14px] font-semibold ${style.text}`}>{bucket.label}</span>
+                                <span className="text-[12px] font-num text-subdued-lighter">{bucket.tasks.length}</span>
+                              </div>
+                              <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+                                  <span className={`font-title text-[14px] font-semibold ${style.text}`}>{bucket.label}</span>
+                                </div>
+                                <div className="pl-4 mt-1 text-xs font-ui text-subdued">{bucket.tasks.length} việc</div>
+                              </div>
+                              <div className="w-full max-w-[800px]">
+                                <div className="bg-surface rounded-vds-lg border border-line overflow-hidden">
+                                  {bucket.tasks.map((task) => renderTaskRow(task, true))}
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        );
+                      })}
                     </div>
                   ) : filterState.projectId === 'all' ? (
                     // Grouped by Project or Direct Folder: Anchor on Left (Pinned), 800px Tasks Card on Right
                     <div className="space-y-6 md:space-y-8">
-                      {Object.entries(activeTasksByProject).map(
+                      {sortedProjectGroups.map(
                         ([groupKey, projTasks], idx) => {
                           const isDirectFolderGroup = groupKey.startsWith('folder:');
                           const directFolderId = isDirectFolderGroup ? groupKey.replace('folder:', '') : undefined;
@@ -2722,7 +2984,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                           return (
                             <div
                               key={groupKey}
-                              className={idx > 0 ? 'border-t border-[#e5e7eb] pt-6 md:pt-8' : ''}
+                              className={idx > 0 ? 'border-t border-line pt-6 md:pt-8' : ''}
                             >
                               <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
                                 {/* Mobile: 1 dòng duy nhất cho phần dự án / thư mục */}
@@ -2750,24 +3012,24 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         : `Bấm để lọc công việc theo dự án: ${displayTitle}`
                                     }
                                   >
-                                    <Folder className={`w-4 h-4 shrink-0 ${isDirectFolderGroup ? 'text-[#963861]' : 'text-[#71717a] group-hover/title:text-[#1e609c]'}`} />
-                                    <span className="font-title text-[14px] font-semibold text-[#202020] group-hover/title:text-[#1e609c] truncate">
+                                    <Folder className={`w-4 h-4 shrink-0 ${isDirectFolderGroup ? 'text-accent' : 'text-subdued group-hover/title:text-support'}`} />
+                                    <span className="font-title text-[14px] font-semibold text-ink group-hover/title:text-support truncate">
                                       {displayTitle}
                                     </span>
                                     {isDirectFolderGroup && (
-                                      <span className="text-[10px] font-ui text-[#963861] bg-[#fdf2f7] border border-[#f3c2d4] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                      <span className="text-[10px] font-ui text-accent bg-surface-accent-faint border border-line px-1.5 py-0.2 rounded-vds-md shrink-0 font-medium">
                                         Tinh chỉnh
                                       </span>
                                     )}
                                     {targetProj?.isStrategic && (
-                                      <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                      <span className="text-warning text-xs shrink-0" title="Dự án chiến lược">⭐</span>
                                     )}
                                     {targetProj?.code && (
-                                      <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                      <span className="font-num text-[10px] text-ink-lighter bg-surface-200 border border-line px-1.5 py-0.2 rounded-vds-md shrink-0 font-medium">
                                         {targetProj.code}
                                       </span>
                                     )}
-                                    <span className="text-[11px] font-ui text-[#64748b] shrink-0">
+                                    <span className="text-xs font-ui text-subdued shrink-0">
                                       ({projTasks.length})
                                     </span>
                                   </button>
@@ -2779,7 +3041,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         e.stopPropagation();
                                         handleOpenProjectDetail(targetProj.id);
                                       }}
-                                      className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
+                                      className="p-1 text-support hover:bg-surface-info rounded-vds-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
                                       title={`Xem thông tin dự án ${displayTitle}`}
                                     >
                                       <span className="text-base font-bold leading-none">→</span>
@@ -2789,11 +3051,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
                                 {/* Desktop: Cột trái Tên dự án / Thư mục pin theo khi cuộn */}
                                 <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
-                                  <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
+                                  <div className="p-2 -ml-2 rounded-vds-lg hover:bg-black/[0.03] transition-colors">
                                     {/* Nhãn Thư mục cha của dự án */}
                                     {!isDirectFolderGroup && projFolderPath && (
                                       <div className="pl-6 mb-1">
-                                        <span className="text-[10px] font-ui font-medium text-[#963861] bg-[#fdf2f7] px-1.5 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-block truncate max-w-full">
+                                        <span className="text-[10px] font-ui font-medium text-accent bg-surface-accent-faint px-1.5 py-0.5 rounded-vds-md border border-line inline-block truncate max-w-full">
                                           📁 {projFolderPath}
                                         </span>
                                       </div>
@@ -2824,27 +3086,27 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                       }
                                     >
                                       <div className="flex items-start gap-2 min-w-0">
-                                        <Folder className={`w-4 h-4 transition-colors shrink-0 mt-0.5 ${isDirectFolderGroup ? 'text-[#963861]' : 'text-[#71717a] group-hover/title:text-[#1e609c]'}`} />
+                                        <Folder className={`w-4 h-4 transition-colors shrink-0 mt-0.5 ${isDirectFolderGroup ? 'text-accent' : 'text-subdued group-hover/title:text-support'}`} />
                                         <div className="min-w-0 flex-1">
-                                          <span className="font-title text-[14px] font-normal text-[#202020] group-hover/title:text-[#1e609c] group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                          <span className="font-title text-[14px] font-normal text-ink group-hover/title:text-support group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
                                             {displayTitle}
                                           </span>
                                         </div>
                                         {targetProj?.isStrategic && (
-                                          <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                          <span className="text-warning text-xs shrink-0" title="Dự án chiến lược">⭐</span>
                                         )}
                                       </div>
                                       <div className="flex items-center flex-wrap gap-1.5 pl-6 text-xs font-ui mt-1.5">
                                         {isDirectFolderGroup ? (
-                                          <span className="text-[10px] font-ui text-[#963861] bg-[#fdf2f7] border border-[#f3c2d4] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                          <span className="text-[10px] font-ui text-accent bg-surface-accent-faint border border-line px-1.5 py-0.5 rounded-vds-md font-medium">
                                             Trực tiếp trong folder
                                           </span>
                                         ) : targetProj?.code ? (
-                                          <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                          <span className="font-num text-[10px] text-ink-lighter bg-surface-200 border border-line px-1.5 py-0.5 rounded-vds-md font-medium">
                                             {targetProj.code}
                                           </span>
                                         ) : null}
-                                        <span className="text-[11px] font-ui text-[#64748b]">
+                                        <span className="text-xs font-ui text-subdued">
                                           {projTasks.length} việc
                                         </span>
                                       </div>
@@ -2859,7 +3121,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                             e.stopPropagation();
                                             handleOpenProjectDetail(targetProj.id);
                                           }}
-                                          className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                          className="group/info text-xs font-ui text-support hover:text-support hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
                                           title={`Bấm để xem thông tin dự án ${displayTitle} ở Right Sidebar`}
                                         >
                                           <span>Thông tin dự án</span>
@@ -2872,27 +3134,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
 
                                 {/* Cột phải: 800px Card công việc trình bày như cũ (card trắng bo tròn 12px, viền e0e0e0, divide-y f0f0f0) */}
                                 <div className="w-full max-w-[800px]">
-                                  <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                                    {projTasks.map((task) => (
-                                      <TaskItemRow
-                                        key={task.id}
-                                        task={task}
-                                        members={members}
-                                        projects={projects}
-                                        currentAuthUser={currentAuthUser}
-                                        isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                                        onToggleComplete={handleToggleComplete}
-                                        onSelectTask={(t) => {
-                                          setSelectedTask(t);
-                                          setIsDrawerOpen(true);
-                                        }}
-                                        onUpdateStatus={handleUpdateTaskStatus}
-                                        onDeleteTask={handleDeleteTask}
-                                        onOpenProjectDetail={handleOpenProjectDetail}
-                                        onFilterByAssignee={handleFilterByAssignee}
-                                        onUpdateDueDate={handleUpdateTaskDueDate}
-                                      />
-                                    ))}
+                                  <div className="bg-surface rounded-vds-lg border border-line overflow-hidden">
+                                    {projTasks.map((task) => renderTaskRow(task))}
                                   </div>
                                 </div>
                               </div>
@@ -2922,19 +3165,19 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                   className="group/title flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
                                   title={`Đang lọc: ${curProj.name}. Bấm để xem tất cả dự án`}
                                 >
-                                  <Folder className="w-4 h-4 text-[#1e609c] shrink-0" />
-                                  <span className="font-title text-[14px] font-semibold text-[#1e609c] truncate">
+                                  <Folder className="w-4 h-4 text-support shrink-0" />
+                                  <span className="font-title text-[14px] font-semibold text-support truncate">
                                     {curProj.name}
                                   </span>
                                   {curProj.code && (
-                                    <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.2 rounded-[4px] shrink-0 font-medium">
+                                    <span className="font-num text-[10px] text-ink-lighter bg-surface-200 border border-line px-1.5 py-0.2 rounded-vds-md shrink-0 font-medium">
                                       {curProj.code}
                                     </span>
                                   )}
-                                  <span className="text-[11px] font-ui text-[#64748b] shrink-0">
+                                  <span className="text-xs font-ui text-subdued shrink-0">
                                     ({activeTasks.length})
                                   </span>
-                                  <span className="text-[10px] font-ui text-[#963861] shrink-0 font-medium">
+                                  <span className="text-[10px] font-ui text-accent shrink-0 font-medium">
                                     ✕ Bỏ lọc
                                   </span>
                                 </button>
@@ -2945,7 +3188,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     e.stopPropagation();
                                     handleOpenProjectDetail(curProj.id);
                                   }}
-                                  className="p-1 text-[#1e609c] hover:bg-[#f0f7ff] rounded-[6px] transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
+                                  className="p-1 text-support hover:bg-surface-info rounded-vds-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer ml-2"
                                   title={`Xem thông tin dự án ${curProj.name}`}
                                 >
                                   <span className="text-base font-bold leading-none">→</span>
@@ -2956,10 +3199,10 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                             {/* Desktop: Cột trái Tên dự án pin theo khi cuộn */}
                             <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
                               {curProj ? (
-                                <div className="p-2 -ml-2 rounded-[8px] hover:bg-black/[0.03] transition-colors">
+                                <div className="p-2 -ml-2 rounded-vds-lg hover:bg-black/[0.03] transition-colors">
                                   {curProjFolderPath && (
                                     <div className="pl-6 mb-1">
-                                      <span className="text-[10px] font-ui font-medium text-[#963861] bg-[#fdf2f7] px-1.5 py-0.5 rounded-[4px] border border-[#f3c2d4] inline-block truncate max-w-full">
+                                      <span className="text-[10px] font-ui font-medium text-accent bg-surface-accent-faint px-1.5 py-0.5 rounded-vds-md border border-line inline-block truncate max-w-full">
                                         📁 {curProjFolderPath}
                                       </span>
                                     </div>
@@ -2974,26 +3217,26 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                     title={`Đang lọc dự án: ${curProj.name}. Bấm để xem tất cả dự án`}
                                   >
                                     <div className="flex items-start gap-2 min-w-0">
-                                      <Folder className="w-4 h-4 text-[#1e609c] transition-colors shrink-0 mt-0.5" />
+                                      <Folder className="w-4 h-4 text-support transition-colors shrink-0 mt-0.5" />
                                       <div className="min-w-0 flex-1">
-                                        <span className="font-title text-[14px] font-normal text-[#1e609c] group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
+                                        <span className="font-title text-[14px] font-normal text-support group-hover/title:underline underline-offset-2 transition-colors block leading-snug break-words">
                                           {curProj.name}
                                         </span>
                                       </div>
                                       {curProj.isStrategic && (
-                                        <span className="text-[#d97706] text-xs shrink-0" title="Dự án chiến lược">⭐</span>
+                                        <span className="text-warning text-xs shrink-0" title="Dự án chiến lược">⭐</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1.5 pl-6 text-xs font-ui mt-1.5">
                                       {curProj.code && (
-                                        <span className="font-num text-[10px] text-[#475569] bg-[#f1f5f9] border border-[#cbd5e1] px-1.5 py-0.5 rounded-[4px] font-medium">
+                                        <span className="font-num text-[10px] text-ink-lighter bg-surface-200 border border-line px-1.5 py-0.5 rounded-vds-md font-medium">
                                           {curProj.code}
                                         </span>
                                       )}
-                                      <span className="text-[11px] font-ui text-[#64748b]">
+                                      <span className="text-xs font-ui text-subdued">
                                         {activeTasks.length} việc
                                       </span>
-                                      <span className="text-[10px] font-ui text-[#963861] ml-auto group-hover/title:underline">
+                                      <span className="text-[10px] font-ui text-accent ml-auto group-hover/title:underline">
                                         ✕ Bỏ lọc
                                       </span>
                                     </div>
@@ -3007,7 +3250,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                         e.stopPropagation();
                                         handleOpenProjectDetail(curProj.id);
                                       }}
-                                      className="group/info text-[11px] font-ui text-[#1e609c] hover:text-[#154673] hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                      className="group/info text-xs font-ui text-support hover:text-support hover:underline underline-offset-2 inline-flex items-center gap-1 cursor-pointer transition-colors"
                                       title={`Bấm để xem thông tin dự án ${curProj.name} ở Right Sidebar`}
                                     >
                                       <span>Thông tin dự án</span>
@@ -3016,33 +3259,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-xs font-ui text-[#64748b] p-2">Dự án</div>
+                                <div className="text-xs font-ui text-subdued p-2">Dự án</div>
                               )}
                             </div>
 
                             {/* Cột phải: 800px Card công việc trình bày như cũ */}
                             <div className="w-full max-w-[800px]">
-                              <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                                {activeTasks.map((task) => (
-                                  <TaskItemRow
-                                    key={task.id}
-                                    task={task}
-                                    members={members}
-                                    projects={projects}
-                                    currentAuthUser={currentAuthUser}
-                                    isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                                    onToggleComplete={handleToggleComplete}
-                                    onSelectTask={(t) => {
-                                      setSelectedTask(t);
-                                      setIsDrawerOpen(true);
-                                    }}
-                                    onUpdateStatus={handleUpdateTaskStatus}
-                                    onDeleteTask={handleDeleteTask}
-                                    onOpenProjectDetail={handleOpenProjectDetail}
-                                    onFilterByAssignee={handleFilterByAssignee}
-                                    onUpdateDueDate={handleUpdateTaskDueDate}
-                                  />
-                                ))}
+                              <div className="bg-surface rounded-vds-lg border border-line overflow-hidden">
+                                {sortTasksByUrgency(activeTasks).map((task) => renderTaskRow(task))}
                               </div>
                             </div>
                           </div>
@@ -3051,62 +3275,50 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     </div>
                   )}
 
-                  {/* Completed Tasks Container */}
+                  {/* Đã hoàn thành: thu gọn mặc định */}
                   {completedTasks.length > 0 && (
-                    <div className="border-t border-[#e5e7eb] pt-6 md:pt-8">
-                      <div className="flex flex-col md:flex-row items-start gap-4 lg:gap-6">
-                        {/* Mobile: 1 dòng duy nhất cho Đã hoàn thành */}
-                        <div className="flex md:hidden items-center gap-2 w-full py-1.5 px-0.5 text-[#24a148]">
-                          <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
-                          <span className="font-title text-[14px] font-semibold text-[#24a148]">
+                    <div className="flex flex-col md:flex-row items-start gap-2 md:gap-4 lg:gap-6 pt-2">
+                      <div className="hidden md:block w-48 lg:w-52 shrink-0" />
+                      <div className="w-full max-w-[800px]">
+                        <button
+                          type="button"
+                          onClick={() => setShowCompleted((v) => !v)}
+                          aria-expanded={showCompleted}
+                          className="w-full flex items-center gap-2 px-1 py-2 text-left cursor-pointer group/done"
+                        >
+                          <ChevronRight
+                            className={`w-4 h-4 text-subdued-lighter transition-transform ${showCompleted ? 'rotate-90' : ''}`}
+                          />
+                          <CheckCircle2 className="w-4 h-4 text-positive" />
+                          <span className="font-title text-[14px] font-semibold text-ink-lighter group-hover/done:text-ink">
                             Đã hoàn thành
                           </span>
-                          <span className="text-[11px] font-ui text-[#64748b]">
-                            ({completedTasks.length})
-                          </span>
-                        </div>
-
-                        {/* Desktop: Anchor (Pinned) */}
-                        <div className="hidden md:block w-48 lg:w-52 shrink-0 md:sticky md:top-28 self-start pt-1">
-                          <div className="p-2 -ml-2 space-y-1">
-                            <div className="flex items-center gap-2 text-[#24a148]">
-                              <CheckCircle2 className="w-4 h-4 text-[#24a148] shrink-0" />
-                              <span className="font-title text-[14px] font-normal text-[#24a148]">
-                                Đã hoàn thành
-                              </span>
-                            </div>
-                            <div className="pl-6 text-[11px] font-ui text-[#64748b]">
-                              {completedTasks.length} việc
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Column: 800px Completed Tasks Card (như cũ) */}
-                        <div className="w-full max-w-[800px]">
-                          <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs divide-y divide-[#f0f0f0] overflow-hidden">
-                            {completedTasks.map((task) => (
-                              <TaskItemRow
-                                key={task.id}
-                                task={task}
-                                members={members}
-                                projects={projects}
-                                currentAuthUser={currentAuthUser}
-                                isMyTask={currentAuthUser ? isTaskForMember(task, currentAuthUser) : false}
-                                onToggleComplete={handleToggleComplete}
-                                onSelectTask={(t) => {
-                                  setSelectedTask(t);
-                                  setIsDrawerOpen(true);
-                                }}
-                                onUpdateStatus={handleUpdateTaskStatus}
-                                onDeleteTask={handleDeleteTask}
-                                onOpenProjectDetail={handleOpenProjectDetail}
-                                showProjectBadge={true}
-                                onFilterByAssignee={handleFilterByAssignee}
-                                onUpdateDueDate={handleUpdateTaskDueDate}
-                              />
-                            ))}
-                          </div>
-                        </div>
+                          <span className="text-[12px] font-num text-subdued-lighter">{completedTasks.length}</span>
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {showCompleted && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="bg-surface rounded-vds-lg border border-line overflow-hidden mt-1">
+                                {completedTasks.slice(0, completedLimit).map((task) => renderTaskRow(task, true))}
+                              </div>
+                              {completedTasks.length > completedLimit && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCompletedLimit((n) => n + 30)}
+                                  className="mt-2 w-full h-9 rounded-vds-lg text-[13px] font-ui font-semibold text-ink-lighter hover:bg-surface hover:text-ink border border-transparent hover:border-line cursor-pointer"
+                                >
+                                  Xem thêm {Math.min(30, completedTasks.length - completedLimit)} việc
+                                </button>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                   )}
@@ -3215,6 +3427,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
               )}
             </motion.div>
           </AnimatePresence>
+          </Suspense>
         </main>
       </div>
 
@@ -3235,6 +3448,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       />
 
       {/* Project Details Drawer (Accessible from any view, including Tasks page) */}
+      {hasOpenedProjectDrawer && (
+      <Suspense fallback={null}>
       <ProjectDetailsDrawer
         project={selectedProjectForDrawer}
         projects={projects}
@@ -3258,6 +3473,8 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         currentAuthUser={currentAuthUser}
         onOpenFolderManager={() => setIsFolderManagerOpen(true)}
       />
+      </Suspense>
+      )}
 
       {/* Right Sidebar Personal Notifications Drawer */}
       <NotificationDrawer
@@ -3340,19 +3557,39 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         />
       )}
 
-      {/* Mobile Floating Action Button (FAB) - Ghim góc dưới phải trên màn hình di động khi ở tab Công việc */}
-      {activeTab === 'tasks' && (
-        <div className="fixed bottom-6 right-5 z-40 block md:hidden">
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={() => setIsMobileQuickAddOpen(true)}
-            className="w-14 h-14 rounded-full bg-[#963861] text-white shadow-xl flex items-center justify-center cursor-pointer hover:bg-[#80284f] transition-colors border-2 border-white ring-4 ring-[#963861]/20"
-            title="Thêm công việc mới nhanh"
-          >
-            <Plus className="w-7 h-7 stroke-[2.5]" />
-          </motion.button>
-        </div>
-      )}
+      {/* Thanh điều hướng đáy (mobile) */}
+      <MobileTabBar
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0 });
+        }}
+        onQuickAdd={() => setIsMobileQuickAddOpen(true)}
+        onOpenMenu={() => setIsMobileSidebarOpen(true)}
+        taskBadge={quickViewCounts.overdue}
+      />
+
+      <UndoToast toast={undoToast} onDismiss={dismissUndoToast} />
+
+      {/* Bảng lệnh & tìm kiếm nhanh (⌘K) */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        commands={paletteCommands}
+        tasks={tasks}
+        projects={projects}
+        members={getProductMembers(members)}
+        currentUser={currentAuthUser}
+        onOpenTask={openTaskDetail}
+        onFilterProject={(projectId) => {
+          setActiveTab('tasks');
+          setFilterState((f) => ({ ...f, projectId, folderId: 'all' }));
+        }}
+        onFilterMember={(m) => {
+          setActiveTab('tasks');
+          handleSelectProductMember(m);
+        }}
+      />
 
       {/* Dedicated Mobile Quick Add Sheet Drawer */}
       <MobileQuickAddDrawer

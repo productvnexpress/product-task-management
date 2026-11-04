@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Filter, X, RotateCcw, Plus, ChevronRight, Check } from 'lucide-react';
+import { Filter, X, RotateCcw, Plus, ChevronRight, Check } from './vds/icons';
 import { FilterState, ProjectItem, MemberItem, TaskStatus, TeamType, DueFilterType, FolderItem } from '../types';
 import { getFolderPath, INITIAL_FOLDERS } from '../utils/folderUtils';
 import { TaskPersonalScope } from './PersonalizationBanner';
@@ -149,23 +149,23 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
   const teams: TeamType[] = ['Product Manager', 'UX/UI Designer', 'SEO', 'Data'];
 
   return (
-    <div className="bg-[#fafafa] border-b border-[#e5e7eb] px-4 md:px-6 py-2 transition-all sticky top-[83px] z-10 shadow-2xs select-none">
+    <div className="bg-surface-100 border-b border-line px-4 md:px-6 py-2 transition sticky top-[83px] z-10 select-none">
       <div className="max-w-[1040px] w-full mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-ui font-semibold text-[#64748b] flex items-center gap-1 shrink-0 mr-1">
-            <Filter className="w-3 h-3 text-[#64748b]" />
+          <span className="text-xs font-ui font-semibold text-subdued flex items-center gap-1 shrink-0 mr-1">
+            <Filter className="w-3 h-3 text-subdued" />
             <span>Đang lọc:</span>
           </span>
 
           {/* Thư mục */}
           {activeFolder && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-[#fdf2f7] text-[11px] font-ui text-[#963861] border border-[#f3c2d4] shadow-2xs">
-              <span className="text-[#963861]/70">Thư mục:</span>
-              <span className="font-semibold text-[#963861]">📁 {activeFolder}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface-accent-faint text-xs font-ui text-accent border border-line ">
+              <span className="text-accent/70">Thư mục:</span>
+              <span className="font-semibold text-accent">📁 {activeFolder}</span>
               <button
                 type="button"
                 onClick={onClearFolder}
-                className="p-0.5 rounded-[3px] text-[#963861]/70 hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-accent/70 hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo thư mục này"
               >
                 <X className="w-3 h-3" />
@@ -175,13 +175,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Dự án */}
           {activeProject && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Dự án:</span>
-              <span className="font-semibold text-[#1e293b]">{activeProject.replace('Dự án ', '')}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Dự án:</span>
+              <span className="font-semibold text-ink">{activeProject.replace('Dự án ', '')}</span>
               <button
                 type="button"
                 onClick={onClearProject}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo dự án này"
               >
                 <X className="w-3 h-3" />
@@ -191,13 +191,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Nhân sự */}
           {activeAssignee && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Nhân sự:</span>
-              <span className="font-semibold text-[#1e293b]">{activeAssignee}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Nhân sự:</span>
+              <span className="font-semibold text-ink">{activeAssignee}</span>
               <button
                 type="button"
                 onClick={onClearAssignee}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo nhân sự này"
               >
                 <X className="w-3 h-3" />
@@ -207,13 +207,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Nhóm */}
           {activeTeam && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Nhóm:</span>
-              <span className="font-semibold text-[#1e293b]">{activeTeam}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Nhóm:</span>
+              <span className="font-semibold text-ink">{activeTeam}</span>
               <button
                 type="button"
                 onClick={onClearTeam}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo nhóm này"
               >
                 <X className="w-3 h-3" />
@@ -223,13 +223,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Trạng thái */}
           {activeStatus && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Trạng thái:</span>
-              <span className="font-semibold text-[#1e293b]">{activeStatus}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Trạng thái:</span>
+              <span className="font-semibold text-ink">{activeStatus}</span>
               <button
                 type="button"
                 onClick={onClearStatus}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo trạng thái này"
               >
                 <X className="w-3 h-3" />
@@ -239,13 +239,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Thời hạn */}
           {activeDueLabel && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Thời hạn:</span>
-              <span className="font-semibold text-[#1e293b]">{activeDueLabel}</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Thời hạn:</span>
+              <span className="font-semibold text-ink">{activeDueLabel}</span>
               <button
                 type="button"
                 onClick={onClearDue}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc theo thời hạn này"
               >
                 <X className="w-3 h-3" />
@@ -255,13 +255,13 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Tìm kiếm */}
           {activeSearch && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="text-[#64748b]">Từ khóa:</span>
-              <span className="font-semibold text-[#1e293b]">"{activeSearch}"</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="text-subdued">Từ khóa:</span>
+              <span className="font-semibold text-ink">"{activeSearch}"</span>
               <button
                 type="button"
                 onClick={onClearSearch}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Bỏ lọc tìm kiếm này"
               >
                 <X className="w-3 h-3" />
@@ -271,12 +271,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
 
           {/* Dự án của tôi */}
           {isMyProjectsScope && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#334155] border border-[#cbd5e1] shadow-2xs">
-              <span className="font-semibold text-[#1e293b]">Dự án của tôi</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-ink-lighter border border-line ">
+              <span className="font-semibold text-ink">Dự án của tôi</span>
               <button
                 type="button"
                 onClick={onClearPersonalScope}
-                className="p-0.5 rounded-[3px] text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fee2e2] cursor-pointer transition-colors ml-0.5"
+                className="p-0.5 rounded-vds-md text-subdued-lighter hover:text-negative hover:bg-surface-negative cursor-pointer transition-colors ml-0.5"
                 title="Quay về tất cả công việc"
               >
                 <X className="w-3 h-3" />
@@ -293,7 +293,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                   setIsAddMenuOpen(!isAddMenuOpen);
                   setHoveredCategory(null);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] bg-white text-[11px] font-ui text-[#64748b] hover:text-[#1e293b] hover:border-[#94a3b8] border border-dashed border-[#cbd5e1] cursor-pointer transition-colors shadow-2xs"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-vds-md bg-surface text-xs font-ui text-subdued hover:text-ink hover:border-line-regular border border-dashed border-line cursor-pointer transition-colors "
                 title="Thêm điều kiện lọc"
               >
                 <Plus className="w-3 h-3" />
@@ -303,7 +303,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
               {/* Popover Menu Thêm lọc */}
               {isAddMenuOpen && (
                 <div
-                  className="absolute left-0 top-full mt-1 w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-lg py-1 z-50 animate-fade-in font-ui text-xs"
+                  className="absolute left-0 top-full mt-1 w-44 bg-surface rounded-vds-lg border border-line shadow-pop py-1 z-50 animate-fade-in font-ui text-xs"
                   onMouseLeave={() => setHoveredCategory(null)}
                 >
                   {/* 1. Dự án */}
@@ -316,12 +316,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                         type="button"
                         className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
                           hoveredCategory === 'project'
-                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
-                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                            ? 'bg-surface-200 text-ink font-medium'
+                            : 'text-ink-lighter hover:bg-surface-100'
                         }`}
                       >
                         <span>Dự án</span>
-                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                       </button>
 
                       {/* Submenu cấp 2 bên phải cho Dự án */}
@@ -330,7 +330,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                           className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
                           onMouseEnter={() => setHoveredCategory('project')}
                         >
-                          <div className="w-60 max-h-72 overflow-y-auto bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                          <div className="w-60 max-h-72 overflow-y-auto bg-surface rounded-vds-lg border border-line shadow-sheet py-1">
                             {projects.map((p) => {
                               const isSelected = filterState.projectId === p.id;
                               return (
@@ -344,12 +344,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                                   }}
                                   className={`w-full px-3 py-1.5 text-left text-xs truncate cursor-pointer flex items-center justify-between transition-colors ${
                                     isSelected
-                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
-                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                      ? 'bg-surface-accent-faint text-accent font-semibold'
+                                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                                   }`}
                                 >
                                   <span className="truncate">{p.name.replace('Dự án ', '')}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0 ml-1" />}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-accent shrink-0 ml-1" />}
                                 </button>
                               );
                             })}
@@ -369,12 +369,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                         type="button"
                         className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
                           hoveredCategory === 'status'
-                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
-                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                            ? 'bg-surface-200 text-ink font-medium'
+                            : 'text-ink-lighter hover:bg-surface-100'
                         }`}
                       >
                         <span>Trạng thái</span>
-                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                       </button>
 
                       {/* Submenu cấp 2 bên phải cho Trạng thái */}
@@ -383,7 +383,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                           className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
                           onMouseEnter={() => setHoveredCategory('status')}
                         >
-                          <div className="w-48 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                          <div className="w-48 bg-surface rounded-vds-lg border border-line shadow-sheet py-1">
                             {statuses.map((st) => {
                               const isSelected = filterState.status === st;
                               return (
@@ -397,12 +397,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                                   }}
                                   className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
                                     isSelected
-                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
-                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                      ? 'bg-surface-accent-faint text-accent font-semibold'
+                                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                                   }`}
                                 >
                                   <span>{st}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-accent shrink-0" />}
                                 </button>
                               );
                             })}
@@ -422,12 +422,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                         type="button"
                         className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
                           hoveredCategory === 'due'
-                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
-                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                            ? 'bg-surface-200 text-ink font-medium'
+                            : 'text-ink-lighter hover:bg-surface-100'
                         }`}
                       >
                         <span>Thời hạn</span>
-                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                       </button>
 
                       {/* Submenu cấp 2 bên phải cho Thời hạn */}
@@ -436,7 +436,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                           className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
                           onMouseEnter={() => setHoveredCategory('due')}
                         >
-                          <div className="w-44 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                          <div className="w-44 bg-surface rounded-vds-lg border border-line shadow-sheet py-1">
                             {dueOptions.map((opt) => {
                               const isSelected = filterState.dueFilter === opt.key;
                               return (
@@ -450,12 +450,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                                   }}
                                   className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
                                     isSelected
-                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
-                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                      ? 'bg-surface-accent-faint text-accent font-semibold'
+                                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                                   }`}
                                 >
                                   <span>{opt.label}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-accent shrink-0" />}
                                 </button>
                               );
                             })}
@@ -475,12 +475,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                         type="button"
                         className={`w-full px-3 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
                           hoveredCategory === 'team'
-                            ? 'bg-[#f1f5f9] text-[#1e293b] font-medium'
-                            : 'text-[#334155] hover:bg-[#f8fafc]'
+                            ? 'bg-surface-200 text-ink font-medium'
+                            : 'text-ink-lighter hover:bg-surface-100'
                         }`}
                       >
                         <span>Nhóm</span>
-                        <ChevronRight className="w-3 h-3 text-[#94a3b8]" />
+                        <ChevronRight className="w-3 h-3 text-subdued-lighter" />
                       </button>
 
                       {/* Submenu cấp 2 bên phải cho Nhóm */}
@@ -489,7 +489,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                           className="absolute left-full top-0 -ml-0.5 pl-1.5 z-50"
                           onMouseEnter={() => setHoveredCategory('team')}
                         >
-                          <div className="w-48 bg-white rounded-[8px] border border-[#e2e8f0] shadow-xl py-1">
+                          <div className="w-48 bg-surface rounded-vds-lg border border-line shadow-sheet py-1">
                             {teams.map((tm) => {
                               const isSelected = filterState.team === tm;
                               return (
@@ -503,12 +503,12 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
                                   }}
                                   className={`w-full px-3 py-1.5 text-left text-xs cursor-pointer flex items-center justify-between transition-colors ${
                                     isSelected
-                                      ? 'bg-[#fcf0f5] text-[#963861] font-semibold'
-                                      : 'text-[#334155] hover:bg-[#f1f5f9] hover:text-[#1e293b]'
+                                      ? 'bg-surface-accent-faint text-accent font-semibold'
+                                      : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
                                   }`}
                                 >
                                   <span>{tm}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#963861] shrink-0" />}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-accent shrink-0" />}
                                 </button>
                               );
                             })}
@@ -527,7 +527,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
         <button
           type="button"
           onClick={onClearAll}
-          className="text-[11px] font-ui font-medium text-[#64748b] hover:text-[#dc2626] hover:bg-[#fee2e2]/60 px-2.5 py-1 rounded-[4px] transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+          className="text-xs font-ui font-medium text-subdued hover:text-negative hover:bg-surface-negative/60 px-2.5 py-1 rounded-vds-md transition-colors cursor-pointer flex items-center gap-1 shrink-0"
           title="Đặt lại toàn bộ các điều kiện lọc về mặc định"
         >
           <RotateCcw className="w-3 h-3" />

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, X, ExternalLink } from 'lucide-react';
+import { Bell, X, ExternalLink } from './vds/icons';
 
 interface ToastItem {
   id: string;
@@ -76,35 +76,35 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="pointer-events-auto bg-white border border-[#963861]/30 rounded-[10px] shadow-xl p-3.5 flex items-start gap-3 relative overflow-hidden group hover:border-[#963861] transition-all cursor-pointer"
+            className="pointer-events-auto bg-surface border border-line-accent/30 rounded-vds-lg shadow-sheet p-3.5 flex items-start gap-3 relative overflow-hidden group hover:border-line-accent transition cursor-pointer"
             onClick={() => handleClickToast(toast)}
           >
             {/* Thanh viền accent bên trái màu mận VnExpress */}
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#963861]" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent-solid" />
 
             {/* Icon Bell */}
-            <div className="w-8 h-8 rounded-full bg-[#fdf2f7] text-[#963861] border border-[#f4c2d7] flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-full bg-surface-accent-faint text-accent border border-line flex items-center justify-center shrink-0 mt-0.5">
               <Bell className="w-4 h-4 animate-bounce" />
             </div>
 
             {/* Nội dung Toast */}
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-ui font-bold px-1.5 py-0.2 rounded bg-[#963861]/10 text-[#963861] uppercase tracking-wider">
+                <span className="text-[10px] font-ui font-bold px-1.5 py-0.2 rounded bg-accent-solid/10 text-accent">
                   Thông báo
                 </span>
-                <span className="text-[10px] text-[#94a3b8] font-ui">Vừa xong</span>
+                <span className="text-[10px] text-subdued-lighter font-ui">Vừa xong</span>
               </div>
-              <h5 className="font-title text-xs font-bold text-[#1e293b] mt-0.5 truncate">
+              <h5 className="font-title text-xs font-bold text-ink mt-0.5 truncate">
                 {toast.title}
               </h5>
               {toast.body && (
-                <p className="text-[11px] font-ui text-[#475569] mt-0.5 line-clamp-2 leading-relaxed">
+                <p className="text-xs font-ui text-ink-lighter mt-0.5 line-clamp-2 leading-relaxed">
                   {toast.body}
                 </p>
               )}
               {toast.taskId && (
-                <div className="mt-1 flex items-center gap-1 text-[10px] font-ui font-semibold text-[#1d508d]">
+                <div className="mt-1 flex items-center gap-1 text-[10px] font-ui font-semibold text-support">
                   <span>Xem chi tiết công việc</span>
                   <ExternalLink className="w-2.5 h-2.5" />
                 </div>
@@ -118,7 +118,7 @@ export const NotificationToastContainer: React.FC<NotificationToastContainerProp
                 e.stopPropagation();
                 handleClose(toast.id);
               }}
-              className="absolute top-2.5 right-2 text-[#94a3b8] hover:text-[#0f172a] hover:bg-[#f1f5f9] p-1 rounded transition-colors cursor-pointer"
+              className="absolute top-2.5 right-2 text-subdued-lighter hover:text-ink hover:bg-surface-200 p-1 rounded transition-colors cursor-pointer"
               title="Đóng thông báo"
             >
               <X className="w-3.5 h-3.5" />

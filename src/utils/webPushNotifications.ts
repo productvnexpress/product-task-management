@@ -44,7 +44,7 @@ export function getNotificationIconUrl(): string {
     if (!ctx) return '/icon.png';
 
     // Nền màu mận thương hiệu VnExpress #963861
-    ctx.fillStyle = '#963861';
+    ctx.fillStyle = '#b13460'; // VDS component/button/surface/accent/rest
     ctx.beginPath();
     ctx.roundRect(0, 0, 128, 128, 26);
     ctx.fill();

@@ -2,7 +2,9 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1013" media="(prefers-color-scheme: dark)" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -13,14 +15,22 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- VnExpress Design System 0.5.0 (bản phát hành, tự host trong public/vds) -->
+    <link rel="stylesheet" href="/vds/0.5.0/fonts/vds-fonts.css" />
+    <link rel="stylesheet" href="/vds/0.5.0/tokens/vds.css" />
+    <link rel="stylesheet" href="/vds/0.5.0/components/vds-components.css" />
+    <script>
+      // Giao diện sáng/tối theo VDS: data-theme trên <html>, chạy trước khi vẽ để không nháy màu
+      (function () {
+        try {
+          var pref = localStorage.getItem('wms_theme') || 'light';
+          var dark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#ffffff] text-[#202020] antialiased selection:bg-[#fce6eb] selection:text-[#b13460]">
+  <body class="antialiased selection:bg-surface-selected selection:text-accent">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

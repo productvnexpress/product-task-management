@@ -6,7 +6,7 @@
 import React from 'react';
 import { TaskItem, TaskStatus } from '../types';
 import { formatDateWithEnDay, formatPercentage } from '../utils/formatters';
-import { AlertCircle, Check, MessageSquare, ChevronRight, ChevronLeft, Layers, Link, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Check, MessageSquare, ChevronRight, ChevronLeft, Layers, Link, ExternalLink, CheckCircle2 } from './vds/icons';
 
 interface KanbanBoardProps {
   tasks: TaskItem[];
@@ -16,10 +16,10 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS: { status: TaskStatus; title: string; color: string; border: string }[] = [
-  { status: 'Chưa làm', title: 'Chưa làm', color: 'text-[#5f5f5f]', border: 'border-[#9f9f9f]' },
-  { status: 'Đang làm', title: 'Đang làm', color: 'text-[#365983]', border: 'border-[#466fa1]' },
-  { status: 'Bị nghẽn', title: 'Bị nghẽn', color: 'text-[#da1e28]', border: 'border-[#da1e28]' },
-  { status: 'Hoàn thành', title: 'Hoàn thành', color: 'text-[#24a148]', border: 'border-[#24a148]' },
+  { status: 'Chưa làm', title: 'Chưa làm', color: 'text-ink-lighter', border: 'border-line-regular' },
+  { status: 'Đang làm', title: 'Đang làm', color: 'text-support', border: 'border-line-support' },
+  { status: 'Bị nghẽn', title: 'Bị nghẽn', color: 'text-negative', border: 'border-line-negative' },
+  { status: 'Hoàn thành', title: 'Hoàn thành', color: 'text-positive', border: 'border-line-positive' },
 ];
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -47,28 +47,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-6 bg-[#fafafa]">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-6 bg-surface-100">
       {COLUMNS.map((col) => {
         const columnTasks = tasks.filter((t) => t.status === col.status);
 
         return (
           <div
             key={col.status}
-            className="bg-[#ffffff] border border-[#d6d6d6] rounded-[4px] flex flex-col min-h-[500px]"
+            className="bg-surface border border-line rounded-vds-md flex flex-col min-h-[500px]"
           >
             {/* Column Header */}
-            <div className="px-3 py-2.5 border-b border-[#d6d6d6] bg-[#f3f3f3] flex items-center justify-between">
+            <div className="px-3 py-2.5 border-b border-line bg-surface-200 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${
-                  col.status === 'Hoàn thành' ? 'bg-[#24a148]' :
-                  col.status === 'Bị nghẽn' ? 'bg-[#da1e28]' :
-                  col.status === 'Đang làm' ? 'bg-[#466fa1]' : 'bg-[#9f9f9f]'
+                  col.status === 'Hoàn thành' ? 'bg-positive-solid' :
+                  col.status === 'Bị nghẽn' ? 'bg-negative-solid' :
+                  col.status === 'Đang làm' ? 'bg-support-solid' : 'bg-icon-subdued'
                 }`} />
                 <span className={`font-ui text-xs font-bold ${col.color}`}>
                   {col.title}
                 </span>
               </div>
-              <span className="font-num text-xs px-2 py-0.5 rounded-[4px] bg-[#ffffff] border border-[#d6d6d6] text-[#5f5f5f]">
+              <span className="font-num text-xs px-2 py-0.5 rounded-vds-md bg-surface border border-line text-ink-lighter">
                 {columnTasks.length}
               </span>
             </div>
@@ -76,7 +76,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {/* Task Cards */}
             <div className="p-2 space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
               {columnTasks.length === 0 ? (
-                <div className="text-center py-8 text-xs font-body text-[#9f9f9f]">
+                <div className="text-center py-8 text-xs font-body text-subdued-lighter">
                   Không có công việc
                 </div>
               ) : (
@@ -87,20 +87,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   return (
                     <div
                       key={task.id}
-                      className={`p-3 bg-[#ffffff] border rounded-[4px] transition-all hover:border-[#9f9f9f] ${
+                      className={`p-3 bg-surface border rounded-vds-md transition hover:border-line-regular ${
                         task.status === 'Bị nghẽn'
-                          ? 'border-[#da1e28]/40 bg-[#fffafb]'
-                          : 'border-[#d6d6d6]'
+                          ? 'border-line-negative/40 bg-surface-100'
+                          : 'border-line'
                       }`}
                     >
                       {/* Priority tag: ONLY highlight Khẩn cấp in red without heavy box */}
                       <div className="flex items-center justify-between gap-1 mb-1.5 flex-wrap">
                         {task.priority === 'Khẩn cấp' ? (
-                          <span className="font-ui text-[10px] font-bold text-[#be123c] flex items-center gap-1">
+                          <span className="font-ui text-[10px] font-bold text-negative flex items-center gap-1">
                             🚨 Khẩn cấp
                           </span>
                         ) : (
-                          <span className="font-ui text-[10px] text-[#71717a] flex items-center gap-1">
+                          <span className="font-ui text-[10px] text-subdued flex items-center gap-1">
                             {task.priority}
                           </span>
                         )}
@@ -109,21 +109,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       {/* Phase Tag if present */}
                       {task.phaseName && (
                         <div className="mb-1.5">
-                          <span className="font-ui text-[10px] text-[#52525b] inline-flex items-center gap-1">
-                            <Layers className="w-2.5 h-2.5 text-[#71717a]" />
+                          <span className="font-ui text-[10px] text-ink-lighter inline-flex items-center gap-1">
+                            <Layers className="w-2.5 h-2.5 text-subdued" />
                             <span className="truncate max-w-[170px]">{task.phaseName}</span>
                           </span>
                         </div>
                       )}
 
                       {/* Title */}
-                      <h4 className="font-body text-xs text-[#202020] font-normal leading-snug mb-2">
+                      <h4 className="font-body text-xs text-ink font-normal leading-snug mb-2">
                         {task.title}
                       </h4>
 
                       {/* Blocker alert if blocked */}
                       {task.status === 'Bị nghẽn' && (
-                        <div className="mb-2 p-1.5 bg-[#f8d4d6] border border-[#da1e28] rounded-[2px] text-[11px] font-body text-[#da1e28] flex items-start gap-1">
+                        <div className="mb-2 p-1.5 bg-surface-negative border border-line-negative rounded-vds-sm text-xs font-body text-negative flex items-start gap-1">
                           <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
                           <span>{task.blockerReason || task.latestUpdateNote || 'Đang vướng mắc.'}</span>
                         </div>
@@ -137,24 +137,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               href={task.workLink.startsWith('http') ? task.workLink : `https://${task.workLink}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-ui font-medium text-[#2563eb] hover:text-[#1d4ed8] inline-flex items-center gap-1 hover:underline transition-colors"
+                              className="font-ui font-medium text-info hover:text-info inline-flex items-center gap-1 hover:underline transition-colors"
                               title={task.workLink}
                             >
-                              <Link className="w-2.5 h-2.5 text-[#2563eb]" />
+                              <Link className="w-2.5 h-2.5 text-info" />
                               <span>Link làm việc</span>
                               <ExternalLink className="w-2 h-2" />
                             </a>
                           )}
-                          {task.workLink && task.resultLink && <span className="text-[#d4d4d8]">•</span>}
+                          {task.workLink && task.resultLink && <span className="text-icon-subdued">•</span>}
                           {task.resultLink && (
                             <a
                               href={task.resultLink.startsWith('http') ? task.resultLink : `https://${task.resultLink}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-ui font-medium text-[#166534] hover:text-[#14532d] inline-flex items-center gap-1 hover:underline transition-colors"
+                              className="font-ui font-medium text-positive hover:text-positive inline-flex items-center gap-1 hover:underline transition-colors"
                               title={task.resultLink}
                             >
-                              <CheckCircle2 className="w-2.5 h-2.5 text-[#166534]" />
+                              <CheckCircle2 className="w-2.5 h-2.5 text-positive" />
                               <span>Link kết quả</span>
                               <ExternalLink className="w-2 h-2" />
                             </a>
@@ -164,16 +164,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
                       {/* Progress Bar & Quick Step Switcher */}
                       <div className="mb-2">
-                        <div className="flex items-center justify-between text-[10px] font-num text-[#7f7f7f] mb-1">
+                        <div className="flex items-center justify-between text-[10px] font-num text-subdued mb-1">
                           <span>Tiến độ</span>
-                          <span className="font-bold text-[#202020]">
+                          <span className="font-bold text-ink">
                             {formatPercentage(task.progress, 0)}
                           </span>
                         </div>
-                        <div className="h-1.5 bg-[#ececec] rounded-[1px] overflow-hidden mb-1.5">
+                        <div className="h-1.5 bg-surface-300 rounded-vds-sm overflow-hidden mb-1.5">
                           <div
                             className={`h-full ${
-                              task.progress === 100 ? 'bg-[#24a148]' : 'bg-[#466fa1]'
+                              task.progress === 100 ? 'bg-positive-solid' : 'bg-support-solid'
                             }`}
                             style={{ width: `${task.progress}%` }}
                           />
@@ -185,10 +185,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <button
                               key={step}
                               onClick={() => onUpdateProgress(task.id, step)}
-                              className={`flex-1 py-0.5 text-[9px] font-num rounded-[2px] transition-colors ${
+                              className={`flex-1 py-0.5 text-[10px] font-num rounded-vds-sm transition-colors ${
                                 task.progress === step
-                                  ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold shadow-2xs'
-                                  : 'bg-[#f3f3f3] text-[#5f5f5f] hover:bg-[#e1e1e1]'
+                                  ? 'bg-surface-accent-faint text-accent border border-line font-bold '
+                                  : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                               }`}
                             >
                               {step}%
@@ -198,9 +198,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       </div>
 
                       {/* Metadata: Assignee, Due date */}
-                      <div className="pt-2 border-t border-[rgba(0,0,0,0.06)] flex items-center justify-between text-[11px] font-body text-[#5f5f5f]">
+                      <div className="pt-2 border-t border-divider flex items-center justify-between text-xs font-body text-ink-lighter">
                         <span className="truncate max-w-[100px]">{task.assignee}</span>
-                        <span className="font-num text-[10px] text-[#7f7f7f]">
+                        <span className="font-num text-[10px] text-subdued">
                           {formatDateWithEnDay(task.dueDate)}
                         </span>
                       </div>
@@ -211,7 +211,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           {prev && (
                             <button
                               onClick={() => onUpdateStatus(task.id, prev)}
-                              className="h-[24px] px-1.5 rounded-[4px] bg-[#f3f3f3] border border-[#d6d6d6] text-[10px] font-ui text-[#5f5f5f] hover:text-[#202020] flex items-center"
+                              className="h-[24px] px-1.5 rounded-vds-md bg-surface-200 border border-line text-[10px] font-ui text-ink-lighter hover:text-ink flex items-center"
                               title={`Lùi về: ${prev}`}
                             >
                               <ChevronLeft className="w-3 h-3" />
@@ -220,7 +220,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           {next && (
                             <button
                               onClick={() => onUpdateStatus(task.id, next)}
-                              className="h-[24px] px-1.5 rounded-[4px] bg-[#466fa1] text-white text-[10px] font-ui font-bold flex items-center gap-0.5"
+                              className="h-[24px] px-1.5 rounded-vds-md bg-support-solid text-on-color text-[10px] font-ui font-bold flex items-center gap-0.5"
                               title={`Chuyển sang: ${next}`}
                             >
                               <span>{next}</span>
@@ -231,7 +231,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
                         <button
                           onClick={() => onOpenLogModal(task)}
-                          className="h-[24px] px-2 rounded-[4px] bg-[#fafafa] border border-[#d6d6d6] text-[10px] font-ui text-[#5f5f5f] hover:text-[#202020] flex items-center gap-1"
+                          className="h-[24px] px-2 rounded-vds-md bg-surface-100 border border-line text-[10px] font-ui text-ink-lighter hover:text-ink flex items-center gap-1"
                           title="Xem hoặc thêm ghi chú"
                         >
                           <MessageSquare className="w-3 h-3" />

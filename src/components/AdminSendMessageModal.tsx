@@ -17,7 +17,7 @@ import {
   AlertCircle,
   Megaphone,
   CheckCircle2,
-} from 'lucide-react';
+} from './vds/icons';
 
 interface AdminSendMessageModalProps {
   isOpen: boolean;
@@ -159,26 +159,26 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="w-full max-w-lg bg-white rounded-[16px] shadow-2xl border border-[#e2e8f0] overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-lg bg-surface rounded-vds-xl shadow-sheet border border-line overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#f1f5f9] flex items-center justify-between bg-gradient-to-r from-[#faf5ff] to-[#f5f3ff]">
+        <div className="p-5 border-b border-divider flex items-center justify-between bg-gradient-to-r from-surface-100 to-surface-support">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#7e22ce] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-extreme-solid text-on-color flex items-center justify-center shrink-0 ">
               <Megaphone className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-title text-sm sm:text-base font-bold text-[#1e293b]">
+              <h3 className="font-title text-sm sm:text-base font-bold text-ink">
                 Gửi thông điệp quản trị
               </h3>
-              <p className="text-[11px] font-ui text-[#64748b]">
-                Người gửi: <strong className="text-[#7e22ce]">{currentUser.name}</strong> (Quản trị viên)
+              <p className="text-xs font-ui text-subdued">
+                Người gửi: <strong className="text-extreme">{currentUser.name}</strong> (Quản trị viên)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-[#94a3b8] hover:text-[#1e293b] rounded-full hover:bg-[#e2e8f0] cursor-pointer"
+            className="p-1 text-subdued-lighter hover:text-ink rounded-full hover:bg-surface-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -192,9 +192,9 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-[8px] flex items-start gap-2 text-xs text-[#b91c1c]"
+                className="p-3 bg-surface-negative border border-line rounded-vds-lg flex items-start gap-2 text-xs text-negative"
               >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#dc2626]" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-negative" />
                 <span className="leading-relaxed">{errorMsg}</span>
               </motion.div>
             )}
@@ -203,10 +203,10 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
           {/* Recipient Selection Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-ui font-bold text-[#334155] flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-[#7e22ce]" />
+              <label className="text-xs font-ui font-bold text-ink-lighter flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-extreme" />
                 <span>Người nhận:</span>
-                <span className="text-[#7e22ce] font-extrabold bg-[#f3e8ff] px-2 py-0.5 rounded-full text-[11px]">
+                <span className="text-extreme font-extrabold bg-surface-200 px-2 py-0.5 rounded-full text-xs">
                   {selectedKeys.length} nhân sự
                 </span>
               </label>
@@ -216,35 +216,35 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
                 <button
                   type="button"
                   onClick={selectAllProduct}
-                  className="px-2 py-0.5 rounded-[4px] bg-[#f3e8ff] hover:bg-[#e9d5ff] text-[#7e22ce] font-bold cursor-pointer transition-colors"
+                  className="px-2 py-0.5 rounded-vds-md bg-surface-200 hover:bg-surface-200 text-extreme font-bold cursor-pointer transition-colors"
                 >
                   Tất cả ({productMembers.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => selectByTeam('Product Manager')}
-                  className="px-1.5 py-0.5 rounded-[4px] bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-medium cursor-pointer transition-colors"
+                  className="px-1.5 py-0.5 rounded-vds-md bg-surface-200 hover:bg-surface-300 text-ink-lighter font-medium cursor-pointer transition-colors"
                 >
                   PM
                 </button>
                 <button
                   type="button"
                   onClick={() => selectByTeam('UX/UI Designer')}
-                  className="px-1.5 py-0.5 rounded-[4px] bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-medium cursor-pointer transition-colors"
+                  className="px-1.5 py-0.5 rounded-vds-md bg-surface-200 hover:bg-surface-300 text-ink-lighter font-medium cursor-pointer transition-colors"
                 >
                   Design
                 </button>
                 <button
                   type="button"
                   onClick={() => selectByTeam('SEO')}
-                  className="px-1.5 py-0.5 rounded-[4px] bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-medium cursor-pointer transition-colors"
+                  className="px-1.5 py-0.5 rounded-vds-md bg-surface-200 hover:bg-surface-300 text-ink-lighter font-medium cursor-pointer transition-colors"
                 >
                   SEO
                 </button>
                 <button
                   type="button"
                   onClick={() => selectByTeam('Data')}
-                  className="px-1.5 py-0.5 rounded-[4px] bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] font-medium cursor-pointer transition-colors"
+                  className="px-1.5 py-0.5 rounded-vds-md bg-surface-200 hover:bg-surface-300 text-ink-lighter font-medium cursor-pointer transition-colors"
                 >
                   Data
                 </button>
@@ -252,7 +252,7 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
                   <button
                     type="button"
                     onClick={clearSelection}
-                    className="px-1.5 py-0.5 rounded-[4px] text-[#dc2626] hover:bg-[#fef2f2] font-medium cursor-pointer transition-colors"
+                    className="px-1.5 py-0.5 rounded-vds-md text-negative hover:bg-surface-negative font-medium cursor-pointer transition-colors"
                   >
                     Bỏ chọn
                   </button>
@@ -261,19 +261,19 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
             </div>
 
             {/* Member Checkbox List with Search */}
-            <div className="border border-[#cbd5e1] rounded-[8px] overflow-hidden bg-white">
-              <div className="p-2 border-b border-[#f1f5f9] bg-[#f8fafc] flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-[#94a3b8] shrink-0" />
+            <div className="border border-line rounded-vds-lg overflow-hidden bg-surface">
+              <div className="p-2 border-b border-divider bg-surface-100 flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-subdued-lighter shrink-0" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Tìm nhân sự theo tên, username..."
-                  className="w-full text-xs font-ui bg-transparent outline-hidden text-[#1e293b] placeholder-[#94a3b8]"
+                  className="w-full text-xs font-ui bg-transparent outline-hidden text-ink placeholder-subdued-lighter"
                 />
               </div>
 
-              <div className="max-h-36 overflow-y-auto p-1.5 divide-y divide-[#f1f5f9]">
+              <div className="max-h-36 overflow-y-auto p-1.5 divide-y divide-divider">
                 {filteredMembers.map((m) => {
                   const key = (m.username || m.name).toLowerCase();
                   const isSelected = selectedKeys.includes(key);
@@ -281,20 +281,20 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
                     <div
                       key={m.id}
                       onClick={() => toggleMember(m)}
-                      className={`flex items-center justify-between p-2 rounded-[6px] text-xs font-ui cursor-pointer transition-colors ${
-                        isSelected ? 'bg-[#faf5ff] text-[#7e22ce]' : 'hover:bg-[#f8fafc] text-[#334155]'
+                      className={`flex items-center justify-between p-2 rounded-vds-lg text-xs font-ui cursor-pointer transition-colors ${
+                        isSelected ? 'bg-surface-100 text-extreme' : 'hover:bg-surface-100 text-ink-lighter'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-[#7e22ce] shrink-0" />
+                          <CheckSquare className="w-4 h-4 text-extreme shrink-0" />
                         ) : (
-                          <Square className="w-4 h-4 text-[#cbd5e1] shrink-0" />
+                          <Square className="w-4 h-4 text-icon-subdued shrink-0" />
                         )}
                         <span className="font-bold truncate">{m.name}</span>
-                        <span className="text-[10px] text-[#64748b]">@{m.username || m.id}</span>
+                        <span className="text-[10px] text-subdued">@{m.username || m.id}</span>
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f1f5f9] text-[#64748b] shrink-0 font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-200 text-subdued shrink-0 font-medium">
                         {m.team}
                       </span>
                     </div>
@@ -306,7 +306,7 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
 
           {/* Title Input */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-ui font-bold text-[#334155]">
+            <label className="block text-xs font-ui font-bold text-ink-lighter">
               Tiêu đề thông điệp
             </label>
             <input
@@ -317,13 +317,13 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
                 if (errorMsg) setErrorMsg('');
               }}
               placeholder="Ví dụ: Nhắc nhở nộp báo cáo quý, Kế hoạch triển khai release..."
-              className="w-full px-3 py-2 bg-white border border-[#cbd5e1] focus:border-[#7e22ce] focus:ring-2 focus:ring-[#7e22ce]/10 rounded-[8px] text-xs font-medium text-[#1e293b] outline-hidden"
+              className="w-full px-3 py-2 bg-surface border border-line focus:border-line-support focus:ring-2 focus:ring-line-support/10 rounded-vds-lg text-xs font-medium text-ink outline-hidden"
             />
           </div>
 
           {/* Content Textarea */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-ui font-bold text-[#334155]">
+            <label className="block text-xs font-ui font-bold text-ink-lighter">
               Nội dung thông điệp
             </label>
             <textarea
@@ -334,28 +334,28 @@ export const AdminSendMessageModal: React.FC<AdminSendMessageModalProps> = ({
               }}
               rows={4}
               placeholder="Nhập nội dung ngắn gọn, súc tích gửi tới các nhân sự được chọn..."
-              className="w-full px-3 py-2 bg-white border border-[#cbd5e1] focus:border-[#7e22ce] focus:ring-2 focus:ring-[#7e22ce]/10 rounded-[8px] text-xs font-medium text-[#1e293b] outline-hidden leading-relaxed resize-none"
+              className="w-full px-3 py-2 bg-surface border border-line focus:border-line-support focus:ring-2 focus:ring-line-support/10 rounded-vds-lg text-xs font-medium text-ink outline-hidden leading-relaxed resize-none"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f1f5f9]">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
             <button
               type="button"
               onClick={onClose}
               disabled={isSending}
-              className="px-3.5 py-2 text-xs font-ui font-medium text-[#64748b] hover:bg-[#f1f5f9] rounded-[8px] cursor-pointer transition-colors"
+              className="px-3.5 py-2 text-xs font-ui font-medium text-subdued hover:bg-surface-200 rounded-vds-lg cursor-pointer transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSending || selectedKeys.length === 0}
-              className="px-4 py-2 bg-[#7e22ce] hover:bg-[#6b21a8] text-white font-ui text-xs font-bold rounded-[8px] transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              className="px-4 py-2 bg-extreme-solid hover:bg-extreme-solid text-on-color font-ui text-xs font-bold rounded-vds-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               {isSending ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="w-3 h-3 border-2 border-surface/30 border-t-white rounded-full animate-spin" />
                   Đang phát thông điệp...
                 </span>
               ) : (

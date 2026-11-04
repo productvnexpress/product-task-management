@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { FolderItem, ProjectItem, TaskItem } from '../types';
-import { Folder, FolderPlus, Plus, Edit2, Trash2, X, Check, ChevronRight } from 'lucide-react';
+import { Folder, FolderPlus, Plus, Edit2, Trash2, X, Check, ChevronRight } from './vds/icons';
 
 interface FolderManagerModalProps {
   isOpen: boolean;
@@ -113,18 +113,18 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="bg-surface rounded-vds-lg border border-line shadow-sheet w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#f0f0f0] flex items-center justify-between bg-[#fafafa]">
+        <div className="px-5 py-4 border-b border-divider flex items-center justify-between bg-surface-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[8px] bg-[#fdf2f7] border border-[#f4c2d7] flex items-center justify-center text-[#963861]">
+            <div className="w-8 h-8 rounded-vds-lg bg-surface-accent-faint border border-line flex items-center justify-center text-accent">
               <Folder className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-title text-sm font-bold text-[#202020]">
+              <h3 className="font-title text-sm font-bold text-ink">
                 Quản lý Thư mục Sản phẩm & Chuyên mục
               </h3>
-              <p className="text-[11px] font-ui text-[#64748b]">
+              <p className="text-xs font-ui text-subdued">
                 Tổ chức cây thư mục (VnExpress › Thể thao, Thế giới... / Ngôi sao / English / Tia sáng)
               </p>
             </div>
@@ -132,22 +132,22 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-[#71717a] hover:text-[#202020] hover:bg-[#f0f0f0] cursor-pointer"
+            className="p-1.5 rounded-full text-subdued hover:text-ink hover:bg-surface-200 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form thêm thư mục mới */}
-        <form onSubmit={handleAddFolder} className="p-4 border-b border-[#f0f0f0] bg-[#fcfcfc] space-y-2.5">
-          <div className="text-[11px] font-ui font-bold text-[#475569] uppercase tracking-wider">
+        <form onSubmit={handleAddFolder} className="p-4 border-b border-divider bg-surface-100 space-y-2.5">
+          <div className="text-xs font-ui font-bold text-ink-lighter">
             Thêm thư mục mới
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <select
               value={newParentId}
               onChange={(e) => setNewParentId(e.target.value)}
-              className="px-2.5 py-2 text-xs font-ui bg-white border border-[#d6d6d6] rounded-[8px] text-[#202020] focus:border-[#963861] focus:outline-hidden sm:w-44"
+              className="px-2.5 py-2 text-xs font-ui bg-surface border border-line rounded-vds-lg text-ink focus:border-line-accent focus:outline-hidden sm:w-44"
               title="Chọn cấp thư mục"
             >
               <option value="">📁 Thư mục gốc (Cấp 1)</option>
@@ -162,12 +162,12 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={newParentId ? 'Tên chuyên mục (VD: Pháp luật, Đời sống...)' : 'Tên sản phẩm (VD: VnExpress, Ngôi sao...)'}
-              className="flex-1 px-3 py-2 text-xs font-ui bg-white border border-[#d6d6d6] rounded-[8px] text-[#202020] focus:border-[#963861] focus:outline-hidden"
+              className="flex-1 px-3 py-2 text-xs font-ui bg-surface border border-line rounded-vds-lg text-ink focus:border-line-accent focus:outline-hidden"
             />
             <button
               type="submit"
               disabled={!newName.trim()}
-              className="px-3.5 py-2 rounded-[8px] bg-[#963861] hover:bg-[#80284f] disabled:opacity-40 text-white text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+              className="px-3.5 py-2 rounded-vds-lg bg-accent-solid hover:bg-accent-solid-hover disabled:opacity-40 text-on-color text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Thêm</span>
@@ -184,29 +184,29 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
             const rootProjCount = projects.filter((p) => p.folderId === root.id).length;
 
             return (
-              <div key={root.id} className="border border-[#e5e7eb] rounded-[10px] overflow-hidden bg-white">
+              <div key={root.id} className="border border-line rounded-vds-lg overflow-hidden bg-surface">
                 {/* Root Row */}
-                <div className="px-3.5 py-2.5 bg-[#f8fafc] flex items-center justify-between gap-2">
+                <div className="px-3.5 py-2.5 bg-surface-100 flex items-center justify-between gap-2">
                   {editingId === root.id ? (
                     <div className="flex items-center gap-2 flex-1">
                       <input
                         type="text"
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
-                        className="flex-1 px-2.5 py-1 text-xs font-ui bg-white border border-[#963861] rounded-[6px]"
+                        className="flex-1 px-2.5 py-1 text-xs font-ui bg-surface border border-line-accent rounded-vds-lg"
                         autoFocus
                       />
                       <button
                         type="button"
                         onClick={() => handleSaveEdit(root.id)}
-                        className="p-1 text-[#24a148] hover:bg-[#f0fdf4] rounded cursor-pointer"
+                        className="p-1 text-positive hover:bg-surface-positive rounded cursor-pointer"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
-                        className="p-1 text-[#71717a] hover:bg-[#f4f4f5] rounded cursor-pointer"
+                        className="p-1 text-subdued hover:bg-surface-200 rounded cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -214,11 +214,11 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                   ) : (
                     <>
                       <div className="flex items-center gap-2 min-w-0">
-                        <Folder className="w-4 h-4 text-[#963861] shrink-0" />
-                        <span className="font-title text-xs font-bold text-[#202020] truncate">
+                        <Folder className="w-4 h-4 text-accent shrink-0" />
+                        <span className="font-title text-xs font-bold text-ink truncate">
                           {root.name}
                         </span>
-                        <span className="text-[10px] font-ui text-[#64748b] bg-white border border-[#e2e8f0] px-1.5 py-0.2 rounded-full">
+                        <span className="text-[10px] font-ui text-subdued bg-surface border border-line px-1.5 py-0.2 rounded-full">
                           {children.length > 0 ? `${children.length} mục con` : `${rootProjCount} dự án`}
                         </span>
                       </div>
@@ -228,7 +228,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                           onClick={() => {
                             setNewParentId(root.id);
                           }}
-                          className="px-2 py-0.5 text-[10px] font-ui font-medium text-[#963861] hover:bg-[#fdf2f7] rounded cursor-pointer"
+                          className="px-2 py-0.5 text-[10px] font-ui font-medium text-accent hover:bg-surface-accent-faint rounded cursor-pointer"
                           title={`Thêm mục con vào ${root.name}`}
                         >
                           + Mục con
@@ -236,7 +236,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleStartEdit(root)}
-                          className="p-1 text-[#64748b] hover:text-[#202020] rounded cursor-pointer"
+                          className="p-1 text-subdued hover:text-ink rounded cursor-pointer"
                           title="Đổi tên"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDelete(root)}
-                          className="p-1 text-[#64748b] hover:text-[#dc2626] rounded cursor-pointer"
+                          className="p-1 text-subdued hover:text-negative rounded cursor-pointer"
                           title="Xóa thư mục"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -256,13 +256,13 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
 
                 {/* Children */}
                 {children.length > 0 && (
-                  <div className="divide-y divide-[#f1f5f9]">
+                  <div className="divide-y divide-divider">
                     {children.map((child) => {
                       const childProjCount = projects.filter((p) => p.folderId === child.id).length;
                       return (
                         <div
                           key={child.id}
-                          className="pl-7 pr-3.5 py-2 flex items-center justify-between gap-2 hover:bg-[#fafafa]"
+                          className="pl-7 pr-3.5 py-2 flex items-center justify-between gap-2 hover:bg-surface-100"
                         >
                           {editingId === child.id ? (
                             <div className="flex items-center gap-2 flex-1">
@@ -270,20 +270,20 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                                 type="text"
                                 value={editingName}
                                 onChange={(e) => setEditingName(e.target.value)}
-                                className="flex-1 px-2.5 py-1 text-xs font-ui bg-white border border-[#963861] rounded-[6px]"
+                                className="flex-1 px-2.5 py-1 text-xs font-ui bg-surface border border-line-accent rounded-vds-lg"
                                 autoFocus
                               />
                               <button
                                 type="button"
                                 onClick={() => handleSaveEdit(child.id)}
-                                className="p-1 text-[#24a148] hover:bg-[#f0fdf4] rounded cursor-pointer"
+                                className="p-1 text-positive hover:bg-surface-positive rounded cursor-pointer"
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setEditingId(null)}
-                                className="p-1 text-[#71717a] hover:bg-[#f4f4f5] rounded cursor-pointer"
+                                className="p-1 text-subdued hover:bg-surface-200 rounded cursor-pointer"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -291,13 +291,13 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                           ) : (
                             <>
                               <div className="flex items-center gap-2 min-w-0">
-                                <ChevronRight className="w-3 h-3 text-[#94a3b8] shrink-0" />
-                                <Folder className="w-3.5 h-3.5 text-[#3b629b] shrink-0" />
-                                <span className="font-ui text-xs text-[#334155] truncate">
+                                <ChevronRight className="w-3 h-3 text-subdued-lighter shrink-0" />
+                                <Folder className="w-3.5 h-3.5 text-support shrink-0" />
+                                <span className="font-ui text-xs text-ink-lighter truncate">
                                   {child.name}
                                 </span>
                                 {childProjCount > 0 && (
-                                  <span className="text-[10px] font-ui text-[#64748b] bg-[#f1f5f9] px-1.5 py-0.2 rounded-full">
+                                  <span className="text-[10px] font-ui text-subdued bg-surface-200 px-1.5 py-0.2 rounded-full">
                                     {childProjCount} dự án
                                   </span>
                                 )}
@@ -306,7 +306,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(child)}
-                                  className="p-1 text-[#94a3b8] hover:text-[#202020] rounded cursor-pointer"
+                                  className="p-1 text-subdued-lighter hover:text-ink rounded cursor-pointer"
                                   title="Đổi tên"
                                 >
                                   <Edit2 className="w-3 h-3" />
@@ -314,7 +314,7 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(child)}
-                                  className="p-1 text-[#94a3b8] hover:text-[#dc2626] rounded cursor-pointer"
+                                  className="p-1 text-subdued-lighter hover:text-negative rounded cursor-pointer"
                                   title="Xóa"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -333,11 +333,11 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#f0f0f0] bg-[#fafafa] flex justify-end">
+        <div className="px-5 py-3 border-t border-divider bg-surface-100 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-[8px] bg-[#202020] hover:bg-[#333333] text-white text-xs font-ui font-bold cursor-pointer transition-colors"
+            className="px-4 py-1.5 rounded-vds-lg bg-surface-200 hover:bg-surface-300 text-ink text-xs font-ui font-bold cursor-pointer transition-colors"
           >
             Đóng
           </button>

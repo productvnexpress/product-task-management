@@ -6,10 +6,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { formatDateWithEnDay, getInitials } from '../utils/formatters';
 import { getTeamColor } from '../utils/colors';
-import { Plus, User, KeyRound, LogOut, ChevronDown, Bell, Menu } from 'lucide-react';
+import { User, KeyRound, LogOut, ChevronDown, Bell, Search, DarkTheme } from './vds/icons';
 import { MemberItem, TaskItem, ProjectItem, ActiveTab, TeamType, TaskPersonalScope } from '../types';
 import { AccountSwitcher } from './AccountSwitcher';
-import { canCreateProject, canCreateMember, getUserRole, getRoleDisplayInfo } from '../utils/rbac';
+import { useThemePref } from '../utils/theme';
+import { getUserRole, getRoleDisplayInfo } from '../utils/rbac';
 
 interface HeaderProps {
   currentDate: Date;
@@ -34,6 +35,7 @@ interface HeaderProps {
   personalScope?: TaskPersonalScope;
   onChangeScope?: (scope: TaskPersonalScope, member?: MemberItem | null) => void;
   onToggleSidebar?: () => void;
+  onOpenSearch?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -57,8 +59,10 @@ export const Header: React.FC<HeaderProps> = ({
   personalScope,
   onChangeScope,
   onToggleSidebar,
+  onOpenSearch,
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [themePref, setThemePref] = useThemePref();
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,47 +82,37 @@ export const Header: React.FC<HeaderProps> = ({
   const roleInfo = getRoleDisplayInfo(userRole);
   const userTeamCol = userToShow ? getTeamColor(userToShow.team) : null;
   return (
-    <header className="bg-[#ffffff] border-b border-[#e0e0e0] px-4 md:px-6 py-3.5 md:py-4">
+    <header className="bg-surface border-b border-line px-4 md:px-6 py-3.5 md:py-4">
       <div className="flex items-center justify-between gap-3 max-w-[1040px] w-full mx-auto">
         {/* Left: Mobile Menu Toggle + Title & timestamp */}
         <div className="flex items-center gap-3 min-w-0">
-          {/* Hamburger button for Mobile */}
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            className="p-2 -ml-1 rounded-[8px] border border-[#e2e8f0] bg-white text-[#475569] hover:text-[#963861] hover:bg-[#fffbfd] md:hidden cursor-pointer shadow-2xs shrink-0"
-            title="Mở thanh điều hướng và bộ lọc"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
           <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <h2 className="font-title text-xl md:text-2xl font-bold text-[#202020] tracking-tight truncate">
+              <h2 className="font-title text-xl md:text-2xl font-bold text-ink tracking-tight truncate">
                 {activeTabTitle}
               </h2>
               {isDbConnected === true && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0] shrink-0" title="Đang kết nối trực tiếp với Supabase Database (Realtime)">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-surface-positive text-positive border border-line shrink-0" title="Đang kết nối trực tiếp với Supabase Database (Realtime)">
+                  <span className="w-1.5 h-1.5 rounded-full bg-positive-solid animate-pulse" />
                   <span className="hidden sm:inline">Supabase Live</span>
                   <span className="sm:hidden">Live</span>
                 </span>
               )}
               {isDbConnected === false && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#fffbeb] text-[#b45309] border border-[#fde68a] shrink-0" title="Không thể kết nối Supabase, đang dùng bộ nhớ tạm LocalStorage">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-surface-warning text-warning border border-line shrink-0" title="Không thể kết nối Supabase, đang dùng bộ nhớ tạm LocalStorage">
+                  <span className="w-1.5 h-1.5 rounded-full bg-warning-solid" />
                   <span className="hidden sm:inline">Offline Cache</span>
                   <span className="sm:hidden">Offline</span>
                 </span>
               )}
               {isDbConnected === null && (
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-[#f8fafc] text-[#64748b] border border-[#e2e8f0] shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] animate-ping" />
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-ui font-semibold bg-surface-100 text-subdued border border-line shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-icon-subdued animate-ping" />
                   <span className="hidden sm:inline">Đang kết nối...</span>
                 </span>
               )}
             </div>
-            <p className="font-ui text-xs text-[#7f7f7f] truncate">
+            <p className="font-ui text-xs text-subdued truncate">
               {formatDateWithEnDay(currentDate)}
             </p>
           </div>
@@ -126,6 +120,20 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right actions: User Profile Menu + CTA button tailored to active tab */}
         <div className="flex items-center gap-2 shrink-0">
+          {onOpenSearch && (
+            <button
+              type="button"
+              onClick={onOpenSearch}
+              className="h-9 w-9 lg:w-auto lg:pl-2.5 lg:pr-2 rounded-vds-lg bg-surface border border-line hover:border-line-accent text-ink-lighter hover:text-accent flex items-center justify-center lg:justify-start gap-2 cursor-pointer transition-colors"
+              aria-label="Tìm kiếm và lệnh nhanh"
+              title="Tìm kiếm (⌘K hoặc /)"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden lg:inline text-xs font-ui text-subdued-lighter w-28 text-left">Tìm nhanh…</span>
+              <span className="hidden lg:inline-flex kbd">⌘K</span>
+            </button>
+          )}
+
           {/* 1. Perspective Selector: Toàn ban / Việc của tôi / Đồng nghiệp */}
           <AccountSwitcher
             members={members}
@@ -143,12 +151,12 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenNotifications}
-              className="relative h-9 w-9 rounded-[8px] bg-white border border-[#cbd5e1] hover:border-[#963861] hover:bg-[#fffbfd] transition-all flex items-center justify-center cursor-pointer shadow-2xs text-[#475569] hover:text-[#963861]"
+              className="relative h-9 w-9 rounded-vds-lg bg-surface border border-line hover:border-line-accent hover:bg-surface-100 transition flex items-center justify-center cursor-pointer text-ink-lighter hover:text-accent"
               title={`Thông báo cá nhân ${unreadNotificationsCount > 0 ? `(${unreadNotificationsCount} chưa đọc)` : ''}`}
             >
               <Bell className="w-4 h-4" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#dc2626] text-white text-[9px] font-num font-bold ring-2 ring-white shadow-xs">
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-negative-solid text-on-color text-[10px] font-num font-bold ring-2 ring-surface ">
                   {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
                 </span>
               )}
@@ -160,24 +168,24 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative inline-block text-left" ref={profileMenuRef}>
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="h-9 px-2.5 sm:px-3 rounded-[8px] bg-white border border-[#cbd5e1] hover:border-[#963861] transition-all flex items-center gap-2 cursor-pointer shadow-2xs hover:bg-[#fffbfd]"
+                className="h-9 px-1.5 sm:px-3 rounded-vds-lg bg-surface border border-line hover:border-line-accent transition-colors flex items-center gap-2 cursor-pointer hover:bg-surface-100"
                 title="Tài khoản & Quản lý mật khẩu"
               >
                 <div
-                  className={`w-6 h-6 rounded-full ${userTeamCol?.bg || 'bg-[#963861]'} text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-xs`}
+                  className={`w-6 h-6 rounded-full ${userTeamCol?.bg || 'bg-accent-solid'} text-on-color flex items-center justify-center text-[10px] font-bold shrink-0 `}
                 >
                   {getInitials(userToShow.name)}
                 </div>
                 <div className="text-left hidden md:flex items-center gap-1.5">
-                  <span className="text-xs font-ui font-bold text-[#1e293b] max-w-[120px] truncate">
+                  <span className="text-xs font-ui font-bold text-ink max-w-[120px] truncate">
                     {userToShow.name}
                   </span>
-                  <span className="font-mono text-[10px] text-[#963861] font-semibold">
+                  <span className="font-mono text-[10px] text-accent font-semibold">
                     @{userToShow.username || userToShow.id}
                   </span>
                 </div>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-[#64748b] transition-transform shrink-0 ${
+                  className={`hidden sm:block w-3.5 h-3.5 text-subdued transition-transform shrink-0 ${
                     isProfileMenuOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -185,20 +193,20 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Dropdown Menu */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-[10px] border border-[#e2e8f0] shadow-xl z-50 overflow-hidden py-1 animate-fade-in font-body">
+                <div className="absolute right-0 mt-1.5 w-64 bg-surface rounded-vds-lg border border-line shadow-sheet z-50 overflow-hidden py-1 animate-fade-in font-body">
                   {/* User info banner */}
-                  <div className="px-3.5 py-2.5 border-b border-[#f1f5f9] bg-[#f8fafc]">
-                    <p className="text-xs font-title font-bold text-[#1e293b] truncate">
+                  <div className="px-3.5 py-2.5 border-b border-divider bg-surface-100">
+                    <p className="text-xs font-title font-bold text-ink truncate">
                       {userToShow.name}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="font-mono text-[10px] text-[#963861] font-bold">
+                      <span className="font-mono text-[10px] text-accent font-bold">
                         @{userToShow.username || userToShow.id}
                       </span>
                       <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${roleInfo.badgeClass}`}>
                         {roleInfo.shortLabel}
                       </span>
-                      <span className="text-[10px] text-[#64748b]">• {userToShow.team}</span>
+                      <span className="text-[10px] text-subdued">• {userToShow.team}</span>
                     </div>
                   </div>
 
@@ -208,9 +216,9 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsProfileMenuOpen(false);
                       onOpenProfile?.('profile');
                     }}
-                    className="w-full px-3.5 py-2 text-left text-xs text-[#334155] hover:bg-[#f8fafc] flex items-center gap-2 transition-colors cursor-pointer"
+                    className="w-full px-3.5 py-2 text-left text-xs text-ink-lighter hover:bg-surface-100 flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <User className="w-3.5 h-3.5 text-[#64748b]" />
+                    <User className="w-3.5 h-3.5 text-subdued" />
                     <span>Hồ sơ cá nhân</span>
                   </button>
 
@@ -219,13 +227,42 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsProfileMenuOpen(false);
                       onOpenProfile?.('password');
                     }}
-                    className="w-full px-3.5 py-2 text-left text-xs text-[#334155] hover:bg-[#f8fafc] flex items-center gap-2 transition-colors cursor-pointer"
+                    className="w-full px-3.5 py-2 text-left text-xs text-ink-lighter hover:bg-surface-100 flex items-center gap-2 transition-colors cursor-pointer"
                   >
-                    <KeyRound className="w-3.5 h-3.5 text-[#64748b]" />
+                    <KeyRound className="w-3.5 h-3.5 text-subdued" />
                     <span>Đổi mật khẩu</span>
                   </button>
 
-                  <div className="border-t border-[#f1f5f9] my-1" />
+                  <div className="border-t border-divider my-1" />
+
+                  <div className="px-3.5 py-2 flex items-center gap-2">
+                    <DarkTheme className="w-3.5 h-3.5 text-subdued shrink-0" />
+                    <span className="text-xs text-ink-lighter flex-1">Giao diện</span>
+                    <div role="radiogroup" aria-label="Giao diện" className="flex items-center gap-0.5 p-0.5 rounded-vds-md bg-surface-200">
+                      {(
+                        [
+                          { id: 'light', label: 'Sáng' },
+                          { id: 'dark', label: 'Tối' },
+                          { id: 'system', label: 'Tự động' },
+                        ] as const
+                      ).map((o) => (
+                        <button
+                          key={o.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={themePref === o.id}
+                          onClick={() => setThemePref(o.id)}
+                          className={`h-6 px-2 rounded-vds-md text-[10px] font-ui font-bold cursor-pointer transition-colors ${
+                            themePref === o.id ? 'bg-surface text-accent' : 'text-subdued hover:text-ink'
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-divider my-1" />
 
                   {onLogout && (
                     <button
@@ -233,9 +270,9 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsProfileMenuOpen(false);
                         onLogout();
                       }}
-                      className="w-full px-3.5 py-2 text-left text-xs text-[#dc2626] hover:bg-[#fef2f2] flex items-center gap-2 transition-colors cursor-pointer font-bold"
+                      className="w-full px-3.5 py-2 text-left text-xs text-negative hover:bg-surface-negative flex items-center gap-2 transition-colors cursor-pointer font-bold"
                     >
-                      <LogOut className="w-3.5 h-3.5 text-[#dc2626]" />
+                      <LogOut className="w-3.5 h-3.5 text-negative" />
                       <span>Đăng xuất</span>
                     </button>
                   )}
@@ -244,31 +281,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {activeTab === 'projects' && canCreateProject(currentAuthUser) ? (
-            <button
-              onClick={onOpenAddProject}
-              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#b13460] hover:bg-[#8f274c] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tạo dự án mới</span>
-            </button>
-          ) : activeTab === 'members' && canCreateMember(currentAuthUser) ? (
-            <button
-              onClick={onOpenAddMember}
-              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#24a148] hover:bg-[#1d8239] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tạo nhân sự mới</span>
-            </button>
-          ) : (
-            <button
-              onClick={onOpenQuickAdd}
-              className="hidden md:flex h-9 px-4 rounded-[8px] bg-[#963861] hover:bg-[#832e52] text-white font-ui text-xs font-bold items-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tạo việc mới</span>
-            </button>
-          )}
         </div>
       </div>
     </header>

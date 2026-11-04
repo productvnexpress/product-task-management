@@ -19,7 +19,7 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
-} from 'lucide-react';
+} from './vds/icons';
 
 interface ProjectCalendarViewProps {
   projects: ProjectItem[];
@@ -134,27 +134,27 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
     switch (status) {
       case 'Đang triển khai':
         return {
-          classes: 'bg-[#eff6ff] text-[#1e40af] border border-[#bfdbfe] border-l-[3px] border-l-[#2563eb] hover:bg-[#dbeafe]',
+          classes: 'bg-surface-info text-support border border-line border-l-[3px] border-l-line-info hover:bg-surface-info',
           label: 'Đang triển khai',
         };
       case 'Hoàn thành':
         return {
-          classes: 'bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] border-l-[3px] border-l-[#16a34a] hover:bg-[#dcfce7]',
+          classes: 'bg-surface-positive text-positive border border-line border-l-[3px] border-l-line-positive hover:bg-surface-positive',
           label: 'Hoàn thành',
         };
       case 'Chưa triển khai':
         return {
-          classes: 'bg-[#f8fafc] text-[#475569] border border-[#e2e8f0] border-l-[3px] border-l-[#94a3b8] hover:bg-[#f1f5f9]',
+          classes: 'bg-surface-100 text-ink-lighter border border-line border-l-[3px] border-l-line-regular hover:bg-surface-200',
           label: 'Chưa triển khai',
         };
       case 'Tạm dừng':
         return {
-          classes: 'bg-[#fff1f2] text-[#9f1239] border border-[#fecdd3] border-l-[3px] border-l-[#e11d48] hover:bg-[#ffe4e6]',
+          classes: 'bg-surface-negative text-negative border border-line border-l-[3px] border-l-line-negative hover:bg-surface-negative',
           label: 'Tạm dừng',
         };
       default:
         return {
-          classes: 'bg-[#eff6ff] text-[#1e40af] border border-[#bfdbfe] border-l-[3px] border-l-[#2563eb] hover:bg-[#dbeafe]',
+          classes: 'bg-surface-info text-support border border-line border-l-[3px] border-l-line-info hover:bg-surface-info',
           label: 'Đang triển khai',
         };
     }
@@ -182,21 +182,21 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
     <div
       className={
         isFullscreen
-          ? 'fixed inset-0 z-50 bg-[#f8fafc] p-4 sm:p-6 overflow-y-auto flex flex-col space-y-3'
+          ? 'fixed inset-0 z-50 bg-surface-100 p-4 sm:p-6 overflow-y-auto flex flex-col space-y-3'
           : 'space-y-3 animate-fade-in w-full'
       }
     >
       {/* 1. Thanh điều khiển: Chế độ xem & Bộ lọc */}
-      <div className="bg-white border border-[#e0e0e0] rounded-[10px] p-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+      <div className="bg-surface border border-line rounded-vds-lg p-2.5 flex flex-wrap items-center justify-between gap-2.5">
         {/* Nhóm trái: Chế độ xem (Tháng / Tuần) */}
-        <div className="flex items-center gap-1 bg-[#f5f5f5] p-1 rounded-[8px] border border-[#e0e0e0]">
+        <div className="flex items-center gap-1 bg-surface-200 p-1 rounded-vds-lg border border-line">
           <button
             type="button"
             onClick={() => setViewMode('month')}
-            className={`px-3 py-1 rounded-[6px] text-xs font-ui font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-vds-lg text-xs font-ui font-bold transition cursor-pointer ${
               viewMode === 'month'
-                ? 'bg-white text-[#963861] shadow-2xs border border-[#e0e0e0]'
-                : 'text-[#5f5f5f] hover:text-[#202020]'
+                ? 'bg-surface text-accent border border-line'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Tháng
@@ -204,10 +204,10 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
           <button
             type="button"
             onClick={() => setViewMode('week')}
-            className={`px-3 py-1 rounded-[6px] text-xs font-ui font-bold transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-vds-lg text-xs font-ui font-bold transition cursor-pointer ${
               viewMode === 'week'
-                ? 'bg-white text-[#963861] shadow-2xs border border-[#e0e0e0]'
-                : 'text-[#5f5f5f] hover:text-[#202020]'
+                ? 'bg-surface text-accent border border-line'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Tuần
@@ -219,20 +219,20 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
           <button
             type="button"
             onClick={handlePrev}
-            className="p-1.5 rounded-[6px] border border-[#d6d6d6] hover:bg-[#f5f5f5] text-[#5f5f5f] hover:text-[#202020] transition-colors cursor-pointer"
+            className="p-1.5 rounded-vds-lg border border-line hover:bg-surface-200 text-ink-lighter hover:text-ink transition-colors cursor-pointer"
             title="Trước"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="text-xs font-ui font-bold text-[#202020] px-2 whitespace-nowrap min-w-[130px] text-center">
+          <span className="text-xs font-ui font-bold text-ink px-2 whitespace-nowrap min-w-[130px] text-center">
             {timeScale.windowLabel}
           </span>
 
           <button
             type="button"
             onClick={handleNext}
-            className="p-1.5 rounded-[6px] border border-[#d6d6d6] hover:bg-[#f5f5f5] text-[#5f5f5f] hover:text-[#202020] transition-colors cursor-pointer"
+            className="p-1.5 rounded-vds-lg border border-line hover:bg-surface-200 text-ink-lighter hover:text-ink transition-colors cursor-pointer"
             title="Sau"
           >
             <ChevronRight className="w-4 h-4" />
@@ -241,7 +241,7 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
           <button
             type="button"
             onClick={handleToday}
-            className="px-2.5 py-1 text-xs font-ui font-bold rounded-[6px] border border-[#d6d6d6] hover:bg-[#f5f5f5] text-[#5f5f5f] hover:text-[#202020] transition-colors cursor-pointer ml-1"
+            className="px-2.5 py-1 text-xs font-ui font-bold rounded-vds-lg border border-line hover:bg-surface-200 text-ink-lighter hover:text-ink transition-colors cursor-pointer ml-1"
           >
             Hôm nay
           </button>
@@ -250,12 +250,12 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
         {/* Nhóm phải: Lọc nhân sự & Phóng to */}
         <div className="flex items-center gap-2 flex-wrap ml-auto">
           {/* Lọc theo nhân sự */}
-          <div className="flex items-center gap-1 bg-[#fafafa] border border-[#d6d6d6] rounded-[6px] px-2 py-1 text-xs font-ui">
-            <Users className="w-3.5 h-3.5 text-[#7f7f7f]" />
+          <div className="flex items-center gap-1 bg-surface-100 border border-line rounded-vds-lg px-2 py-1 text-xs font-ui">
+            <Users className="w-3.5 h-3.5 text-subdued" />
             <select
               value={selectedMemberFilter}
               onChange={(e) => setSelectedMemberFilter(e.target.value)}
-              className="bg-transparent text-xs font-body text-[#202020] focus:outline-hidden cursor-pointer"
+              className="bg-transparent text-xs font-body text-ink focus:outline-hidden cursor-pointer"
             >
               <option value="all">Tất cả nhân sự</option>
               {productMembers.map((m) => (
@@ -270,12 +270,12 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
           <button
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="px-2.5 py-1.5 rounded-[6px] border border-[#d6d6d6] bg-white hover:bg-[#f5f5f5] text-[#5f5f5f] hover:text-[#202020] transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-ui font-bold"
+            className="px-2.5 py-1.5 rounded-vds-lg border border-line bg-surface hover:bg-surface-200 text-ink-lighter hover:text-ink transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-ui font-bold"
             title={isFullscreen ? 'Thu nhỏ (ESC)' : 'Toàn màn hình'}
           >
             {isFullscreen ? (
               <>
-                <Minimize2 className="w-3.5 h-3.5 text-[#963861]" />
+                <Minimize2 className="w-3.5 h-3.5 text-accent" />
                 <span>Thu nhỏ</span>
               </>
             ) : (
@@ -289,45 +289,45 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
       </div>
 
       {/* 2. Chú thích Ý nghĩa Màu sắc Pastel */}
-      <div className="bg-white border border-[#e8e8e8] rounded-[8px] px-3.5 py-2 shadow-2xs flex items-center gap-4 text-xs font-ui text-[#5f5f5f] flex-wrap">
-        <span className="text-[11px] font-bold text-[#7f7f7f] uppercase tracking-wider">
+      <div className="bg-surface border border-line rounded-vds-lg px-3.5 py-2 flex items-center gap-4 text-xs font-ui text-ink-lighter flex-wrap">
+        <span className="text-xs font-bold text-subdued">
           Trạng thái:
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-xs bg-[#eff6ff] border border-[#bfdbfe] border-l-[3px] border-l-[#2563eb]" />
-          <span className="text-[#202020]">Đang triển khai</span>
+          <span className="w-3 h-3 rounded-xs bg-surface-info border border-line border-l-[3px] border-l-line-info" />
+          <span className="text-ink">Đang triển khai</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-xs bg-[#f0fdf4] border border-[#bbf7d0] border-l-[3px] border-l-[#16a34a]" />
-          <span className="text-[#202020]">Hoàn thành</span>
+          <span className="w-3 h-3 rounded-xs bg-surface-positive border border-line border-l-[3px] border-l-line-positive" />
+          <span className="text-ink">Hoàn thành</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-xs bg-[#f8fafc] border border-[#e2e8f0] border-l-[3px] border-l-[#94a3b8]" />
-          <span className="text-[#202020]">Chưa triển khai</span>
+          <span className="w-3 h-3 rounded-xs bg-surface-100 border border-line border-l-[3px] border-l-line-regular" />
+          <span className="text-ink">Chưa triển khai</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-xs bg-[#fff1f2] border border-[#fecdd3] border-l-[3px] border-l-[#e11d48]" />
-          <span className="text-[#202020]">Tạm dừng</span>
+          <span className="w-3 h-3 rounded-xs bg-surface-negative border border-line border-l-[3px] border-l-line-negative" />
+          <span className="text-ink">Tạm dừng</span>
         </div>
       </div>
 
       {/* 3. Khung Biểu đồ Gantt Timeline (Tháng / Tuần) */}
       <div
-        className={`bg-white border border-[#e0e0e0] rounded-[12px] shadow-2xs overflow-hidden flex flex-col ${
+        className={`bg-surface border border-line rounded-vds-lg overflow-hidden flex flex-col ${
           isFullscreen ? 'flex-1 min-h-[550px]' : ''
         }`}
       >
         <div className="flex overflow-x-auto min-h-[450px] flex-1">
           {/* Cột trái: Định danh Dự án & Cột PM phụ trách thẳng hàng (w-72, PM w-20) */}
-          <div className="w-72 shrink-0 border-r border-[#e0e0e0] bg-[#fafafa] z-10 sticky left-0 shadow-xs">
+          <div className="w-72 shrink-0 border-r border-line bg-surface-100 z-10 sticky left-0 ">
             {/* Tiêu đề cột trái */}
-            <div className="h-12 border-b border-[#e0e0e0] px-3 flex items-center text-xs font-ui font-extrabold uppercase tracking-wider text-[#7f7f7f]">
+            <div className="h-12 border-b border-line px-3 flex items-center text-xs font-ui font-bold text-subdued">
               <div className="flex-1 min-w-0">Dự án ({displayedProjects.length})</div>
-              <div className="w-20 shrink-0 text-left pl-2 border-l border-[#e0e0e0]">PM</div>
+              <div className="w-20 shrink-0 text-left pl-2 border-l border-line">PM</div>
             </div>
 
             {/* Các hàng dự án */}
-            <div className="divide-y divide-[#f0f0f0]">
+            <div className="divide-y divide-divider">
               {displayedProjects.map((p) => {
                 const rawPm = p.roles?.pm?.[0] || p.leadName?.split(/[,&]/)[0] || '';
                 const pmShort = formatPmShortName(rawPm);
@@ -336,30 +336,30 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
                   <div
                     key={p.id}
                     onClick={() => onOpenProjectDetail?.(p.id)}
-                    className="h-14 px-3 flex items-center hover:bg-[#f0f4f8] transition-colors cursor-pointer group"
+                    className="h-14 px-3 flex items-center hover:bg-surface-200 transition-colors cursor-pointer group"
                     title="Xem chi tiết dự án"
                   >
                     {/* Cột 1: Tên & Mã dự án */}
                     <div className="flex-1 min-w-0 pr-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-ui font-bold text-xs text-[#202020] truncate group-hover:text-[#963861]">
+                        <span className="font-ui font-bold text-xs text-ink truncate group-hover:text-accent">
                           {p.name.replace(/^Dự án\s+/i, '')}
                         </span>
                         {p.isStrategic && (
-                          <span className="text-[#d97706] text-xs shrink-0" title="Chiến lược">
+                          <span className="text-warning text-xs shrink-0" title="Chiến lược">
                             ⭐
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] font-num text-[#7f7f7f] block truncate">
+                      <span className="text-[10px] font-num text-subdued block truncate">
                         {p.code}
                       </span>
                     </div>
 
                     {/* Cột 2: PM phụ trách (Thẳng hàng, rút gọn tên) */}
-                    <div className="w-20 shrink-0 text-left pl-2 border-l border-[#f0f0f0]">
+                    <div className="w-20 shrink-0 text-left pl-2 border-l border-divider">
                       <span
-                        className="text-xs font-ui font-semibold text-[#475569] truncate block"
+                        className="text-xs font-ui font-semibold text-ink-lighter truncate block"
                         title={rawPm || undefined}
                       >
                         {pmShort}
@@ -372,25 +372,25 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
           </div>
 
           {/* Khung phải: Thang đo Thời gian & Thanh Gantt Dự án */}
-          <div className="flex-1 min-w-[700px] relative bg-white flex flex-col">
+          <div className="flex-1 min-w-[700px] relative bg-surface flex flex-col">
             {/* Hàng tiêu đề cột thời gian */}
-            <div className="h-12 border-b border-[#e0e0e0] flex sticky top-0 bg-[#fafafa] z-5">
+            <div className="h-12 border-b border-line flex sticky top-0 bg-surface-100 z-5">
               {timeScale.columns.map((col) => (
                 <div
                   key={col.id}
-                  className={`flex-1 border-r border-[#e8e8e8] px-2 flex flex-col justify-center text-center select-none ${
-                    col.isToday ? 'bg-[#fff7ed]' : ''
+                  className={`flex-1 border-r border-line px-2 flex flex-col justify-center text-center select-none ${
+                    col.isToday ? 'bg-surface-warning' : ''
                   }`}
                 >
                   <span
                     className={`text-xs font-ui font-bold truncate ${
-                      col.isToday ? 'text-[#c2410c]' : 'text-[#202020]'
+                      col.isToday ? 'text-warning' : 'text-ink'
                     }`}
                   >
                     {col.label}
                   </span>
                   {col.subLabel && (
-                    <span className="text-[10px] font-num text-[#9f9f9f] truncate">
+                    <span className="text-[10px] font-num text-subdued-lighter truncate">
                       {col.subLabel}
                     </span>
                   )}
@@ -399,15 +399,15 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
             </div>
 
             {/* Hàng chứa thanh Gantt */}
-            <div className="divide-y divide-[#f0f0f0] relative flex-1">
+            <div className="divide-y divide-divider relative flex-1">
               {/* Vạch chỉ báo thời gian Hôm nay */}
               {todayPos.isVisible && (
                 <div
                   style={{ left: `${todayPos.leftPercent}%` }}
-                  className="absolute top-0 bottom-0 w-0.5 bg-[#dc2626] z-10 pointer-events-none"
+                  className="absolute top-0 bottom-0 w-0.5 bg-negative-solid z-10 pointer-events-none"
                   title={`Hôm nay (${todayStr})`}
                 >
-                  <span className="absolute -top-2 -translate-x-1/2 bg-[#dc2626] text-white text-[9px] font-ui font-bold px-1 rounded">
+                  <span className="absolute -top-2 -translate-x-1/2 bg-negative-solid text-on-color text-[10px] font-ui font-bold px-1 rounded">
                     Hôm nay
                   </span>
                 </div>
@@ -428,15 +428,15 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
                 return (
                   <div
                     key={p.id}
-                    className="h-14 relative flex items-center px-1 hover:bg-[#fafafa]/60 transition-colors"
+                    className="h-14 relative flex items-center px-1 hover:bg-surface-100/60 transition-colors"
                   >
                     {/* Vạch chia cột nền */}
                     <div className="absolute inset-0 flex pointer-events-none">
                       {timeScale.columns.map((col) => (
                         <div
                           key={col.id}
-                          className={`flex-1 border-r border-[#f0f0f0] ${
-                            col.isToday ? 'bg-[#fff7ed]/20' : ''
+                          className={`flex-1 border-r border-divider ${
+                            col.isToday ? 'bg-surface-warning/20' : ''
                           }`}
                         />
                       ))}
@@ -450,7 +450,7 @@ export const ProjectCalendarView: React.FC<ProjectCalendarViewProps> = ({
                           left: `${pos.leftPercent}%`,
                           width: `${pos.widthPercent}%`,
                         }}
-                        className={`absolute h-7 rounded-[4px] shadow-2xs transition-all hover:brightness-95 cursor-pointer z-5 flex items-center px-2.5 ${barStyle.classes}`}
+                        className={`absolute h-7 rounded-vds-md transition hover:brightness-95 cursor-pointer z-5 flex items-center px-2.5 ${barStyle.classes}`}
                         title={`${p.name}\nTrạng thái: ${p.status}\nThời hạn: ${formatDateShort(bounds.startDate)} ➔ ${formatDateShort(bounds.endDate)}`}
                       >
                         <div className="flex items-center gap-1.5 truncate text-xs font-ui font-semibold">

@@ -30,7 +30,7 @@ import {
   Check,
   KeyRound,
   Megaphone
-} from 'lucide-react';
+} from './vds/icons';
 import { canCreateMember, canEditMember, canDeleteMember, getUserRole } from '../utils/rbac';
 import { workingTimeService } from '../services/workingTimeService';
 import { AdminResetPasswordModal } from './AdminResetPasswordModal';
@@ -341,23 +341,23 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
   return (
     <div className="space-y-6 animate-fade-in w-full max-w-[800px] mx-auto pb-12">
       {/* 2 Primary Group Tabs Switcher */}
-      <div className="bg-[#f0f0f0] p-1.5 rounded-[10px] border border-[#e0e0e0] flex items-center gap-2">
+      <div className="bg-surface-200 p-1.5 rounded-vds-lg border border-line flex items-center gap-2">
         <button
           type="button"
           onClick={() => setActiveGroupTab('Product')}
-          className={`flex-1 py-2.5 px-4 rounded-[8px] font-ui text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`flex-1 py-2.5 px-4 rounded-vds-lg font-ui text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
             activeGroupTab === 'Product'
-              ? 'bg-white text-[#1d508d] shadow-2xs border border-[#d0d0d0]'
-              : 'text-[#606060] hover:text-[#202020] hover:bg-white/60'
+              ? 'bg-surface text-support border border-line'
+              : 'text-ink-lighter hover:text-ink hover:bg-surface/60'
           }`}
         >
-          <Briefcase className={`w-4 h-4 ${activeGroupTab === 'Product' ? 'text-[#1d508d]' : 'text-[#707070]'}`} />
+          <Briefcase className={`w-4 h-4 ${activeGroupTab === 'Product' ? 'text-support' : 'text-ink-lighter'}`} />
           <span>1. Nhóm Product</span>
           <span
-            className={`font-num text-[11px] px-2 py-0.5 rounded-full font-bold ${
+            className={`font-num text-xs px-2 py-0.5 rounded-full font-bold ${
               activeGroupTab === 'Product'
-                ? 'bg-[#eef4fb] text-[#1d508d] border border-[#c2d7f0]'
-                : 'bg-[#e4e4e4] text-[#707070]'
+                ? 'bg-surface-support text-support border border-line'
+                : 'bg-surface-300 text-ink-lighter'
             }`}
           >
             {productMembers.length} nhân sự
@@ -367,19 +367,19 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
         <button
           type="button"
           onClick={() => setActiveGroupTab('Stakeholder')}
-          className={`flex-1 py-2.5 px-4 rounded-[8px] font-ui text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`flex-1 py-2.5 px-4 rounded-vds-lg font-ui text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
             activeGroupTab === 'Stakeholder'
-              ? 'bg-white text-[#b13460] shadow-2xs border border-[#d0d0d0]'
-              : 'text-[#606060] hover:text-[#202020] hover:bg-white/60'
+              ? 'bg-surface text-accent border border-line'
+              : 'text-ink-lighter hover:text-ink hover:bg-surface/60'
           }`}
         >
-          <Building className={`w-4 h-4 ${activeGroupTab === 'Stakeholder' ? 'text-[#b13460]' : 'text-[#707070]'}`} />
+          <Building className={`w-4 h-4 ${activeGroupTab === 'Stakeholder' ? 'text-accent' : 'text-ink-lighter'}`} />
           <span>2. Nhóm Stakeholder</span>
           <span
-            className={`font-num text-[11px] px-2 py-0.5 rounded-full font-bold ${
+            className={`font-num text-xs px-2 py-0.5 rounded-full font-bold ${
               activeGroupTab === 'Stakeholder'
-                ? 'bg-[#fcf0f5] text-[#b13460] border border-[#f3c2d4]'
-                : 'bg-[#e4e4e4] text-[#707070]'
+                ? 'bg-surface-accent-faint text-accent border border-line'
+                : 'bg-surface-300 text-ink-lighter'
             }`}
           >
             {rawStakeholderMembers.length} nhân sự
@@ -389,14 +389,14 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
       {/* Admin Broadcast Bar */}
       {isAdmin && (
-        <div className="bg-gradient-to-r from-[#faf5ff] to-[#f3e8ff] border border-[#d8b4fe] rounded-[10px] p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="bg-gradient-to-r from-surface-100 to-surface-200 border border-line rounded-vds-lg p-3.5 flex items-center justify-between gap-3 ">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#7e22ce] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-extreme-solid text-on-color flex items-center justify-center shrink-0 ">
               <Megaphone className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-ui font-bold text-[#581c87]">Thông điệp Quản trị</h4>
-              <p className="text-[11px] text-[#7e22ce]/80">Gửi thông báo trực tiếp đến một hoặc nhiều thành viên Ban Sản phẩm</p>
+              <h4 className="text-xs font-ui font-bold text-extreme">Thông điệp Quản trị</h4>
+              <p className="text-xs text-extreme/80">Gửi thông báo trực tiếp đến một hoặc nhiều thành viên Ban Sản phẩm</p>
             </div>
           </div>
           <button
@@ -405,7 +405,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               setSelectedRecipientForMessage(null);
               setIsSendMessageOpen(true);
             }}
-            className="px-3 py-1.5 bg-[#7e22ce] hover:bg-[#6b21a8] text-white text-xs font-ui font-bold rounded-[6px] transition-colors flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
+            className="px-3 py-1.5 bg-extreme-solid hover:bg-extreme-solid text-on-color text-xs font-ui font-bold rounded-vds-lg transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
             <Megaphone className="w-3.5 h-3.5" />
             <span>Gửi thông điệp</span>
@@ -415,15 +415,15 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
       {/* Admin Action Notice */}
       {adminActionNotice && (
-        <div className="bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] px-3.5 py-2.5 rounded-[8px] text-xs flex items-center justify-between animate-fade-in font-ui font-medium">
+        <div className="bg-surface-positive border border-line text-positive px-3.5 py-2.5 rounded-vds-lg text-xs flex items-center justify-between animate-fade-in font-ui font-medium">
           <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-[#16a34a]" />
+            <Check className="w-4 h-4 text-positive" />
             <span>{adminActionNotice}</span>
           </div>
           <button
             type="button"
             onClick={() => setAdminActionNotice(null)}
-            className="text-[#15803d] hover:text-[#14532d] cursor-pointer"
+            className="text-positive hover:text-positive cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -440,25 +440,25 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
             const teamMembers = sortMembersByName(productMembers.filter((m) => m.team === teamName));
 
             const teamColors: Record<string, string> = {
-              'Product Manager': 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]',
-              'UX/UI Designer': 'bg-[#fcf0f5] text-[#b13460] border-[#f3c2d4]',
-              SEO: 'bg-[#f0f8f1] text-[#24a148] border-[#c1e8c7]',
-              Data: 'bg-[#fcf5e8] text-[#b26b00] border-[#f5dbb0]',
+              'Product Manager': 'bg-surface-support text-support border-line',
+              'UX/UI Designer': 'bg-surface-accent-faint text-accent border-line',
+              SEO: 'bg-surface-positive text-positive border-line',
+              Data: 'bg-surface-warning text-warning border-line',
             };
 
             return (
               <div key={teamName} className="space-y-4">
                 {/* Team Title Header */}
-                <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
+                <div className="flex items-center justify-between border-b border-line pb-2">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-3 py-1 rounded-[6px] border text-xs font-ui font-bold ${
+                      className={`px-3 py-1 rounded-vds-lg border text-xs font-ui font-bold ${
                         teamColors[teamName]
                       }`}
                     >
                       {teamName}
                     </span>
-                    <span className="font-num text-xs font-bold text-[#7f7f7f]">
+                    <span className="font-num text-xs font-bold text-subdued">
                       ({teamMembers.length} nhân sự)
                     </span>
                   </div>
@@ -466,7 +466,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                   {canCreateMember(effectiveUser) && (
                     <button
                       onClick={() => openAddModal('Product', teamName)}
-                      className="text-xs font-ui font-bold text-[#466fa1] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-ui font-bold text-support hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Thêm thành viên {teamName}</span>
@@ -477,7 +477,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                 {/* Members Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {teamMembers.length === 0 ? (
-                    <div className="col-span-full p-4 bg-white rounded-[8px] border border-dashed border-[#d6d6d6] text-center text-xs text-[#7f7f7f]">
+                    <div className="col-span-full p-4 bg-surface rounded-vds-lg border border-dashed border-line text-center text-xs text-subdued">
                       Chưa có nhân sự thuộc nhóm này.
                     </div>
                   ) : (
@@ -501,21 +501,21 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                       return (
                         <div
                           key={mem.id}
-                          className={`bg-white rounded-[10px] border p-4 shadow-2xs hover:shadow-md transition-all space-y-3 flex flex-col justify-between ${
+                          className={`bg-surface rounded-vds-lg border p-4 hover:shadow-pop transition space-y-3 flex flex-col justify-between ${
                             isActiveAccount
-                              ? 'border-[#963861] ring-2 ring-[#963861]/20 bg-[#fffdfd]'
-                              : 'border-[#e0e0e0]'
+                              ? 'border-line-accent ring-2 ring-line-accent/20 bg-surface-100'
+                              : 'border-line'
                           }`}
                         >
                           <div className="space-y-2.5">
                             {/* Top Row: Name & Status */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-full bg-[#f0f0f0] text-[#202020] font-ui font-bold flex items-center justify-center text-sm border border-[#d6d6d6] shrink-0">
+                                <div className="w-9 h-9 rounded-full bg-surface-200 text-ink font-ui font-bold flex items-center justify-center text-sm border border-line shrink-0">
                                   {mem.name.charAt(0)}
                                 </div>
                                 <div>
-                                  <h4 className="font-body text-sm text-[#202020] flex items-center gap-1.5 flex-wrap">
+                                  <h4 className="font-body text-sm text-ink flex items-center gap-1.5 flex-wrap">
                                     <span>
                                       {(() => {
                                         let sal = mem.salutation || '';
@@ -529,20 +529,20 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                         }
                                         return (
                                           <>
-                                            {sal && <span className="font-normal text-[#5f5f5f]">{sal} </span>}
-                                            <span className="font-bold text-[#202020]">{cleanName}</span>
-                                            {mem.ipPhone && <span className="font-normal text-[#7f7f7f]"> - {mem.ipPhone}</span>}
+                                            {sal && <span className="font-normal text-ink-lighter">{sal} </span>}
+                                            <span className="font-bold text-ink">{cleanName}</span>
+                                            {mem.ipPhone && <span className="font-normal text-subdued"> - {mem.ipPhone}</span>}
                                           </>
                                         );
                                       })()}
                                     </span>
                                     {mem.username && (
-                                      <span className="text-[11px] font-normal text-[#7f7f7f]">
+                                      <span className="text-xs font-normal text-subdued">
                                         (@{mem.username})
                                       </span>
                                     )}
                                   </h4>
-                                  <p className="text-[11px] font-ui text-[#5f5f5f]">
+                                  <p className="text-xs font-ui text-ink-lighter">
                                     {mem.title} • {mem.department || 'Sản phẩm công nghệ'}
                                   </p>
                                 </div>
@@ -552,8 +552,8 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 <span
                                   className={`text-[10px] font-ui font-bold px-2 py-0.5 rounded-full ${
                                     mem.status === 'Đang bận'
-                                      ? 'bg-[#fcf5e8] text-[#b26b00]'
-                                      : 'bg-[#f4f4f4] text-[#7f7f7f]'
+                                      ? 'bg-surface-warning text-warning'
+                                      : 'bg-surface-200 text-subdued'
                                   }`}
                                 >
                                   {mem.status}
@@ -562,16 +562,16 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                             </div>
 
                             {/* Detail Badges: Region, IP Phone, Join Date */}
-                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-ui">
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs font-ui">
                               {mem.region && (
-                                <span className="bg-[#f0f4f8] text-[#334e68] px-2 py-0.5 rounded-[4px] border border-[#d9e2ec] flex items-center gap-1 font-medium">
-                                  <MapPin className="w-3 h-3 text-[#627d98]" />
+                                <span className="bg-surface-200 text-support px-2 py-0.5 rounded-vds-md border border-line flex items-center gap-1 font-medium">
+                                  <MapPin className="w-3 h-3 text-support" />
                                   {mem.region}
                                 </span>
                               )}
                               {mem.ipPhone && (
-                                <span className="bg-[#fcf5e8] text-[#9c5b00] px-2 py-0.5 rounded-[4px] border border-[#f5dbb0] flex items-center gap-1 font-num font-medium">
-                                  <PhoneCall className="w-3 h-3 text-[#b26b00]" />
+                                <span className="bg-surface-warning text-warning px-2 py-0.5 rounded-vds-md border border-line flex items-center gap-1 font-num font-medium">
+                                  <PhoneCall className="w-3 h-3 text-warning" />
                                   IP: {mem.ipPhone}
                                 </span>
                               )}
@@ -579,19 +579,19 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 const workStats = workingTimeService.calculateDaysWorked(mem.joinDate, mem.name);
                                 if (!workStats.isValid) {
                                   return (
-                                    <span className="bg-[#f4f4f5] text-[#52525b] px-2 py-0.5 rounded-[4px] border border-[#e4e4e7] flex items-center gap-1 font-num text-[11px]">
-                                      <Calendar className="w-3 h-3 text-[#a1a1aa]" />
+                                    <span className="bg-surface-200 text-ink-lighter px-2 py-0.5 rounded-vds-md border border-line flex items-center gap-1 font-num text-xs">
+                                      <Calendar className="w-3 h-3 text-subdued-lighter" />
                                       Vào: {mem.joinDate}
                                     </span>
                                   );
                                 }
                                 return (
                                   <span
-                                    className="bg-[#f4f4f5] text-[#52525b] px-2 py-0.5 rounded-[4px] border border-[#e4e4e7] flex items-center gap-1 font-num text-[11px]"
+                                    className="bg-surface-200 text-ink-lighter px-2 py-0.5 rounded-vds-md border border-line flex items-center gap-1 font-num text-xs"
                                     title={`Vào làm: ${workStats.formattedDate} • ${workStats.workingDays.toLocaleString('vi-VN')} ngày làm việc (Thứ 2 - Thứ 6, trừ lễ & nghỉ) / ${workStats.calendarDays.toLocaleString('vi-VN')} ngày dương lịch`}
                                   >
-                                    <Calendar className="w-3 h-3 text-[#a1a1aa] shrink-0" />
-                                    <span>Vào: <strong className="font-semibold text-[#3f3f46]">{workStats.formattedDate}</strong> ({workStats.workingDays.toLocaleString('vi-VN')} ngày)</span>
+                                    <Calendar className="w-3 h-3 text-subdued-lighter shrink-0" />
+                                    <span>Vào: <strong className="font-semibold text-ink-lighter">{workStats.formattedDate}</strong> ({workStats.workingDays.toLocaleString('vi-VN')} ngày)</span>
                                   </span>
                                 );
                               })()}
@@ -600,18 +600,18 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                             {/* Assigned Projects */}
                             {assignedProjects.length > 0 && (
                               <div className="flex flex-wrap items-center gap-1 pt-1">
-                                <span className="text-[10px] text-[#707070] font-medium mr-1">Dự án:</span>
+                                <span className="text-[10px] text-ink-lighter font-medium mr-1">Dự án:</span>
                                 {assignedProjects.slice(0, 3).map((p) => (
                                   <span
                                     key={p.id}
-                                    className="text-[10px] bg-[#f8f9fa] border border-[#e2e8f0] px-1.5 py-0.5 rounded text-[#334e68] font-medium truncate max-w-[120px]"
+                                    className="text-[10px] bg-surface-100 border border-line px-1.5 py-0.5 rounded text-support font-medium truncate max-w-[120px]"
                                     title={p.name}
                                   >
                                     {p.name}
                                   </span>
                                 ))}
                                 {assignedProjects.length > 3 && (
-                                  <span className="text-[10px] text-[#808080] font-num">
+                                  <span className="text-[10px] text-subdued font-num">
                                     +{assignedProjects.length - 3}
                                   </span>
                                 )}
@@ -619,24 +619,24 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                             )}
 
                             {/* Emails with Copy Feature */}
-                            <div className="space-y-1 text-xs font-num text-[#5f5f5f] pt-1">
+                            <div className="space-y-1 text-xs font-num text-ink-lighter pt-1">
                               <div className="flex items-center justify-between group/mail">
                                 <a
                                   href={`mailto:${mem.email}`}
-                                  className="flex items-center gap-1.5 truncate hover:text-[#1d508d] hover:underline"
+                                  className="flex items-center gap-1.5 truncate hover:text-support hover:underline"
                                   title={mem.email}
                                 >
-                                  <Mail className="w-3.5 h-3.5 text-[#24a148] shrink-0" />
+                                  <Mail className="w-3.5 h-3.5 text-positive shrink-0" />
                                   <span className="truncate">{mem.email}</span>
                                 </a>
                                 <button
                                   type="button"
                                   onClick={(e) => handleCopyEmail(mem.email, e)}
-                                  className="p-1 hover:bg-[#f0f0f0] rounded text-[#808080] hover:text-[#202020] transition-colors ml-1 shrink-0 cursor-pointer"
+                                  className="p-1 hover:bg-surface-200 rounded text-subdued hover:text-ink transition-colors ml-1 shrink-0 cursor-pointer"
                                   title="Sao chép email"
                                 >
                                   {copiedEmail === mem.email ? (
-                                    <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                                    <Check className="w-3.5 h-3.5 text-positive" />
                                   ) : (
                                     <Copy className="w-3.5 h-3.5" />
                                   )}
@@ -646,20 +646,20 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 <div className="flex items-center justify-between group/gmail">
                                   <a
                                     href={`mailto:${mem.gmail}`}
-                                    className="flex items-center gap-1.5 truncate text-[11px] text-[#7f7f7f] hover:text-[#1d508d] hover:underline"
+                                    className="flex items-center gap-1.5 truncate text-xs text-subdued hover:text-support hover:underline"
                                     title={mem.gmail}
                                   >
-                                    <AtSign className="w-3.5 h-3.5 text-[#9f9f9f] shrink-0" />
+                                    <AtSign className="w-3.5 h-3.5 text-subdued-lighter shrink-0" />
                                     <span className="truncate">{mem.gmail}</span>
                                   </a>
                                   <button
                                     type="button"
                                     onClick={(e) => handleCopyEmail(mem.gmail, e)}
-                                    className="p-1 hover:bg-[#f0f0f0] rounded text-[#808080] hover:text-[#202020] transition-colors ml-1 shrink-0 cursor-pointer"
+                                    className="p-1 hover:bg-surface-200 rounded text-subdued hover:text-ink transition-colors ml-1 shrink-0 cursor-pointer"
                                     title="Sao chép Gmail"
                                   >
                                     {copiedEmail === mem.gmail ? (
-                                      <Check className="w-3 h-3 text-[#24a148]" />
+                                      <Check className="w-3 h-3 text-positive" />
                                     ) : (
                                       <Copy className="w-3 h-3" />
                                     )}
@@ -670,14 +670,14 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                           </div>
 
                           {/* Task assignments info */}
-                          <div className="pt-3 border-t border-[#f0f0f0] flex items-center justify-between text-xs font-ui">
+                          <div className="pt-3 border-t border-divider flex items-center justify-between text-xs font-ui">
                             <div className="flex items-center gap-3">
-                              <span className="flex items-center gap-1 text-[#5f5f5f]">
-                                <Clock className="w-3.5 h-3.5 text-[#b13460]" />
-                                <span>Đang làm: <strong className="font-num text-[#202020]">{activeCount}</strong></span>
+                              <span className="flex items-center gap-1 text-ink-lighter">
+                                <Clock className="w-3.5 h-3.5 text-accent" />
+                                <span>Đang làm: <strong className="font-num text-ink">{activeCount}</strong></span>
                               </span>
 
-                              <span className="flex items-center gap-1 text-[#24a148]">
+                              <span className="flex items-center gap-1 text-positive">
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                                 <span>Xong: <strong className="font-num">{completedCount}</strong></span>
                               </span>
@@ -688,10 +688,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => onSelectProductMember(isActiveAccount ? null : mem)}
-                                  className={`px-2 py-0.5 text-[11px] font-ui font-bold rounded-[4px] transition-colors cursor-pointer ${
+                                  className={`px-2 py-0.5 text-xs font-ui font-bold rounded-vds-md transition-colors cursor-pointer ${
                                     isActiveAccount
-                                      ? 'bg-[#963861] text-white'
-                                      : 'bg-[#fafafa] text-[#52525b] hover:bg-[#963861] hover:text-white border border-[#d4d4d8]'
+                                      ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                                      : 'bg-surface-100 text-ink-lighter hover:bg-accent-solid hover:text-on-color border border-line'
                                   }`}
                                   title={isActiveAccount ? 'Nhấp để bỏ chọn' : `Chuyển làm tài khoản chính: ${mem.name}`}
                                 >
@@ -702,7 +702,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setResetPasswordMember(mem)}
-                                  className="p-1 text-[#7f7f7f] hover:text-[#b45309] hover:bg-[#fef3c7] rounded-[4px] cursor-pointer transition-colors"
+                                  className="p-1 text-subdued hover:text-warning hover:bg-surface-warning rounded-vds-md cursor-pointer transition-colors"
                                   title={`Reset mật khẩu cho @${mem.username || mem.name}`}
                                 >
                                   <KeyRound className="w-3.5 h-3.5" />
@@ -715,7 +715,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                     setSelectedRecipientForMessage(mem);
                                     setIsSendMessageOpen(true);
                                   }}
-                                  className="p-1 text-[#7f7f7f] hover:text-[#7e22ce] hover:bg-[#faf5ff] rounded-[4px] cursor-pointer transition-colors"
+                                  className="p-1 text-subdued hover:text-extreme hover:bg-surface-100 rounded-vds-md cursor-pointer transition-colors"
                                   title={`Gửi thông điệp riêng cho @${mem.username || mem.name}`}
                                 >
                                   <Megaphone className="w-3.5 h-3.5" />
@@ -724,7 +724,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                               {canEditMember(effectiveUser, mem) && (
                                 <button
                                   onClick={() => openEditModal(mem)}
-                                  className="p-1 text-[#7f7f7f] hover:text-[#202020] hover:bg-[#f0f0f0] rounded-[4px] cursor-pointer"
+                                  className="p-1 text-subdued hover:text-ink hover:bg-surface-200 rounded-vds-md cursor-pointer"
                                   title="Chỉnh sửa thông tin"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
@@ -737,7 +737,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                       onDeleteMember(mem.id);
                                     }
                                   }}
-                                  className="p-1 text-[#7f7f7f] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] cursor-pointer"
+                                  className="p-1 text-subdued hover:text-negative hover:bg-surface-negative rounded-vds-md cursor-pointer"
                                   title="Xóa nhân sự"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -762,12 +762,12 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
       {activeGroupTab === 'Stakeholder' && (
         <div className="space-y-6 animate-fade-in">
           {/* Stakeholder Filters & Search Bar */}
-          <div className="bg-white p-4 rounded-[10px] border border-[#e0e0e0] shadow-2xs flex flex-wrap items-center justify-between gap-3">
+          <div className="bg-surface p-4 rounded-vds-lg border border-line flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               {/* Region Filter */}
-              <div className="flex items-center gap-1 bg-[#f4f4f4] p-1 rounded-[6px] text-xs font-ui">
-                <span className="text-[#606060] font-medium px-2 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#627d98]" />
+              <div className="flex items-center gap-1 bg-surface-200 p-1 rounded-vds-lg text-xs font-ui">
+                <span className="text-ink-lighter font-medium px-2 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-support" />
                   Vùng:
                 </span>
                 {(['Tất cả', 'Hà Nội', 'TP HCM'] as const).map((r) => (
@@ -775,10 +775,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                     key={r}
                     type="button"
                     onClick={() => setStakeholderRegionFilter(r)}
-                    className={`px-2.5 py-1 rounded-[4px] font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-vds-md font-semibold transition cursor-pointer ${
                       stakeholderRegionFilter === r
-                        ? 'bg-white text-[#1d508d] shadow-2xs font-bold'
-                        : 'text-[#505050] hover:text-[#202020]'
+                        ? 'bg-surface text-support font-bold'
+                        : 'text-ink-lighter hover:text-ink'
                     }`}
                   >
                     {r}
@@ -791,7 +791,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                 <select
                   value={stakeholderDeptFilter}
                   onChange={(e) => setStakeholderDeptFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-white border border-[#d0d0d0] rounded-[6px] text-xs font-ui text-[#202020] font-medium focus:border-[#b13460] cursor-pointer"
+                  className="px-3 py-1.5 bg-surface border border-line rounded-vds-lg text-xs font-ui text-ink font-medium focus:border-line-accent cursor-pointer"
                 >
                   <option value="Tất cả">Tất cả Ban / Phòng ({rawStakeholderMembers.length})</option>
                   {stakeholderDepartments.map((dept) => {
@@ -808,19 +808,19 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
             {/* Search Input for Stakeholders */}
             <div className="relative w-full sm:w-64">
-              <Search className="w-3.5 h-3.5 text-[#7f7f7f] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-subdued absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={stakeholderSearchQuery}
                 onChange={(e) => setStakeholderSearchQuery(e.target.value)}
                 placeholder="Tìm tên, ban, chức vụ, IP..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#d0d0d0] rounded-[6px] text-[#202020] focus:border-[#b13460]"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface border border-line rounded-vds-lg text-ink focus:border-line-accent"
               />
               {stakeholderSearchQuery && (
                 <button
                   type="button"
                   onClick={() => setStakeholderSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#333]"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subdued-lighter hover:text-ink"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -830,7 +830,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
           {/* Stakeholders Count and Add button */}
           <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-ui text-[#5f5f5f]">
+            <p className="text-xs font-ui text-ink-lighter">
               Hiển thị <strong>{filteredStakeholders.length}</strong> / <strong>{rawStakeholderMembers.length}</strong> Stakeholder
               {stakeholderDeptFilter !== 'Tất cả' && ` thuộc ${stakeholderDeptFilter}`}
               {stakeholderRegionFilter !== 'Tất cả' && ` tại ${stakeholderRegionFilter}`}
@@ -839,7 +839,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
             {canCreateMember(effectiveUser) && (
               <button
                 onClick={() => openAddModal('Stakeholder')}
-                className="text-xs font-ui font-bold text-[#b13460] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-ui font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Thêm Stakeholder</span>
@@ -850,8 +850,8 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
           {/* Stakeholders Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredStakeholders.length === 0 ? (
-              <div className="col-span-full p-8 bg-white rounded-[10px] border border-dashed border-[#d6d6d6] text-center text-xs text-[#7f7f7f] space-y-2">
-                <Users className="w-8 h-8 text-[#b0b0b0] mx-auto" />
+              <div className="col-span-full p-8 bg-surface rounded-vds-lg border border-dashed border-line text-center text-xs text-subdued space-y-2">
+                <Users className="w-8 h-8 text-subdued-lighter mx-auto" />
                 <p>Không tìm thấy Stakeholder nào phù hợp với bộ lọc hiện tại.</p>
                 <button
                   onClick={() => {
@@ -859,7 +859,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                     setStakeholderRegionFilter('Tất cả');
                     setStakeholderSearchQuery('');
                   }}
-                  className="text-xs text-[#1d508d] font-semibold underline cursor-pointer"
+                  className="text-xs text-support font-semibold underline cursor-pointer"
                 >
                   Đặt lại bộ lọc
                 </button>
@@ -876,8 +876,8 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                 return (
                   <div
                     key={mem.id}
-                    className={`bg-white rounded-[10px] border p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 ${
-                      isBBT ? 'border-[#e4c4d0] bg-linear-to-b from-[#fffbfc] to-white' : 'border-[#e0e0e0]'
+                    className={`bg-surface rounded-vds-lg border p-4 hover:shadow-pop transition flex flex-col justify-between space-y-3 ${
+                      isBBT ? 'border-line bg-linear-to-b from-surface-100 to-surface' : 'border-line'
                     }`}
                   >
                     <div className="space-y-2.5">
@@ -887,14 +887,14 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                           <div
                             className={`w-9 h-9 rounded-full flex items-center justify-center font-ui font-bold text-sm shrink-0 border ${
                               isBBT
-                                ? 'bg-[#fcf0f5] text-[#b13460] border-[#f3c2d4]'
-                                : 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0]'
+                                ? 'bg-surface-accent-faint text-accent border-line'
+                                : 'bg-surface-support text-support border-line'
                             }`}
                           >
                             {mem.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="font-body text-sm text-[#202020] truncate flex items-center gap-1.5" title={mem.name}>
+                            <h4 className="font-body text-sm text-ink truncate flex items-center gap-1.5" title={mem.name}>
                               <span>
                                 {(() => {
                                   let sal = mem.salutation || '';
@@ -908,16 +908,16 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                   }
                                   return (
                                     <>
-                                      {sal && <span className="font-normal text-[#5f5f5f]">{sal} </span>}
-                                      <span className="font-bold text-[#202020]">{cleanName}</span>
-                                      {mem.ipPhone && <span className="font-normal text-[#7f7f7f]"> - {mem.ipPhone}</span>}
+                                      {sal && <span className="font-normal text-ink-lighter">{sal} </span>}
+                                      <span className="font-bold text-ink">{cleanName}</span>
+                                      {mem.ipPhone && <span className="font-normal text-subdued"> - {mem.ipPhone}</span>}
                                     </>
                                   );
                                 })()}
                               </span>
                             </h4>
                             {mem.username && (
-                              <p className="text-[11px] font-mono text-[#7f7f7f] truncate">
+                              <p className="text-xs font-mono text-subdued truncate">
                                 @{mem.username}
                               </p>
                             )}
@@ -927,10 +927,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                         {/* Region Tag */}
                         {mem.region && (
                           <span
-                            className={`text-[10px] font-ui font-bold px-2 py-0.5 rounded-[4px] shrink-0 border flex items-center gap-1 ${
+                            className={`text-[10px] font-ui font-bold px-2 py-0.5 rounded-vds-md shrink-0 border flex items-center gap-1 ${
                               mem.region === 'TP HCM'
-                                ? 'bg-[#fdf4e8] text-[#b26b00] border-[#f5dbb0]'
-                                : 'bg-[#f0f4f8] text-[#334e68] border-[#d9e2ec]'
+                                ? 'bg-surface-warning text-warning border-line'
+                                : 'bg-surface-200 text-support border-line'
                             }`}
                           >
                             <MapPin className="w-2.5 h-2.5" />
@@ -941,21 +941,21 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
                       {/* Role & Department Badges */}
                       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                        <span className="bg-[#f1f5f9] text-[#1e293b] border border-[#cbd5e1] px-2 py-0.5 rounded-[4px] font-ui font-bold text-[11px]">
+                        <span className="bg-surface-200 text-ink border border-line px-2 py-0.5 rounded-vds-md font-ui font-bold text-xs">
                           {mem.title || 'Đại diện'}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-[4px] font-ui font-medium text-[11px] border ${
+                          className={`px-2 py-0.5 rounded-vds-md font-ui font-medium text-xs border ${
                             isBBT
-                              ? 'bg-[#fcf0f5] text-[#b13460] border-[#f3c2d4]'
-                              : 'bg-[#f4f4f4] text-[#404040] border-[#e0e0e0]'
+                              ? 'bg-surface-accent-faint text-accent border-line'
+                              : 'bg-surface-200 text-ink-lighter border-line'
                           }`}
                         >
                           {mem.department || 'Ban'}
                         </span>
                         {mem.ipPhone && (
-                          <span className="bg-[#fcf5e8] text-[#9c5b00] px-1.5 py-0.5 rounded-[4px] border border-[#f5dbb0] font-num text-[11px] font-semibold flex items-center gap-1">
-                            <PhoneCall className="w-2.5 h-2.5 text-[#b26b00]" />
+                          <span className="bg-surface-warning text-warning px-1.5 py-0.5 rounded-vds-md border border-line font-num text-xs font-semibold flex items-center gap-1">
+                            <PhoneCall className="w-2.5 h-2.5 text-warning" />
                             {mem.ipPhone}
                           </span>
                         )}
@@ -963,16 +963,16 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
                       {/* Product Owner Indicator */}
                       {poProjects.length > 0 && (
-                        <div className="bg-[#fcf0f5] p-2 rounded-[6px] border border-[#f3c2d4] space-y-1">
-                          <span className="text-[10px] font-ui font-bold text-[#b13460] flex items-center gap-1">
-                            <Award className="w-3 h-3 text-[#b13460]" />
+                        <div className="bg-surface-accent-faint p-2 rounded-vds-lg border border-line space-y-1">
+                          <span className="text-[10px] font-ui font-bold text-accent flex items-center gap-1">
+                            <Award className="w-3 h-3 text-accent" />
                             Product Owner phụ trách:
                           </span>
                           <div className="flex flex-wrap gap-1">
                             {poProjects.map((p) => (
                               <span
                                 key={p.id}
-                                className="text-[10px] bg-white border border-[#f3c2d4] px-1.5 py-0.5 rounded text-[#b13460] font-bold"
+                                className="text-[10px] bg-surface border border-line px-1.5 py-0.5 rounded text-accent font-bold"
                               >
                                 {p.name}
                               </span>
@@ -982,24 +982,24 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                       )}
 
                       {/* Contact Info with Copy Feature */}
-                      <div className="space-y-1 text-xs font-num text-[#5f5f5f] pt-1">
+                      <div className="space-y-1 text-xs font-num text-ink-lighter pt-1">
                         <div className="flex items-center justify-between group/mail">
                           <a
                             href={`mailto:${mem.email}`}
-                            className="flex items-center gap-1.5 truncate hover:text-[#1d508d] hover:underline"
+                            className="flex items-center gap-1.5 truncate hover:text-support hover:underline"
                             title={mem.email}
                           >
-                            <Mail className="w-3.5 h-3.5 text-[#24a148] shrink-0" />
+                            <Mail className="w-3.5 h-3.5 text-positive shrink-0" />
                             <span className="truncate">{mem.email}</span>
                           </a>
                           <button
                             type="button"
                             onClick={(e) => handleCopyEmail(mem.email, e)}
-                            className="p-1 hover:bg-[#f0f0f0] rounded text-[#808080] hover:text-[#202020] transition-colors ml-1 shrink-0 cursor-pointer"
+                            className="p-1 hover:bg-surface-200 rounded text-subdued hover:text-ink transition-colors ml-1 shrink-0 cursor-pointer"
                             title="Sao chép email"
                           >
                             {copiedEmail === mem.email ? (
-                              <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                              <Check className="w-3.5 h-3.5 text-positive" />
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
@@ -1009,10 +1009,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                           <div className="flex items-center justify-between group/gmail">
                             <a
                               href={`mailto:${mem.gmail}`}
-                              className="flex items-center gap-1.5 truncate text-[11px] text-[#7f7f7f] hover:text-[#1d508d] hover:underline"
+                              className="flex items-center gap-1.5 truncate text-xs text-subdued hover:text-support hover:underline"
                               title={mem.gmail}
                             >
-                              <AtSign className="w-3.5 h-3.5 text-[#9f9f9f] shrink-0" />
+                              <AtSign className="w-3.5 h-3.5 text-subdued-lighter shrink-0" />
                               <span className="truncate" title={mem.gmail}>
                                 {mem.gmail}
                               </span>
@@ -1020,11 +1020,11 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                             <button
                               type="button"
                               onClick={(e) => handleCopyEmail(mem.gmail, e)}
-                              className="p-1 hover:bg-[#f0f0f0] rounded text-[#808080] hover:text-[#202020] transition-colors ml-1 shrink-0 cursor-pointer"
+                              className="p-1 hover:bg-surface-200 rounded text-subdued hover:text-ink transition-colors ml-1 shrink-0 cursor-pointer"
                               title="Sao chép Gmail"
                             >
                               {copiedEmail === mem.gmail ? (
-                                <Check className="w-3.5 h-3.5 text-[#24a148]" />
+                                <Check className="w-3.5 h-3.5 text-positive" />
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
@@ -1035,8 +1035,8 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                     </div>
 
                     {/* Bottom Actions */}
-                    <div className="pt-2.5 border-t border-[#f0f0f0] flex items-center justify-between text-xs font-ui">
-                      <span className="text-[10px] font-ui text-[#808080]">
+                    <div className="pt-2.5 border-t border-divider flex items-center justify-between text-xs font-ui">
+                      <span className="text-[10px] font-ui text-subdued">
                         Nhóm: <strong>Stakeholder</strong>
                       </span>
 
@@ -1044,7 +1044,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                         {canEditMember(effectiveUser, mem) && (
                           <button
                             onClick={() => openEditModal(mem)}
-                            className="p-1 text-[#7f7f7f] hover:text-[#202020] hover:bg-[#f0f0f0] rounded-[4px] cursor-pointer"
+                            className="p-1 text-subdued hover:text-ink hover:bg-surface-200 rounded-vds-md cursor-pointer"
                             title="Chỉnh sửa thông tin"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -1057,7 +1057,7 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                                 onDeleteMember(mem.id);
                               }
                             }}
-                            className="p-1 text-[#7f7f7f] hover:text-[#da1e28] hover:bg-[#fff0f1] rounded-[4px] cursor-pointer"
+                            className="p-1 text-subdued hover:text-negative hover:bg-surface-negative rounded-vds-md cursor-pointer"
                             title="Xóa Stakeholder"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1078,17 +1078,17 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
       {/* ========================================================================= */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-[12px] border border-[#d6d6d6] shadow-xl overflow-hidden space-y-4 my-8">
-            <div className="p-5 bg-[#fafafa] border-b border-[#e6e6e6] flex items-center justify-between">
+          <div className="bg-surface w-full max-w-lg rounded-vds-lg border border-line shadow-sheet overflow-hidden space-y-4 my-8">
+            <div className="p-5 bg-surface-100 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#b13460]" />
-                <h3 className="font-title text-base font-bold text-[#202020]">
+                <Users className="w-5 h-5 text-accent" />
+                <h3 className="font-title text-base font-bold text-ink">
                   {editingMember ? 'Chỉnh sửa thông tin nhân sự' : 'Thêm nhân sự mới'}
                 </h3>
               </div>
               <button
                 onClick={closeModal}
-                className="p-1 rounded-full text-[#7f7f7f] hover:text-[#202020] cursor-pointer"
+                className="p-1 rounded-full text-subdued hover:text-ink cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1096,8 +1096,8 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-body max-h-[80vh] overflow-y-auto">
               {/* Group Selector: Product vs Stakeholder */}
-              <div className="space-y-1.5 bg-[#f8f9fa] p-3 rounded-[8px] border border-[#e0e0e0]">
-                <label className="font-ui font-bold text-[#303030] block">Phân loại Nhóm nhân sự *:</label>
+              <div className="space-y-1.5 bg-surface-100 p-3 rounded-vds-lg border border-line">
+                <label className="font-ui font-bold text-ink block">Phân loại Nhóm nhân sự *:</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -1110,10 +1110,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                         setTeam('Product Manager');
                       }
                     }}
-                    className={`p-2.5 rounded-[6px] border text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    className={`p-2.5 rounded-vds-lg border text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                       memberGroup === 'Product'
-                        ? 'bg-[#eef4fb] text-[#1d508d] border-[#c2d7f0] shadow-2xs'
-                        : 'bg-white text-[#505050] border-[#d0d0d0]'
+                        ? 'bg-surface-support text-support border-line '
+                        : 'bg-surface text-ink-lighter border-line'
                     }`}
                   >
                     <Briefcase className="w-3.5 h-3.5" />
@@ -1129,10 +1129,10 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                         setDepartment('BBT');
                       }
                     }}
-                    className={`p-2.5 rounded-[6px] border text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    className={`p-2.5 rounded-vds-lg border text-xs font-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer transition ${
                       memberGroup === 'Stakeholder'
-                        ? 'bg-[#fcf0f5] text-[#b13460] border-[#f3c2d4] shadow-2xs'
-                        : 'bg-white text-[#505050] border-[#d0d0d0]'
+                        ? 'bg-surface-accent-faint text-accent border-line '
+                        : 'bg-surface text-ink-lighter border-line'
                     }`}
                   >
                     <Building className="w-3.5 h-3.5" />
@@ -1144,11 +1144,11 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {/* Salutation & Full name input */}
               <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-1 col-span-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Danh xưng:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Danh xưng:</label>
                   <select
                     value={salutation}
                     onChange={(e) => setSalutation(e.target.value)}
-                    className="w-full p-2.5 border border-[#d6d6d6] focus:border-[#b13460] rounded-[6px] text-[#202020] bg-white font-medium cursor-pointer"
+                    className="w-full p-2.5 border border-line focus:border-line-accent rounded-vds-lg text-ink bg-surface font-medium cursor-pointer"
                   >
                     <option value="">(Không)</option>
                     <option value="Anh">Anh</option>
@@ -1158,14 +1158,14 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                   </select>
                 </div>
                 <div className="space-y-1 col-span-3">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Họ tên đầy đủ *:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Họ tên đầy đủ *:</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ví dụ: Phạm Văn Hiếu, Trần Huy Anh..."
-                    className="w-full p-2.5 border border-[#d6d6d6] focus:border-[#b13460] rounded-[6px] text-[#202020] font-medium"
+                    className="w-full p-2.5 border border-line focus:border-line-accent rounded-vds-lg text-ink font-medium"
                   />
                 </div>
               </div>
@@ -1173,33 +1173,33 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {/* Last Name, First Name, Username */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Họ:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Họ:</label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Phạm"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Tên:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Tên:</label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Hiếu"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Tài khoản:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Tài khoản:</label>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="phamhieu"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-mono"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-mono"
                   />
                 </div>
               </div>
@@ -1208,11 +1208,11 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {memberGroup === 'Product' ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="font-ui font-bold text-[#5f5f5f]">Nhóm chuyên môn:</label>
+                    <label className="font-ui font-bold text-ink-lighter">Nhóm chuyên môn:</label>
                     <select
                       value={team}
                       onChange={(e) => setTeam(e.target.value as TeamType)}
-                      className="w-full p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-ui"
+                      className="w-full p-2.5 border border-line rounded-vds-lg text-ink font-ui"
                     >
                       {PRODUCT_TEAMS.map((t) => (
                         <option key={t} value={t}>
@@ -1223,39 +1223,39 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-ui font-bold text-[#5f5f5f]">Chức vụ:</label>
+                    <label className="font-ui font-bold text-ink-lighter">Chức vụ:</label>
                     <input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Quản lý sản phẩm, Thiết kế..."
-                      className="w-full p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                      className="w-full p-2.5 border border-line rounded-vds-lg text-ink"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="font-ui font-bold text-[#5f5f5f]">Ban / Đơn vị *:</label>
+                    <label className="font-ui font-bold text-ink-lighter">Ban / Đơn vị *:</label>
                     <input
                       type="text"
                       required
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                       placeholder="BBT, Thời sự Hà Nội, Pháp luật..."
-                      className="w-full p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-ui"
+                      className="w-full p-2.5 border border-line rounded-vds-lg text-ink font-ui"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-ui font-bold text-[#5f5f5f]">Chức vụ *:</label>
+                    <label className="font-ui font-bold text-ink-lighter">Chức vụ *:</label>
                     <input
                       type="text"
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="TBT, P. TBT, Trưởng ban, Phó ban, SD..."
-                      className="w-full p-2.5 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                      className="w-full p-2.5 border border-line rounded-vds-lg text-ink"
                     />
                   </div>
                 </div>
@@ -1264,11 +1264,11 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {/* Region, Department (for Product), IP Phone */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Vùng:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Vùng:</label>
                   <select
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink"
                   >
                     <option value="Hà Nội">Hà Nội</option>
                     <option value="TP HCM">TP HCM</option>
@@ -1277,25 +1277,25 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
 
                 {memberGroup === 'Product' && (
                   <div className="space-y-1">
-                    <label className="font-ui font-bold text-[#5f5f5f]">Ban:</label>
+                    <label className="font-ui font-bold text-ink-lighter">Ban:</label>
                     <input
                       type="text"
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                       placeholder="Sản phẩm công nghệ"
-                      className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020]"
+                      className="w-full p-2 border border-line rounded-vds-lg text-ink"
                     />
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">IP Phone:</label>
+                  <label className="font-ui font-bold text-ink-lighter">IP Phone:</label>
                   <input
                     type="text"
                     value={ipPhone}
                     onChange={(e) => setIpPhone(e.target.value)}
                     placeholder="4501, 4847..."
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-mono"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-mono"
                   />
                 </div>
               </div>
@@ -1303,24 +1303,24 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {/* Email & Gmail */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Email VnExpress:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Email VnExpress:</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="phamhieu@vnexpress.net"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-mono"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Gmail cá nhân:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Gmail cá nhân:</label>
                   <input
                     type="email"
                     value={gmail}
                     onChange={(e) => setGmail(e.target.value)}
                     placeholder="haiduyld2010@gmail.com"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-mono"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-mono"
                   />
                 </div>
               </div>
@@ -1328,22 +1328,22 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
               {/* Join Date & Status */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Ngày vào công ty:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Ngày vào công ty:</label>
                   <input
                     type="text"
                     value={joinDate}
                     onChange={(e) => setJoinDate(e.target.value)}
                     placeholder="17/02/2014"
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-mono"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-ui font-bold text-[#5f5f5f]">Trạng thái:</label>
+                  <label className="font-ui font-bold text-ink-lighter">Trạng thái:</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full p-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-ui"
+                    className="w-full p-2 border border-line rounded-vds-lg text-ink font-ui"
                   >
                     <option value="Sẵn sàng">🟢 Sẵn sàng</option>
                     <option value="Đang bận">🟡 Đang bận</option>
@@ -1352,17 +1352,17 @@ export const MembersManager: React.FC<MembersManagerProps> = ({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#f0f0f0] flex justify-end gap-2">
+              <div className="pt-4 border-t border-divider flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 border border-[#d6d6d6] rounded-[6px] text-[#202020] font-ui font-bold cursor-pointer hover:bg-[#f4f4f4]"
+                  className="px-4 py-2 border border-line rounded-vds-lg text-ink font-ui font-bold cursor-pointer hover:bg-surface-200"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#24a148] text-white rounded-[6px] font-ui font-bold hover:bg-[#1d8239] cursor-pointer shadow-2xs"
+                  className="px-5 py-2 bg-positive-solid text-on-color rounded-vds-lg font-ui font-bold hover:bg-positive-solid cursor-pointer "
                 >
                   {editingMember ? 'Lưu thay đổi' : 'Tạo nhân sự'}
                 </button>

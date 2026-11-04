@@ -29,7 +29,7 @@ import {
   Calendar,
   History,
   Link,
-} from 'lucide-react';
+} from './vds/icons';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TrashItemDetailView } from './TrashItemDetailView';
@@ -196,27 +196,27 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
     switch (type) {
       case 'task':
         return {
-          icon: <CheckSquare className="w-3.5 h-3.5 text-[#963861]" />,
+          icon: <CheckSquare className="w-3.5 h-3.5 text-accent" />,
           label: 'Công việc',
-          style: 'bg-[#fcf0f5] text-[#963861] border-[#f3c2d4]',
+          style: 'bg-surface-accent-faint text-accent border-line',
         };
       case 'project':
         return {
-          icon: <FolderKanban className="w-3.5 h-3.5 text-[#1e609c]" />,
+          icon: <FolderKanban className="w-3.5 h-3.5 text-support" />,
           label: 'Dự án',
-          style: 'bg-[#edf5fd] text-[#1e609c] border-[#cfe2fe]',
+          style: 'bg-surface-info text-support border-line',
         };
       case 'member':
         return {
-          icon: <Users className="w-3.5 h-3.5 text-[#166534]" />,
+          icon: <Users className="w-3.5 h-3.5 text-positive" />,
           label: 'Nhân sự',
-          style: 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]',
+          style: 'bg-surface-positive text-positive border-line',
         };
       default:
         return {
-          icon: <CheckSquare className="w-3.5 h-3.5 text-[#71717a]" />,
+          icon: <CheckSquare className="w-3.5 h-3.5 text-subdued" />,
           label: 'Mục',
-          style: 'bg-[#f4f4f5] text-[#71717a] border-[#d4d4d8]',
+          style: 'bg-surface-200 text-subdued border-line',
         };
     }
   };
@@ -224,21 +224,21 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
   return (
     <div className="w-full max-w-[800px] mx-auto space-y-6 animate-fade-in">
       {/* 1. HEADER CONTAINER */}
-      <div className="bg-white rounded-[12px] border border-[#e0e0e0] p-6 shadow-2xs space-y-4">
+      <div className="bg-surface rounded-vds-lg border border-line p-6 space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-[8px] bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center text-[#be123c]">
+              <div className="w-8 h-8 rounded-vds-lg bg-surface-negative border border-line flex items-center justify-center text-negative">
                 <Trash2 className="w-4 h-4" />
               </div>
-              <h2 className="font-title text-xl font-bold text-[#202020]">
+              <h2 className="font-title text-xl font-bold text-ink">
                 Thùng rác
               </h2>
-              <span className="text-xs font-num font-bold px-2 py-0.5 rounded-full bg-[#f4f4f5] text-[#52525b] border border-[#e4e4e7]">
+              <span className="text-xs font-num font-bold px-2 py-0.5 rounded-full bg-surface-200 text-ink-lighter border border-line">
                 {trash.length} mục
               </span>
             </div>
-            <p className="text-xs font-ui text-[#71717a]">
+            <p className="text-xs font-ui text-subdued">
               Lưu trữ các công việc, dự án và nhân sự đã bị xoá. Dữ liệu có thể được xem chi tiết và khôi phục về danh sách tác nghiệp bất cứ lúc nào.
             </p>
           </div>
@@ -248,12 +248,12 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
             <button
               onClick={handleEmptyClick}
               disabled={trash.length === 0 || !isTienNgoc}
-              className={`h-9 px-4 rounded-[8px] font-ui text-xs font-bold flex items-center gap-2 transition-all shadow-xs ${
+              className={`h-9 px-4 rounded-vds-lg font-ui text-xs font-bold flex items-center gap-2 transition ${
                 trash.length === 0
-                  ? 'bg-[#f4f4f5] text-[#a1a1aa] border border-[#e4e4e7] cursor-not-allowed opacity-60'
+                  ? 'bg-surface-200 text-subdued-lighter border border-line cursor-not-allowed opacity-60'
                   : isTienNgoc
-                  ? 'bg-[#be123c] hover:bg-[#9f1239] text-white cursor-pointer active:scale-[0.98]'
-                  : 'bg-[#f4f4f5] text-[#a1a1aa] border border-[#e4e4e7] cursor-not-allowed'
+                  ? 'bg-negative-solid hover:bg-negative-solid text-on-color cursor-pointer active:scale-[0.98]'
+                  : 'bg-surface-200 text-subdued-lighter border border-line cursor-not-allowed'
               }`}
               title={
                 !isTienNgoc
@@ -264,7 +264,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
               {isTienNgoc ? (
                 <Trash2 className="w-3.5 h-3.5" />
               ) : (
-                <Lock className="w-3.5 h-3.5 text-[#a1a1aa]" />
+                <Lock className="w-3.5 h-3.5 text-subdued-lighter" />
               )}
               <span>Dọn sạch thùng rác</span>
             </button>
@@ -272,51 +272,51 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
         </div>
 
         {/* Permission Info Note */}
-        <div className="p-3 bg-[#fafafa] rounded-[8px] border border-[#e4e4e7] flex items-center justify-between gap-3 text-xs font-ui">
-          <div className="flex items-center gap-2 text-[#52525b]">
-            <Info className="w-4 h-4 text-[#466fa1] shrink-0" />
+        <div className="p-3 bg-surface-100 rounded-vds-lg border border-line flex items-center justify-between gap-3 text-xs font-ui">
+          <div className="flex items-center gap-2 text-ink-lighter">
+            <Info className="w-4 h-4 text-support shrink-0" />
             <span>
               <strong>Quy chuẩn bảo mật:</strong> Dữ liệu xoá được bảo lưu trong Thùng rác. Chỉ tài khoản của{' '}
-              <strong className="text-[#963861]">Đặng Tiến Ngọc (tienngoc)</strong> mới có quyền thực hiện dọn sạch (Empty) vĩnh viễn.
+              <strong className="text-accent">Đặng Tiến Ngọc (tienngoc)</strong> mới có quyền thực hiện dọn sạch (Empty) vĩnh viễn.
             </span>
           </div>
 
           <div className="shrink-0 flex items-center gap-1.5">
-            <span className="text-[11px] text-[#71717a]">Tài khoản hiện tại:</span>
+            <span className="text-xs text-subdued">Tài khoản hiện tại:</span>
             {effectiveUser ? (
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-[4px] border flex items-center gap-1.5 ${roleInfo.badgeClass}`}
+                className={`text-xs font-bold px-2 py-0.5 rounded-vds-md border flex items-center gap-1.5 ${roleInfo.badgeClass}`}
               >
                 <span>{effectiveUser.name}</span>
                 <span className="opacity-75">• {roleInfo.shortLabel}</span>
               </span>
             ) : (
-              <span className="text-[11px] text-[#a1a1aa] italic">Chưa đăng nhập tài khoản</span>
+              <span className="text-xs text-subdued-lighter italic">Chưa đăng nhập tài khoản</span>
             )}
           </div>
         </div>
       </div>
 
       {/* 2. FILTER & SEARCH CONTROLS */}
-      <div className="bg-white rounded-[10px] border border-[#e0e0e0] p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-surface rounded-vds-lg border border-line p-4 flex flex-wrap items-center justify-between gap-3">
         {/* Type Tabs */}
         <div className="flex items-center gap-1.5 flex-wrap text-xs font-ui">
           <button
             onClick={() => setSelectedType('all')}
-            className={`px-3 py-1.5 rounded-[6px] font-bold transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-vds-lg font-bold transition-colors cursor-pointer ${
               selectedType === 'all'
-                ? 'bg-[#202020] text-white'
-                : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
             }`}
           >
             Tất cả ({counts.all})
           </button>
           <button
             onClick={() => setSelectedType('task')}
-            className={`px-3 py-1.5 rounded-[6px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-vds-lg font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
               selectedType === 'task'
-                ? 'bg-[#963861] text-white'
-                : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
             }`}
           >
             <CheckSquare className="w-3.5 h-3.5" />
@@ -324,10 +324,10 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
           </button>
           <button
             onClick={() => setSelectedType('project')}
-            className={`px-3 py-1.5 rounded-[6px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-vds-lg font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
               selectedType === 'project'
-                ? 'bg-[#1e609c] text-white'
-                : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
             }`}
           >
             <FolderKanban className="w-3.5 h-3.5" />
@@ -335,10 +335,10 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
           </button>
           <button
             onClick={() => setSelectedType('member')}
-            className={`px-3 py-1.5 rounded-[6px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-vds-lg font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
               selectedType === 'member'
-                ? 'bg-[#166534] text-white'
-                : 'bg-[#f4f4f5] text-[#52525b] hover:bg-[#e4e4e7]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -348,18 +348,18 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search className="w-3.5 h-3.5 text-[#7f7f7f] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-subdued absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm trong thùng rác..."
-            className="w-full pl-8 pr-7 py-1.5 text-xs font-body bg-[#fafafa] border border-[#d6d6d6] focus:border-[#963861] focus:bg-white rounded-[6px] text-[#202020] placeholder-[#9f9f9f] focus:outline-hidden"
+            className="w-full pl-8 pr-7 py-1.5 text-xs font-body bg-surface-100 border border-line focus:border-line-accent focus:bg-surface rounded-vds-lg text-ink placeholder-subdued-lighter focus:outline-hidden"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#7f7f7f] hover:text-[#202020] p-0.5 cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subdued hover:text-ink p-0.5 cursor-pointer"
             >
               <X className="w-3 h-3" />
             </button>
@@ -368,18 +368,18 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
       </div>
 
       {/* 3. ITEMS LIST */}
-      <div className="bg-white rounded-[12px] border border-[#e0e0e0] shadow-2xs overflow-hidden">
+      <div className="bg-surface rounded-vds-lg border border-line overflow-hidden">
         {filteredTrash.length > 0 && (
-          <div className="p-3 bg-[#fafafa] border-b border-[#e4e4e7] flex items-center justify-between gap-3 flex-wrap text-xs font-ui">
+          <div className="p-3 bg-surface-100 border-b border-line flex items-center justify-between gap-3 flex-wrap text-xs font-ui">
             <div className="flex items-center gap-2.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={isAllFilteredSelected}
                   onChange={handleToggleSelectAll}
-                  className="w-4 h-4 rounded text-[#963861] border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                  className="w-4 h-4 rounded text-accent border-line focus:ring-line-accent cursor-pointer"
                 />
-                <span className="font-bold text-[#202020]">
+                <span className="font-bold text-ink">
                   {selectedTrashIds.size > 0
                     ? `Đã chọn ${selectedTrashIds.size} mục`
                     : 'Chọn tất cả'}
@@ -388,7 +388,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
               {selectedTrashIds.size > 0 && (
                 <button
                   onClick={() => setSelectedTrashIds(new Set())}
-                  className="text-[11px] text-[#71717a] hover:text-[#202020] underline cursor-pointer"
+                  className="text-xs text-subdued hover:text-ink underline cursor-pointer"
                 >
                   Bỏ chọn
                 </button>
@@ -399,7 +399,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBulkRestore}
-                  className="px-3 py-1.5 rounded-[6px] bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  className="px-3 py-1.5 rounded-vds-lg bg-surface-positive text-positive border border-line hover:bg-surface-positive font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                   title="Khôi phục các mục đã chọn"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -409,7 +409,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                 {isTienNgoc && (
                   <button
                     onClick={handleBulkPermanentDelete}
-                    className="px-3 py-1.5 rounded-[6px] bg-[#fff1f2] text-[#be123c] border border-[#fecdd3] hover:bg-[#ffe4e6] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    className="px-3 py-1.5 rounded-vds-lg bg-surface-negative text-negative border border-line hover:bg-surface-negative font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer "
                     title="Xoá vĩnh viễn các mục đã chọn"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -423,20 +423,20 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
 
         {filteredTrash.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-[#f4f4f5] text-[#a1a1aa] flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-full bg-surface-200 text-subdued-lighter flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="font-title text-base font-bold text-[#202020]">
+            <h3 className="font-title text-base font-bold text-ink">
               Thùng rác trống
             </h3>
-            <p className="text-xs font-ui text-[#71717a] max-w-sm mx-auto">
+            <p className="text-xs font-ui text-subdued max-w-sm mx-auto">
               {searchQuery
                 ? 'Không tìm thấy mục nào khớp với từ khóa tìm kiếm.'
                 : 'Hiện không có công việc, dự án hoặc nhân sự nào trong thùng rác.'}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-[#f0f0f0]">
+          <div className="divide-y divide-divider">
             {filteredTrash.map((item) => {
               const badge = getTypeBadge(item.type);
               const isSelected = selectedTrashIds.has(item.id);
@@ -444,7 +444,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                 <div
                   key={item.id}
                   className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
-                    isSelected ? 'bg-[#fffbfd]' : 'hover:bg-[#fafafa]'
+                    isSelected ? 'bg-surface-100' : 'hover:bg-surface-100'
                   }`}
                 >
                   {/* Left: Checkbox + Type Badge + Title + Subtitle + Deletion Log */}
@@ -454,13 +454,13 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleToggleSelectItem(item.id)}
-                        className="w-4 h-4 rounded text-[#963861] border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                        className="w-4 h-4 rounded text-accent border-line focus:ring-line-accent cursor-pointer"
                       />
                     </div>
 
                     <div className="mt-0.5 shrink-0">
                       <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-ui font-bold px-2 py-0.5 rounded-[4px] border ${badge.style}`}
+                        className={`inline-flex items-center gap-1 text-xs font-ui font-bold px-2 py-0.5 rounded-vds-md border ${badge.style}`}
                       >
                         {badge.icon}
                         <span>{badge.label}</span>
@@ -470,29 +470,29 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                     <div className="space-y-1 min-w-0 flex-1">
                       <h4
                         onClick={() => setSelectedDetailItem(item)}
-                        className="font-title text-sm font-bold text-[#18181b] leading-snug break-words hover:text-[#963861] cursor-pointer transition-colors"
+                        className="font-title text-sm font-bold text-ink leading-snug break-words hover:text-accent cursor-pointer transition-colors"
                         title="Bấm để xem chi tiết"
                       >
                         {item.title}
                       </h4>
                       {item.subtitle && (
-                        <p className="text-xs font-ui text-[#52525b] truncate">
+                        <p className="text-xs font-ui text-ink-lighter truncate">
                           {item.subtitle}
                         </p>
                       )}
 
                       {/* Deletion Log: Who deleted & when */}
-                      <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] font-ui text-[#71717a]">
-                        <span className="inline-flex items-center gap-1 text-[#be123c] font-medium">
-                          <Clock className="w-3 h-3 text-[#be123c]" />
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs font-ui text-subdued">
+                        <span className="inline-flex items-center gap-1 text-negative font-medium">
+                          <Clock className="w-3 h-3 text-negative" />
                           <span>Đã xoá: {formatDateWithEnDay(item.deletedAt, true)}</span>
                         </span>
                         {item.deletedBy && (
                           <>
-                            <span className="text-[#d4d4d8]">•</span>
-                            <span className="inline-flex items-center gap-1 font-medium text-[#52525b]">
-                              <User className="w-3 h-3 text-[#963861]" />
-                              <span>Người xoá: <strong className="text-[#963861]">{item.deletedBy}</strong></span>
+                            <span className="text-icon-subdued">•</span>
+                            <span className="inline-flex items-center gap-1 font-medium text-ink-lighter">
+                              <User className="w-3 h-3 text-accent" />
+                              <span>Người xoá: <strong className="text-accent">{item.deletedBy}</strong></span>
                             </span>
                           </>
                         )}
@@ -505,10 +505,10 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                     {/* View Details Button */}
                     <button
                       onClick={() => setSelectedDetailItem(item)}
-                      className="h-8 px-2.5 rounded-[6px] bg-[#f4f4f5] text-[#3f3f46] hover:bg-[#e4e4e7] border border-[#d4d4d8] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      className="h-8 px-2.5 rounded-vds-lg bg-surface-200 text-ink-lighter hover:bg-surface-300 border border-line text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
                       title="Xem chi tiết nội dung đã xoá"
                     >
-                      <Eye className="w-3.5 h-3.5 text-[#52525b]" />
+                      <Eye className="w-3.5 h-3.5 text-ink-lighter" />
                       <span>Chi tiết</span>
                     </button>
 
@@ -516,7 +516,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                     {canRestoreTrashItem(effectiveUser, item) ? (
                       <button
                         onClick={() => onRestoreItem(item.id)}
-                        className="h-8 px-3 rounded-[6px] bg-[#f0fdf4] text-[#166534] border border-[#bbf7d0] hover:bg-[#dcfce7] text-xs font-ui font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="h-8 px-3 rounded-vds-lg bg-surface-positive text-positive border border-line hover:bg-surface-positive text-xs font-ui font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                         title="Khôi phục mục này về vị trí cũ"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -525,7 +525,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                     ) : (
                       <button
                         disabled
-                        className="h-8 px-2.5 rounded-[6px] bg-[#f4f4f5] text-[#a1a1aa] border border-[#e4e4e7] text-xs font-ui font-medium flex items-center gap-1.5 cursor-not-allowed opacity-60"
+                        className="h-8 px-2.5 rounded-vds-lg bg-surface-200 text-subdued-lighter border border-line text-xs font-ui font-medium flex items-center gap-1.5 cursor-not-allowed opacity-60"
                         title="Chỉ người đã xoá hoặc Admin mới có quyền khôi phục"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -537,7 +537,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                     {isTienNgoc && (
                       <button
                         onClick={() => setItemToDeletePermanently(item)}
-                        className="h-8 px-2.5 rounded-[6px] text-[#71717a] hover:text-[#be123c] hover:bg-[#fff1f2] text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                        className="h-8 px-2.5 rounded-vds-lg text-subdued hover:text-negative hover:bg-surface-negative text-xs font-ui font-medium flex items-center gap-1 transition-colors cursor-pointer"
                         title="Xoá vĩnh viễn mục này"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -562,26 +562,26 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
           />
 
           {/* Slide-over Drawer Panel */}
-          <div className="relative w-full max-w-[620px] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200 border-l border-[#e0e0e0]">
+          <div className="relative w-full max-w-[620px] bg-surface h-full shadow-sheet flex flex-col z-10 animate-in slide-in-from-right duration-200 border-l border-line">
             {/* Drawer Header */}
-            <div className="px-6 py-4 border-b border-[#e0e0e0] flex items-center justify-between bg-[#fafafa]">
+            <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-surface-100">
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-ui font-bold px-2.5 py-1 rounded-[6px] border ${
+                  className={`inline-flex items-center gap-1 text-xs font-ui font-bold px-2.5 py-1 rounded-vds-lg border ${
                     getTypeBadge(selectedDetailItem.type).style
                   }`}
                 >
                   {getTypeBadge(selectedDetailItem.type).icon}
                   <span>{getTypeBadge(selectedDetailItem.type).label}</span>
                 </span>
-                <h3 className="font-title text-sm font-bold text-[#202020]">
+                <h3 className="font-title text-sm font-bold text-ink">
                   Chi tiết mục trong thùng rác
                 </h3>
               </div>
 
               <button
                 onClick={() => setSelectedDetailItem(null)}
-                className="w-8 h-8 rounded-full hover:bg-[#e4e4e7] flex items-center justify-center text-[#52525b] hover:text-[#202020] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full hover:bg-surface-300 flex items-center justify-center text-ink-lighter hover:text-ink transition-colors cursor-pointer"
                 title="Đóng (ESC)"
               >
                 <X className="w-4 h-4" />
@@ -594,7 +594,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
             </div>
 
             {/* Drawer Footer */}
-            <div className="px-6 py-4 border-t border-[#e0e0e0] bg-[#fafafa] flex items-center justify-between gap-3">
+            <div className="px-6 py-4 border-t border-line bg-surface-100 flex items-center justify-between gap-3">
               <div>
                 {isTienNgoc && (
                   <button
@@ -602,7 +602,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                       setItemToDeletePermanently(selectedDetailItem);
                       setSelectedDetailItem(null);
                     }}
-                    className="h-9 px-3 rounded-[6px] text-[#be123c] hover:bg-[#fff1f2] border border-[#fecdd3] text-xs font-ui font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="h-9 px-3 rounded-vds-lg text-negative hover:bg-surface-negative border border-line text-xs font-ui font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Xoá vĩnh viễn</span>
@@ -613,7 +613,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedDetailItem(null)}
-                  className="h-9 px-4 rounded-[6px] bg-white border border-[#d4d4d8] text-[#52525b] hover:bg-[#f4f4f5] text-xs font-ui font-medium transition-colors cursor-pointer"
+                  className="h-9 px-4 rounded-vds-lg bg-surface border border-line text-ink-lighter hover:bg-surface-200 text-xs font-ui font-medium transition-colors cursor-pointer"
                 >
                   Đóng
                 </button>
@@ -623,13 +623,13 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                       onRestoreItem(selectedDetailItem.id);
                       setSelectedDetailItem(null);
                     }}
-                    className="h-9 px-4 rounded-[6px] bg-[#166534] hover:bg-[#14532d] text-white text-xs font-ui font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+                    className="h-9 px-4 rounded-vds-lg bg-positive-solid hover:bg-positive-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-[0.98]"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Khôi phục mục này</span>
                   </button>
                 ) : (
-                  <span className="text-xs text-[#a1a1aa] italic px-2">
+                  <span className="text-xs text-subdued-lighter italic px-2">
                     Chỉ người đã xoá hoặc Admin mới có quyền khôi phục
                   </span>
                 )}
@@ -642,35 +642,35 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
       {/* 5. CONFIRM EMPTY TRASH MODAL */}
       {isConfirmEmptyOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-md w-full p-6 shadow-xl space-y-4">
+          <div className="bg-surface rounded-vds-lg border border-line max-w-md w-full p-6 shadow-sheet space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center text-[#be123c] shrink-0">
+              <div className="w-10 h-10 rounded-full bg-surface-negative border border-line flex items-center justify-center text-negative shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-title text-base font-bold text-[#202020]">
+                <h3 className="font-title text-base font-bold text-ink">
                   Xác nhận dọn sạch thùng rác?
                 </h3>
-                <p className="text-xs font-ui text-[#52525b] leading-relaxed">
+                <p className="text-xs font-ui text-ink-lighter leading-relaxed">
                   Hành động này sẽ xoá vĩnh viễn toàn bộ <strong>{trash.length} mục</strong> trong Thùng rác. Dữ liệu sau khi dọn sạch sẽ <strong>không thể khôi phục lại</strong>.
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-[#fafafa] rounded-[6px] border border-[#e4e4e7] text-[11px] font-ui text-[#52525b]">
-              Người thực hiện: <strong className="text-[#963861]">{effectiveUser?.name || 'Đặng Tiến Ngọc'}</strong>
+            <div className="p-3 bg-surface-100 rounded-vds-lg border border-line text-xs font-ui text-ink-lighter">
+              Người thực hiện: <strong className="text-accent">{effectiveUser?.name || 'Đặng Tiến Ngọc'}</strong>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
               <button
                 onClick={() => setIsConfirmEmptyOpen(false)}
-                className="px-4 py-2 rounded-[6px] text-xs font-ui font-medium text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg text-xs font-ui font-medium text-ink-lighter hover:bg-surface-200 cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleConfirmEmpty}
-                className="px-4 py-2 rounded-[6px] bg-[#be123c] hover:bg-[#9f1239] text-white text-xs font-ui font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg bg-negative-solid hover:bg-negative-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Xác nhận dọn sạch</span>
@@ -683,25 +683,25 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
       {/* 6. CONFIRM SINGLE PERMANENT DELETE MODAL */}
       {itemToDeletePermanently && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-md w-full p-6 shadow-xl space-y-4">
+          <div className="bg-surface rounded-vds-lg border border-line max-w-md w-full p-6 shadow-sheet space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center text-[#be123c] shrink-0">
+              <div className="w-10 h-10 rounded-full bg-surface-negative border border-line flex items-center justify-center text-negative shrink-0">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-title text-base font-bold text-[#202020]">
+                <h3 className="font-title text-base font-bold text-ink">
                   Xoá vĩnh viễn mục này?
                 </h3>
-                <p className="text-xs font-ui text-[#52525b] leading-relaxed">
-                  Bạn có chắc chắn muốn xoá vĩnh viễn: <strong className="text-[#18181b]">"{itemToDeletePermanently.title}"</strong>? Mục này sẽ không thể khôi phục lại.
+                <p className="text-xs font-ui text-ink-lighter leading-relaxed">
+                  Bạn có chắc chắn muốn xoá vĩnh viễn: <strong className="text-ink">"{itemToDeletePermanently.title}"</strong>? Mục này sẽ không thể khôi phục lại.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
               <button
                 onClick={() => setItemToDeletePermanently(null)}
-                className="px-4 py-2 rounded-[6px] text-xs font-ui font-medium text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg text-xs font-ui font-medium text-ink-lighter hover:bg-surface-200 cursor-pointer"
               >
                 Hủy bỏ
               </button>
@@ -710,7 +710,7 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
                   onPermanentDeleteItem(itemToDeletePermanently.id);
                   setItemToDeletePermanently(null);
                 }}
-                className="px-4 py-2 rounded-[6px] bg-[#be123c] hover:bg-[#9f1239] text-white text-xs font-ui font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg bg-negative-solid hover:bg-negative-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Xoá vĩnh viễn</span>
@@ -723,31 +723,31 @@ export const TrashManager: React.FC<TrashManagerProps> = ({
       {/* 7. CONFIRM BULK PERMANENT DELETE MODAL */}
       {isConfirmBulkPermanentOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-[12px] border border-[#e0e0e0] max-w-md w-full p-6 shadow-xl space-y-4 font-ui">
+          <div className="bg-surface rounded-vds-lg border border-line max-w-md w-full p-6 shadow-sheet space-y-4 font-ui">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#fff1f2] border border-[#fecdd3] flex items-center justify-center text-[#be123c] shrink-0">
+              <div className="w-10 h-10 rounded-full bg-surface-negative border border-line flex items-center justify-center text-negative shrink-0">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-title text-base font-bold text-[#202020]">
+                <h3 className="font-title text-base font-bold text-ink">
                   Xoá vĩnh viễn {selectedTrashIds.size} mục đã chọn?
                 </h3>
-                <p className="text-xs text-[#52525b] leading-relaxed">
+                <p className="text-xs text-ink-lighter leading-relaxed">
                   Bạn có chắc chắn muốn xoá vĩnh viễn <strong>{selectedTrashIds.size} mục</strong> đã chọn khỏi hệ thống? Các mục này sẽ <strong>không thể khôi phục lại</strong>.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0f0f0]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider">
               <button
                 onClick={() => setIsConfirmBulkPermanentOpen(false)}
-                className="px-4 py-2 rounded-[6px] text-xs font-ui font-medium text-[#52525b] hover:bg-[#f4f4f5] cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg text-xs font-ui font-medium text-ink-lighter hover:bg-surface-200 cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleConfirmBulkPermanent}
-                className="px-4 py-2 rounded-[6px] bg-[#be123c] hover:bg-[#9f1239] text-white text-xs font-ui font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="px-4 py-2 rounded-vds-lg bg-negative-solid hover:bg-negative-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Xác nhận xoá vĩnh viễn</span>

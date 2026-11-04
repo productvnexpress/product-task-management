@@ -193,7 +193,7 @@ export function renderCommentWithMentions(
         return (
           <span
             key={idx}
-            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-[4px] bg-[#fdf2f7] text-[#963861] font-semibold text-xs border border-[#f4c2d7]/80 align-baseline mx-0.5 shadow-2xs"
+            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-vds-md bg-surface-accent-faint text-accent font-semibold text-xs border border-line/80 align-baseline mx-0.5 "
             title={`${matched.name} (${teamOrDept})`}
           >
             <span className="opacity-70 font-normal">@</span>

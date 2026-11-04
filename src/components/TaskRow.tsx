@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus, MemberItem } from '../types';
 import { formatDateWithEnDay, formatPercentage, formatMemberNameOnly } from '../utils/formatters';
-import { MessageSquare, AlertTriangle, Check, Trash2, Edit2, Layers, Link, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, AlertTriangle, Check, Trash2, Edit2, Layers, Link, ExternalLink, CheckCircle2 } from './vds/icons';
 
 interface TaskRowProps {
   task: TaskItem;
@@ -35,39 +35,39 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const getStatusBadgeStyle = (status: TaskStatus) => {
     switch (status) {
       case 'Chưa làm':
-        return 'bg-[#f3f3f3] text-[#5f5f5f] border-[#d6d6d6]';
+        return 'bg-surface-200 text-ink-lighter border-line';
       case 'Đang làm':
-        return 'bg-[#eaf0f8] text-[#365983] border-[#466fa1]';
+        return 'bg-surface-support text-support border-line-support';
       case 'Bị nghẽn':
-        return 'bg-[#f8d4d6] text-[#da1e28] border-[#da1e28]';
+        return 'bg-surface-negative text-negative border-line-negative';
       case 'Hoàn thành':
-        return 'bg-[#d5eddc] text-[#24a148] border-[#24a148]';
+        return 'bg-surface-positive text-positive border-line-positive';
     }
   };
 
   const getPriorityStyle = (priority: string) => {
     switch (priority) {
       case 'Khẩn cấp':
-        return 'text-[#da1e28] bg-[#f8d4d6] border-[#da1e28] font-bold';
+        return 'text-negative bg-surface-negative border-line-negative font-bold';
       case 'Ưu tiên cao':
-        return 'text-[#ee853b] bg-[#fce8da] border-[#ee853b]';
+        return 'text-warning bg-surface-warning border-line-warning';
       default:
-        return 'text-[#5f5f5f] bg-[#f3f3f3] border-[#d6d6d6]';
+        return 'text-ink-lighter bg-surface-200 border-line';
     }
   };
 
   const getTeamColor = (team: string) => {
     switch (team) {
       case 'Product Manager':
-        return 'text-[#b13460] bg-[#fce6eb] border-[rgba(177,52,96,0.2)]';
+        return 'text-accent bg-surface-negative border-line';
       case 'UX/UI Designer':
-        return 'text-[#365983] bg-[#eaf0f8] border-[rgba(70,111,161,0.2)]';
+        return 'text-support bg-surface-support border-line';
       case 'SEO':
-        return 'text-[#24a148] bg-[#d5eddc] border-[rgba(36,161,72,0.2)]';
+        return 'text-positive bg-surface-positive border-line';
       case 'Data':
-        return 'text-[#7e4f16] bg-[#fdf3e7] border-[rgba(126,79,22,0.2)]';
+        return 'text-warning bg-surface-warning border-line';
       default:
-        return 'text-[#5f5f5f] bg-[#f3f3f3] border-[#d6d6d6]';
+        return 'text-ink-lighter bg-surface-200 border-line';
     }
   };
 
@@ -95,15 +95,15 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   ];
 
   return (
-    <div className={`border-b border-[rgba(0,0,0,0.06)] hover:bg-[#fafafa] transition-colors ${
-      task.status === 'Bị nghẽn' ? 'bg-[#fffafb]' : 'bg-[#ffffff]'
+    <div className={`border-b border-divider hover:bg-surface-100 transition-colors ${
+      task.status === 'Bị nghẽn' ? 'bg-surface-100' : 'bg-surface'
     }`}>
       <div className="px-4 py-3 sm:px-6">
         {/* Main Row Grid */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Left Block: Team, Title, Priority, Assignee */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-x-2 gap-y-1 flex-wrap mb-1.5 text-xs font-ui text-[#71717a]">
+            <div className="flex items-center gap-x-2 gap-y-1 flex-wrap mb-1.5 text-xs font-ui text-subdued">
               {/* Phase (Chỉ để Giai đoạn 1, Giai đoạn 2 hoặc không có giai đoạn) */}
               {(() => {
                 if (!task.phaseName) return null;
@@ -112,32 +112,32 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 const phaseLabel = match[1].replace(/Phase/i, 'Giai đoạn');
                 return (
                   <>
-                    <span className="flex items-center gap-1 text-[#52525b]" title={`Giai đoạn: ${task.phaseName}`}>
-                      <Layers className="w-3 h-3 text-[#a1a1aa]" />
+                    <span className="flex items-center gap-1 text-ink-lighter" title={`Giai đoạn: ${task.phaseName}`}>
+                      <Layers className="w-3 h-3 text-subdued-lighter" />
                       <span>{phaseLabel}</span>
                     </span>
-                    <span className="text-[#d4d4d8]">•</span>
+                    <span className="text-icon-subdued">•</span>
                   </>
                 );
               })()}
 
               {/* Assignee */}
-              <span className="text-[#52525b]">
-                Phụ trách: <strong className="text-[#18181b] font-normal">{formatMemberNameOnly(task.assignee, members)}</strong>
+              <span className="text-ink-lighter">
+                Phụ trách: <strong className="text-ink font-normal">{formatMemberNameOnly(task.assignee, members)}</strong>
               </span>
 
-              <span className="text-[#d4d4d8]">•</span>
+              <span className="text-icon-subdued">•</span>
 
               {/* Due date */}
-              <span className="font-num text-[#71717a]">
+              <span className="font-num text-subdued">
                 Hạn: {formatDateWithEnDay(task.dueDate)}
               </span>
 
               {/* Priority - ONLY 'Khẩn cấp' highlighted */}
               {task.priority === 'Khẩn cấp' && (
                 <>
-                  <span className="text-[#d4d4d8]">•</span>
-                  <span className="text-[11px] font-bold text-[#be123c] flex items-center gap-1">
+                  <span className="text-icon-subdued">•</span>
+                  <span className="text-xs font-bold text-negative flex items-center gap-1">
                     🚨 Khẩn cấp
                   </span>
                 </>
@@ -154,11 +154,11 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                   onKeyDown={handleKeyDown}
                   onBlur={handleTitleSubmit}
                   autoFocus
-                  className="w-full px-2 py-1 border border-[#0590de] rounded-[4px] font-body text-sm text-[#202020] bg-[#ffffff] focus:outline-none"
+                  className="w-full px-2 py-1 border border-line-info rounded-vds-md font-body text-sm text-ink bg-surface focus:outline-none"
                 />
                 <button
                   onClick={handleTitleSubmit}
-                  className="p-1 rounded-[4px] bg-[#24a148] text-white hover:opacity-90"
+                  className="p-1 rounded-vds-md bg-positive-solid text-on-color hover:opacity-90"
                   title="Lưu"
                 >
                   <Check className="w-4 h-4" />
@@ -169,13 +169,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 <h3
                   onClick={() => setIsEditingTitle(true)}
                   title="Nhấp để chỉnh sửa tên công việc"
-                  className="font-body text-[15px] font-normal text-[#202020] leading-snug cursor-pointer hover:text-[#b13460] transition-colors"
+                  className="font-body text-[15px] font-normal text-ink leading-snug cursor-pointer hover:text-accent transition-colors"
                 >
                   {task.title}
                 </h3>
                 <button
                   onClick={() => setIsEditingTitle(true)}
-                  className="opacity-0 group-hover:opacity-100 text-[#9f9f9f] hover:text-[#202020] transition-opacity p-0.5"
+                  className="opacity-0 group-hover:opacity-100 text-subdued-lighter hover:text-ink transition-opacity p-0.5"
                   title="Sửa tên việc"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
@@ -185,7 +185,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
             {/* Blocker Alert Inline if Status is 'Bị nghẽn' */}
             {task.status === 'Bị nghẽn' && (
-              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[#da1e28] font-body bg-[#f8d4d6]/60 p-1.5 rounded-[4px] border border-[#da1e28]/30">
+              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-negative font-body bg-surface-negative/60 p-1.5 rounded-vds-md border border-line-negative/30">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                 <span>
                   <strong>Trở ngại:</strong> {task.blockerReason || task.latestUpdateNote || 'Đang vướng mắc kỹ thuật hoặc phụ thuộc bên ngoài.'}
@@ -202,10 +202,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="px-2 py-0.5 rounded-[4px] bg-[#f0f4f9] text-[#1d508d] border border-[#adc6e5] text-[11px] font-bold flex items-center gap-1 hover:underline"
+                    className="px-2 py-0.5 rounded-vds-md bg-surface-200 text-support border border-line text-xs font-bold flex items-center gap-1 hover:underline"
                     title={task.workLink}
                   >
-                    <Link className="w-3 h-3 text-[#1d508d]" />
+                    <Link className="w-3 h-3 text-support" />
                     <span>Link làm việc</span>
                     <ExternalLink className="w-2.5 h-2.5" />
                   </a>
@@ -216,10 +216,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="px-2 py-0.5 rounded-[4px] bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] text-[11px] font-bold flex items-center gap-1 hover:underline"
+                    className="px-2 py-0.5 rounded-vds-md bg-surface-positive text-positive border border-line text-xs font-bold flex items-center gap-1 hover:underline"
                     title={task.resultLink}
                   >
-                    <CheckCircle2 className="w-3 h-3 text-[#15803d]" />
+                    <CheckCircle2 className="w-3 h-3 text-positive" />
                     <span>Link kết quả</span>
                     <ExternalLink className="w-2.5 h-2.5" />
                   </a>
@@ -231,9 +231,9 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
             {/* Latest update note */}
             {task.latestUpdateNote && task.status !== 'Bị nghẽn' && (
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-[#5f5f5f] font-body">
-                <span className="text-[#9f9f9f]">↳ Cập nhật gần nhất:</span>
-                <span className="text-[#5f5f5f]">{task.latestUpdateNote}</span>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-ink-lighter font-body">
+                <span className="text-subdued-lighter">↳ Cập nhật gần nhất:</span>
+                <span className="text-ink-lighter">{task.latestUpdateNote}</span>
               </div>
             )}
           </div>
@@ -244,7 +244,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
-                className={`h-[32px] px-2.5 rounded-[8px] border font-ui text-xs font-bold transition-all flex items-center gap-1.5 state-layer-std ${getStatusBadgeStyle(
+                className={`h-[32px] px-2.5 rounded-vds-lg border font-ui text-xs font-bold transition flex items-center gap-1.5 state-layer-std ${getStatusBadgeStyle(
                   task.status
                 )}`}
                 title="Bấm để đổi trạng thái"
@@ -259,8 +259,8 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsStatusMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-1 w-44 bg-[#ffffff] border border-[#9f9f9f] rounded-[4px] py-1 z-50">
-                    <div className="px-2.5 py-1 text-[11px] font-ui text-[#7f7f7f] border-b border-[rgba(0,0,0,0.06)]">
+                  <div className="absolute right-0 mt-1 w-44 bg-surface border border-line-regular rounded-vds-md py-1 z-50">
+                    <div className="px-2.5 py-1 text-xs font-ui text-subdued border-b border-divider">
                       Chuyển trạng thái:
                     </div>
                     {statuses.map((s) => (
@@ -270,12 +270,12 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                           onUpdateStatus(task.id, s);
                           setIsStatusMenuOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-xs font-ui transition-colors hover:bg-[#f3f3f3] flex items-center justify-between ${
-                          task.status === s ? 'font-bold text-[#b13460]' : 'text-[#202020]'
+                        className={`w-full text-left px-3 py-1.5 text-xs font-ui transition-colors hover:bg-surface-200 flex items-center justify-between ${
+                          task.status === s ? 'font-bold text-accent' : 'text-ink'
                         }`}
                       >
                         <span>{s}</span>
-                        {task.status === s && <Check className="w-3.5 h-3.5 text-[#b13460]" />}
+                        {task.status === s && <Check className="w-3.5 h-3.5 text-accent" />}
                       </button>
                     ))}
                   </div>
@@ -284,7 +284,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </div>
 
             {/* Quick 1-Click Progress Step Buttons: [0%] [25%] [50%] [75%] [100%] */}
-            <div className="flex items-center gap-1 bg-[#f3f3f3] p-1 rounded-[6px] border border-[#d6d6d6]">
+            <div className="flex items-center gap-1 bg-surface-200 p-1 rounded-vds-lg border border-line">
               {[0, 25, 50, 75, 100].map((step) => {
                 const isActive = task.progress === step;
                 return (
@@ -292,10 +292,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                     key={step}
                     onClick={() => onUpdateProgress(task.id, step)}
                     title={`Cập nhật ngay ${step}%`}
-                    className={`h-[24px] px-1.5 rounded-[4px] font-num text-[11px] transition-colors state-layer-std ${
+                    className={`h-[24px] px-1.5 rounded-vds-md font-num text-xs transition-colors state-layer-std ${
                       isActive
-                        ? 'bg-[#fdf2f7] text-[#913257] border border-[#f4c2d7] font-bold shadow-2xs'
-                        : 'text-[#5f5f5f] hover:text-[#202020] hover:bg-[#e8e8e8]'
+                        ? 'bg-surface-accent-faint text-accent border border-line font-bold '
+                        : 'text-ink-lighter hover:text-ink hover:bg-surface-300'
                     }`}
                   >
                     {step}%
@@ -306,13 +306,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
             {/* Current progress indicator with bar */}
             <div className="w-16 hidden sm:block">
-              <div className="text-[11px] font-num text-right text-[#5f5f5f] mb-0.5">
+              <div className="text-xs font-num text-right text-ink-lighter mb-0.5">
                 {formatPercentage(task.progress, 0)}
               </div>
-              <div className="h-1.5 bg-[#ececec] rounded-[2px] overflow-hidden">
+              <div className="h-1.5 bg-surface-300 rounded-vds-sm overflow-hidden">
                 <div
-                  className={`h-full transition-all ${
-                    task.progress === 100 ? 'bg-[#24a148]' : 'bg-[#466fa1]'
+                  className={`h-full transition ${
+                    task.progress === 100 ? 'bg-positive-solid' : 'bg-support-solid'
                   }`}
                   style={{ width: `${task.progress}%` }}
                 />
@@ -323,18 +323,18 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => onOpenLogModal(task)}
-                className="h-[32px] px-2 rounded-[8px] bg-[#fafafa] border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] hover:border-[#9f9f9f] font-ui text-xs flex items-center gap-1 transition-colors state-layer-std"
+                className="h-[32px] px-2 rounded-vds-lg bg-surface-100 border border-line text-ink-lighter hover:text-ink hover:border-line-regular font-ui text-xs flex items-center gap-1 transition-colors state-layer-std"
                 title="Ghi chú cập nhật / Nhật ký tiến độ"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline font-num text-[11px]">
+                <span className="hidden sm:inline font-num text-xs">
                   ({task.logs.length})
                 </span>
               </button>
 
               <button
                 onClick={() => onDeleteTask(task.id)}
-                className="h-[32px] w-[32px] rounded-[8px] border border-transparent text-[#9f9f9f] hover:text-[#da1e28] hover:bg-[#f8d4d6] flex items-center justify-center transition-colors"
+                className="h-[32px] w-[32px] rounded-vds-lg border border-transparent text-subdued-lighter hover:text-negative hover:bg-surface-negative flex items-center justify-center transition-colors"
                 title="Xóa công việc"
               >
                 <Trash2 className="w-3.5 h-3.5" />

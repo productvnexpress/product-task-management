@@ -14,7 +14,7 @@ import {
   ChevronUp,
   Search,
   ChevronsUpDown,
-} from 'lucide-react';
+} from './vds/icons';
 import { ProjectItem, ProjectChecklistItem, ProjectChecklistStatus, MemberItem } from '../types';
 import {
   CHECKLIST_PHASES,
@@ -156,25 +156,25 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="bg-white w-full max-w-3xl rounded-[12px] shadow-2xl border border-[#d0d0d0] flex flex-col max-h-[90vh] overflow-hidden"
+        className="bg-surface w-full max-w-3xl rounded-vds-lg shadow-sheet border border-line flex flex-col max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-5 py-3.5 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-line bg-surface-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold shrink-0">
               <ListChecks className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-title text-base font-bold text-[#202020]">
+                <h3 className="font-title text-base font-bold text-ink">
                   Checklist dự án: {project.name.replace(/^Dự án\s+/i, '')}
                 </h3>
-                <span className="text-[10px] font-num font-bold px-1.5 py-0.5 rounded bg-[#f0f0f0] text-[#505050] border border-[#d8d8d8]">
+                <span className="text-[10px] font-num font-bold px-1.5 py-0.5 rounded bg-surface-200 text-ink-lighter border border-line">
                   {project.code}
                 </span>
               </div>
-              <p className="text-xs text-[#707070] font-ui mt-0.5">
+              <p className="text-xs text-ink-lighter font-ui mt-0.5">
                 Bấm "Dùng mục này" để điền tiêu đề công việc hoặc đánh dấu tiến độ tuân thủ
               </p>
             </div>
@@ -183,7 +183,7 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-[#707070] hover:text-[#202020] hover:bg-[#e8e8e8] rounded-[6px] transition-colors cursor-pointer"
+            className="p-1.5 text-ink-lighter hover:text-ink hover:bg-surface-300 rounded-vds-lg transition-colors cursor-pointer"
             title="Đóng cửa sổ"
           >
             <X className="w-4 h-4" />
@@ -191,13 +191,13 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
         </div>
 
         {/* Modal Subheader: Tiến độ & Bộ lọc */}
-        <div className="px-5 py-3 border-b border-[#e8e8e8] bg-white space-y-3">
+        <div className="px-5 py-3 border-b border-line bg-surface space-y-3">
           {/* Hàng tiến độ tuân thủ */}
           <div className="flex items-center justify-between text-xs font-ui">
-            <span className="text-[#505050] font-medium">Tiến độ tuân thủ tiêu chuẩn:</span>
+            <span className="text-ink-lighter font-medium">Tiến độ tuân thủ tiêu chuẩn:</span>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[#b13460]">{stats.percent}%</span>
-              <span className="text-[11px] text-[#707070]">
+              <span className="font-bold text-accent">{stats.percent}%</span>
+              <span className="text-xs text-ink-lighter">
                 ({stats.completed}/{stats.total - stats.skipped} hoàn thành
                 {stats.skipped > 0 ? `, ${stats.skipped} bỏ qua` : ''})
               </span>
@@ -205,14 +205,14 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
           </div>
 
           {/* Thanh tiến độ đa màu */}
-          <div className="h-1.5 w-full bg-[#f0f0f0] rounded-full overflow-hidden flex">
+          <div className="h-1.5 w-full bg-surface-200 rounded-full overflow-hidden flex">
             <div
-              className="h-full bg-[#24a148] transition-all duration-300"
+              className="h-full bg-positive-solid transition duration-300"
               style={{ width: `${(stats.completed / Math.max(1, stats.total)) * 100}%` }}
               title={`Hoàn thành: ${stats.completed}`}
             />
             <div
-              className="h-full bg-[#a0a0a0] transition-all duration-300"
+              className="h-full bg-icon-subdued transition duration-300"
               style={{ width: `${(stats.skipped / Math.max(1, stats.total)) * 100}%` }}
               title={`Bỏ qua: ${stats.skipped}`}
             />
@@ -223,10 +223,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
             <button
               type="button"
               onClick={() => handleSelectPhaseTab('all')}
-              className={`px-2.5 py-1 rounded-[6px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-vds-lg font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 activePhaseTab === 'all'
-                  ? 'bg-[#b13460] text-white shadow-2xs'
-                  : 'bg-[#f4f4f4] text-[#505050] hover:bg-[#eaeaea]'
+                  ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                  : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
               }`}
             >
               Tất cả ({currentChecklist.length})
@@ -240,10 +240,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                   key={p.id}
                   type="button"
                   onClick={() => handleSelectPhaseTab(p.id)}
-                  className={`px-2.5 py-1 rounded-[6px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-vds-lg font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                     activePhaseTab === p.id
-                      ? 'bg-[#b13460] text-white shadow-2xs'
-                      : 'bg-[#f4f4f4] text-[#505050] hover:bg-[#eaeaea]'
+                      ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                      : 'bg-surface-200 text-ink-lighter hover:bg-surface-300'
                   }`}
                 >
                   {p.shortTitle} ({countInPhase}/{totalInPhase})
@@ -256,19 +256,19 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             {/* Search Box */}
             <div className="relative flex-1 min-w-[200px] max-w-[320px]">
-              <Search className="w-3.5 h-3.5 text-[#808080] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-subdued absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
                 placeholder="Tìm tiêu chuẩn (SEO, Tracking, Figma...)"
-                className="w-full pl-8 pr-7 py-1 text-xs font-ui bg-[#f9f9f9] border border-[#d8d8d8] rounded-[6px] focus:outline-hidden focus:border-[#b13460] focus:bg-white text-[#202020] placeholder-[#888888] transition-colors"
+                className="w-full pl-8 pr-7 py-1 text-xs font-ui bg-surface-100 border border-line rounded-vds-lg focus:outline-hidden focus:border-line-accent focus:bg-surface text-ink placeholder-subdued transition-colors"
               />
               {searchKeyword && (
                 <button
                   type="button"
                   onClick={() => setSearchKeyword('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#202020] cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-subdued hover:text-ink cursor-pointer"
                   title="Xóa tìm kiếm"
                 >
                   <X className="w-3 h-3" />
@@ -278,14 +278,14 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
 
             <div className="flex items-center gap-2 text-xs font-ui">
               {/* Lọc trạng thái */}
-              <div className="flex items-center gap-1 bg-[#f5f5f5] p-0.5 rounded-[6px] border border-[#e0e0e0]">
+              <div className="flex items-center gap-1 bg-surface-200 p-0.5 rounded-vds-lg border border-line">
                 <button
                   type="button"
                   onClick={() => setFilterStatus('all')}
-                  className={`px-2 py-0.5 rounded-[4px] font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-vds-md font-medium transition-colors cursor-pointer ${
                     filterStatus === 'all'
-                      ? 'bg-white text-[#202020] font-semibold shadow-2xs'
-                      : 'text-[#666666] hover:text-[#202020]'
+                      ? 'bg-surface text-ink font-semibold '
+                      : 'text-ink-lighter hover:text-ink'
                   }`}
                 >
                   Tất cả
@@ -293,10 +293,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterStatus('pending')}
-                  className={`px-2 py-0.5 rounded-[4px] font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-vds-md font-medium transition-colors cursor-pointer ${
                     filterStatus === 'pending'
-                      ? 'bg-white text-[#8f6b00] font-semibold shadow-2xs'
-                      : 'text-[#666666] hover:text-[#202020]'
+                      ? 'bg-surface text-warning font-semibold '
+                      : 'text-ink-lighter hover:text-ink'
                   }`}
                 >
                   Chưa xong
@@ -304,10 +304,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterStatus('completed')}
-                  className={`px-2 py-0.5 rounded-[4px] font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-vds-md font-medium transition-colors cursor-pointer ${
                     filterStatus === 'completed'
-                      ? 'bg-white text-[#24a148] font-semibold shadow-2xs'
-                      : 'text-[#666666] hover:text-[#202020]'
+                      ? 'bg-surface text-positive font-semibold '
+                      : 'text-ink-lighter hover:text-ink'
                   }`}
                 >
                   Đã xong
@@ -315,10 +315,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterStatus('skipped')}
-                  className={`px-2 py-0.5 rounded-[4px] font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-vds-md font-medium transition-colors cursor-pointer ${
                     filterStatus === 'skipped'
-                      ? 'bg-white text-[#505050] font-semibold shadow-2xs'
-                      : 'text-[#666666] hover:text-[#202020]'
+                      ? 'bg-surface text-ink-lighter font-semibold '
+                      : 'text-ink-lighter hover:text-ink'
                   }`}
                 >
                   Bỏ qua
@@ -330,11 +330,11 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                 <button
                   type="button"
                   onClick={toggleAllPhases}
-                  className="flex items-center gap-1 px-2 py-1 text-[#606060] hover:text-[#202020] hover:bg-[#f0f0f0] rounded-[6px] transition-colors cursor-pointer border border-[#e0e0e0] bg-white"
+                  className="flex items-center gap-1 px-2 py-1 text-ink-lighter hover:text-ink hover:bg-surface-200 rounded-vds-lg transition-colors cursor-pointer border border-line bg-surface"
                   title={areAllExpanded ? 'Thu gọn tất cả giai đoạn' : 'Mở rộng tất cả giai đoạn'}
                 >
-                  <ChevronsUpDown className="w-3 h-3 text-[#808080]" />
-                  <span className="text-[11px] font-medium">{areAllExpanded ? 'Thu gọn hết' : 'Mở rộng hết'}</span>
+                  <ChevronsUpDown className="w-3 h-3 text-subdued" />
+                  <span className="text-xs font-medium">{areAllExpanded ? 'Thu gọn hết' : 'Mở rộng hết'}</span>
                 </button>
               )}
             </div>
@@ -342,15 +342,15 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
         </div>
 
         {/* Modal Body: Danh sách phân nhóm theo Giai đoạn */}
-        <div className="p-4 overflow-y-auto flex-1 bg-[#fcfcfc] space-y-3.5">
+        <div className="p-4 overflow-y-auto flex-1 bg-surface-100 space-y-3.5">
           {totalMatchingItems === 0 ? (
-            <div className="py-12 text-center text-xs text-[#808080] font-ui bg-white rounded-[10px] border border-[#e8e8e8] p-6 space-y-2">
-              <p className="font-semibold text-[#505050]">Không tìm thấy tiêu chuẩn nào phù hợp.</p>
+            <div className="py-12 text-center text-xs text-subdued font-ui bg-surface rounded-vds-lg border border-line p-6 space-y-2">
+              <p className="font-semibold text-ink-lighter">Không tìm thấy tiêu chuẩn nào phù hợp.</p>
               {searchKeyword && (
                 <button
                   type="button"
                   onClick={() => setSearchKeyword('')}
-                  className="text-[#b13460] font-semibold hover:underline cursor-pointer"
+                  className="text-accent font-semibold hover:underline cursor-pointer"
                 >
                   Xóa bộ lọc tìm kiếm
                 </button>
@@ -385,40 +385,40 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
               return (
                 <div
                   key={phase.id}
-                  className="bg-white rounded-[10px] border border-[#e2e2e2] overflow-hidden shadow-2xs transition-all"
+                  className="bg-surface rounded-vds-lg border border-line overflow-hidden transition"
                 >
                   {/* Header Giai đoạn */}
                   <div
                     onClick={() => togglePhaseExpand(phase.id)}
-                    className="flex items-center justify-between px-3.5 py-2.5 bg-[#fafafa] hover:bg-[#f4f4f4] cursor-pointer transition-colors border-b border-[#ececec] select-none"
+                    className="flex items-center justify-between px-3.5 py-2.5 bg-surface-100 hover:bg-surface-200 cursor-pointer transition-colors border-b border-divider select-none"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="font-title text-xs font-bold text-[#202020]">
+                      <span className="font-title text-xs font-bold text-ink">
                         {phase.title}
                       </span>
                       <span
-                        className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-[4px] border ${phase.badgeColor}`}
+                        className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-vds-md border ${phase.badgeColor}`}
                       >
                         {phaseCompleted}/{allItemsInPhase.length} hoàn thành
                         {phaseSkipped > 0 ? ` • ${phaseSkipped} bỏ qua` : ''}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-[#707070] text-[11px] font-ui">
+                    <div className="flex items-center gap-1.5 text-ink-lighter text-xs font-ui">
                       <span className="hidden sm:inline">{isExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
                       {isExpanded ? (
-                        <ChevronUp className="w-3.5 h-3.5 text-[#707070]" />
+                        <ChevronUp className="w-3.5 h-3.5 text-ink-lighter" />
                       ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-[#707070]" />
+                        <ChevronDown className="w-3.5 h-3.5 text-ink-lighter" />
                       )}
                     </div>
                   </div>
 
                   {/* Danh sách tiêu chuẩn trong Giai đoạn */}
                   {isExpanded && (
-                    <div className="divide-y divide-[#f2f2f2] bg-white">
+                    <div className="divide-y divide-divider bg-surface">
                       {phaseMatchingItems.length === 0 ? (
-                        <div className="p-3 text-center text-xs text-[#808080] italic font-ui">
+                        <div className="p-3 text-center text-xs text-subdued italic font-ui">
                           Không có mục nào trong giai đoạn này khớp với bộ lọc.
                         </div>
                       ) : (
@@ -435,10 +435,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                               key={item.id}
                               className={`p-3 flex items-start gap-2.5 transition-colors group ${
                                 isCompleted
-                                  ? 'bg-[#f8fdf9]'
+                                  ? 'bg-surface-100'
                                   : isSkipped
-                                  ? 'bg-[#fcfcfc] opacity-65'
-                                  : 'hover:bg-[#fafafa]'
+                                  ? 'bg-surface-100 opacity-65'
+                                  : 'hover:bg-surface-100'
                               }`}
                             >
                               {/* Complete Checkbox */}
@@ -446,17 +446,17 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                                 type="button"
                                 onClick={() => handleToggleComplete(item.id)}
                                 title={isCompleted ? 'Hủy hoàn thành' : 'Đánh dấu hoàn thành'}
-                                className={`mt-0.5 w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                                className={`mt-0.5 w-4 h-4 rounded-vds-md border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                                   isCompleted
-                                    ? 'bg-[#24a148] border-[#24a148] text-white'
-                                    : 'border-[#b5b5b5] bg-white hover:border-[#24a148]'
+                                    ? 'bg-positive-solid border-line-positive text-on-color'
+                                    : 'border-line-regular bg-surface hover:border-line-positive'
                                 }`}
                               >
                                 {isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
                               </button>
 
                               {/* Hierarchical Number Badge (1.1, 1.2...) */}
-                              <span className="text-[11px] font-num font-semibold text-[#808080] bg-[#f2f2f2] px-1.5 py-0.5 rounded-[4px] shrink-0 mt-0.5 select-none">
+                              <span className="text-xs font-num font-semibold text-subdued bg-surface-200 px-1.5 py-0.5 rounded-vds-md shrink-0 mt-0.5 select-none">
                                 {hierarchicalNumber}
                               </span>
 
@@ -464,12 +464,12 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                               <div className="flex-1 min-w-0 pr-1">
                                 <div className="flex items-center gap-1.5 mb-1">
                                   {isCompleted && (
-                                    <span className="text-[10px] font-ui font-semibold text-[#24a148] bg-[#e2f6e9] px-1.5 py-0.2 rounded">
+                                    <span className="text-[10px] font-ui font-semibold text-positive bg-surface-positive px-1.5 py-0.2 rounded">
                                       Đã xong
                                     </span>
                                   )}
                                   {isSkipped && (
-                                    <span className="text-[10px] font-ui font-semibold text-[#606060] bg-[#f0f0f0] px-1.5 py-0.2 rounded">
+                                    <span className="text-[10px] font-ui font-semibold text-ink-lighter bg-surface-200 px-1.5 py-0.2 rounded">
                                       Bỏ qua
                                     </span>
                                   )}
@@ -477,10 +477,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                                 <p
                                   className={`text-xs font-ui leading-relaxed ${
                                     isCompleted
-                                      ? 'text-[#1e5a2b] font-medium'
+                                      ? 'text-positive font-medium'
                                       : isSkipped
-                                      ? 'line-through text-[#808080]'
-                                      : 'text-[#202020]'
+                                      ? 'line-through text-subdued'
+                                      : 'text-ink'
                                   }`}
                                 >
                                   {item.text}
@@ -494,10 +494,10 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                                   type="button"
                                   onClick={() => handleToggleSkip(item.id)}
                                   title={isSkipped ? 'Bỏ gạch ngang (áp dụng lại)' : 'Bỏ qua (không áp dụng)'}
-                                  className={`p-1.5 rounded-[4px] text-xs font-ui transition-colors cursor-pointer ${
+                                  className={`p-1.5 rounded-vds-md text-xs font-ui transition-colors cursor-pointer ${
                                     isSkipped
-                                      ? 'bg-[#505050] text-white hover:bg-[#303030]'
-                                      : 'text-[#808080] hover:text-[#da1e28] hover:bg-[#fff0f1]'
+                                      ? 'bg-icon-strong text-on-color hover:bg-surface-dark'
+                                      : 'text-subdued hover:text-negative hover:bg-surface-negative'
                                   }`}
                                 >
                                   <Ban className="w-3.5 h-3.5" />
@@ -511,7 +511,7 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
                                       onSelectAsTaskTitle(item.text, item.phaseId);
                                       onClose();
                                     }}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-[6px] bg-[#fcf0f5] hover:bg-[#fae6ef] text-[#b13460] font-ui text-xs font-semibold border border-[#f3c2d4] transition-colors cursor-pointer shadow-2xs"
+                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-vds-lg bg-surface-accent-faint hover:bg-surface-accent text-accent font-ui text-xs font-semibold border border-line transition-colors cursor-pointer "
                                     title="Điền mục này làm tiêu đề công việc"
                                   >
                                     <span>Dùng mục này</span>
@@ -532,14 +532,14 @@ export const ProjectChecklistModal: React.FC<ProjectChecklistModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3 border-t border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between text-xs font-ui">
-          <span className="text-[#707070]">
+        <div className="px-5 py-3 border-t border-line bg-surface-100 flex items-center justify-between text-xs font-ui">
+          <span className="text-ink-lighter">
             Bấm ESC hoặc nút Đóng để quay lại
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-white hover:bg-[#f0f0f0] text-[#404040] rounded-[6px] border border-[#d0d0d0] font-semibold transition-colors cursor-pointer"
+            className="px-4 py-1.5 bg-surface hover:bg-surface-200 text-ink-lighter rounded-vds-lg border border-line font-semibold transition-colors cursor-pointer"
           >
             Đóng
           </button>

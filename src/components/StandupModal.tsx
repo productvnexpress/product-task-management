@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TaskItem, TeamType } from '../types';
-import { X, Copy, Check, FileText } from 'lucide-react';
+import { X, Copy, Check, FileText } from './vds/icons';
 import { formatDateShort } from '../utils/formatters';
 
 interface StandupModalProps {
@@ -108,36 +108,36 @@ export const StandupModal: React.FC<StandupModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 bg-white w-full max-w-2xl rounded-[12px] border border-[#d6d6d6] shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="relative z-10 bg-surface w-full max-w-2xl rounded-vds-lg border border-line shadow-sheet overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Modal Header */}
-            <div className="p-5 bg-[#fafafa] border-b border-[#e6e6e6] flex items-center justify-between">
+            <div className="p-5 bg-surface-100 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#b13460]" />
-                <h2 className="font-title text-base font-bold text-[#202020]">
+                <FileText className="w-5 h-5 text-accent" />
+                <h2 className="font-title text-base font-bold text-ink">
                   Xuất báo cáo Standup hàng ngày
                 </h2>
               </div>
               <button
                 onClick={onClose}
-                className="p-1 rounded-full text-[#7f7f7f] hover:text-[#202020] hover:bg-[#ececec] cursor-pointer transition-colors"
+                className="p-1 rounded-full text-subdued hover:text-ink hover:bg-surface-300 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Team filter bar */}
-            <div className="px-5 py-2.5 bg-[#f4f4f4] border-b border-[#e6e6e6] flex items-center gap-2 text-xs font-ui">
-              <span className="font-bold text-[#5f5f5f]">Lọc theo nhóm:</span>
+            <div className="px-5 py-2.5 bg-surface-200 border-b border-line flex items-center gap-2 text-xs font-ui">
+              <span className="font-bold text-ink-lighter">Lọc theo nhóm:</span>
               {(['Tất cả', 'Product Manager', 'UX/UI Designer', 'SEO', 'Data'] as const).map(
                 (team) => (
                   <button
                     key={team}
                     onClick={() => setFilterTeam(team)}
-                    className={`px-2.5 py-1 rounded-[6px] transition-colors cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-vds-lg transition-colors cursor-pointer ${
                       filterTeam === team
-                        ? 'bg-[#b13460] text-white font-bold'
-                        : 'bg-white text-[#5f5f5f] hover:bg-[#ececec]'
+                        ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                        : 'bg-surface text-ink-lighter hover:bg-surface-300'
                     }`}
                   >
                     {team}
@@ -152,22 +152,22 @@ export const StandupModal: React.FC<StandupModalProps> = ({
                 readOnly
                 value={reportContent}
                 rows={14}
-                className="w-full text-xs font-num p-3 bg-[#f8f9fa] border border-[#e0e0e0] rounded-[6px] text-[#202020] focus:outline-hidden leading-relaxed"
+                className="w-full text-xs font-num p-3 bg-surface-100 border border-line rounded-vds-lg text-ink focus:outline-hidden leading-relaxed"
               />
             </div>
 
             {/* Modal Footer */}
-            <div className="p-5 bg-[#fafafa] border-t border-[#e6e6e6] flex items-center justify-between">
-              <p className="text-xs font-body text-[#5f5f5f]">
+            <div className="p-5 bg-surface-100 border-t border-line flex items-center justify-between">
+              <p className="text-xs font-body text-ink-lighter">
                 Sao chép nội dung này để dán vào kênh Slack / Teams của bộ phận.
               </p>
               <button
                 onClick={handleCopy}
-                className="px-5 py-2 bg-[#b13460] text-white text-xs font-ui font-bold rounded-[6px] hover:bg-[#8f274c] transition-colors flex items-center gap-2 shadow-2xs cursor-pointer"
+                className="px-5 py-2 bg-accent-solid text-on-color text-xs font-ui font-bold rounded-vds-lg hover:bg-accent-solid-hover transition-colors flex items-center gap-2 cursor-pointer"
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 text-white" />
+                    <Check className="w-4 h-4 text-on-color" />
                     <span>Đã sao chép!</span>
                   </>
                 ) : (

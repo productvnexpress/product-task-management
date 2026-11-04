@@ -17,7 +17,7 @@ import {
   RecurringRuleConfig,
   FolderItem,
 } from '../types';
-import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw, Folder } from 'lucide-react';
+import { Plus, CornerDownLeft, Calendar, User, Briefcase, Layers, ListChecks, RotateCw, Folder } from './vds/icons';
 import { formatDateWithEnDay } from '../utils/formatters';
 import { getProductMembers, isSamePersonName } from '../utils/memberPersonalization';
 import { getTodayDateString } from '../utils/dateUtils';
@@ -32,7 +32,9 @@ import { ProjectChecklistModal } from './ProjectChecklistModal';
 import { calculateChecklistStats } from '../data/defaultProjectChecklist';
 import { getUserRole } from '../utils/rbac';
 import { recurringTaskService, calculateNextCycleDate } from '../services/recurringTaskService';
-import { MobileQuickAddDrawer } from './MobileQuickAddDrawer';
+import { SmartTitleInput } from './smart/SmartTitleInput';
+import { QuickAddParseResult } from '../utils/quickAddParser';
+import { TitleQualityResult, checkTitleQuality } from '../utils/titleQuality';
 
 interface QuickAddBarProps {
   folders?: FolderItem[];
@@ -76,7 +78,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   onUpdateProjectChecklist,
   currentUser,
 }) => {
-  const productMembers = getProductMembers(members);
+  const productMembers = useMemo(() => getProductMembers(members), [members]);
   const [title, setTitle] = useState('');
   const [assignee, setAssignee] = useState(defaultAssignee || productMembers[0]?.name || 'Hệ thống');
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
@@ -119,12 +121,23 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = getUserRole(currentUser) === 'Admin';
-  const isAssigningToOther = Boolean(
-    currentUser?.name && assignee && !isSamePersonName(assignee, currentUser.name)
-  );
   const [isUrgent, setIsUrgent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Cú pháp gõ nhanh (@người #dự án mai !) & kiểm tra tiêu đề chung chung
+  const [parsed, setParsed] = useState<QuickAddParseResult | null>(null);
+  const [manualOverride, setManualOverride] = useState<{ assignee?: boolean; project?: boolean; date?: boolean }>({});
+  const [quality, setQuality] = useState<TitleQualityResult | null>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const effAssignee = (!manualOverride.assignee && parsed?.assignee?.name) || assignee;
+  const effProjectId = (!manualOverride.project && parsed?.project?.id) || projectId;
+  const effDueDate = !manualOverride.date && parsed?.dueDate ? parsed.dueDate : dueDate;
+  const effUrgent = Boolean(parsed?.isUrgent) || isUrgent;
+  const isAssigningToOther = Boolean(
+    currentUser?.name && effAssignee && !isSamePersonName(effAssignee, currentUser.name)
+  );
 
   // Recurring task states (Admin only)
   const [isRecurring, setIsRecurring] = useState(false);
@@ -161,8 +174,8 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     }
   }, [projects, folders, projectGroups, projectId]);
 
-  const isDirectFolder = projectId.startsWith('folder:');
-  const selectedProj = isDirectFolder ? undefined : projects.find((p) => p.id === projectId);
+  const isDirectFolder = effProjectId.startsWith('folder:');
+  const selectedProj = isDirectFolder ? undefined : projects.find((p) => p.id === effProjectId);
   const availablePhases = selectedProj?.phases || [];
 
   const checklistStats = useMemo(() => {
@@ -192,12 +205,21 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const submitTask = (skipQualityCheck = false) => {
+    const finalTitle = (parsed?.title ?? title).trim();
+    if (!finalTitle) return;
+
+    if (!skipQualityCheck) {
+      const q = checkTitleQuality(finalTitle);
+      if (q.isVague) {
+        setQuality(q);
+        setIsExpanded(true);
+        return;
+      }
+    }
 
     const resolvedFolderId = isDirectFolder
-      ? projectId.replace(/^folder:/, '')
+      ? effProjectId.replace(/^folder:/, '')
       : selectedProj?.folderId || inferProjectFolderId(selectedProj || {});
     const resolvedFolderPath = getFolderPath(resolvedFolderId, folders);
 
@@ -207,9 +229,10 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       ? selectedProj.name
       : 'Chưa xác định (Others)';
     const foundPhase = isDirectFolder ? undefined : availablePhases.find((ph) => ph.id === phaseId);
-    const selectedMember = members.find((m) => m.name === assignee);
+    const selectedMember = members.find((m) => m.name === effAssignee);
     const team: TeamType = selectedMember?.team || 'Product Manager';
-    const initialDueDate = isAssigningToOther && !dueDate ? '' : (dueDate || getTodayDateString());
+    const initialDueDate = isAssigningToOther && !effDueDate ? '' : (effDueDate || getTodayDateString());
+    const priority: PriorityLevel = effUrgent ? 'Khẩn cấp' : 'Bình thường';
 
     let recurringRuleId: string | undefined = undefined;
 
@@ -221,14 +244,14 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
       const newRule: RecurringRuleConfig = {
         id: recurringRuleId,
-        title: title.trim(),
-        projectId: isDirectFolder ? `folder:${resolvedFolderId}` : projectId,
+        title: finalTitle,
+        projectId: isDirectFolder ? `folder:${resolvedFolderId}` : effProjectId,
         projectName: projName,
         phaseId: foundPhase ? foundPhase.id : undefined,
         phaseName: foundPhase ? foundPhase.name : undefined,
         team,
-        assignee,
-        priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
+        assignee: effAssignee,
+        priority,
         frequency: recurringFrequency,
         endType: recurringEndType,
         endDate: recurringEndType === 'specific_date' && recurringEndDate ? recurringEndDate : undefined,
@@ -245,69 +268,83 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
     onAddTask({
       id: recurringRuleId ? `task-rec-${recurringRuleId}-${initialDueDate}` : undefined,
-      title: title.trim(),
+      title: finalTitle,
       folderId: resolvedFolderId,
       folderName: resolvedFolderPath,
-      projectId: isDirectFolder ? '' : projectId,
+      projectId: isDirectFolder ? '' : effProjectId,
       projectName: projName,
       phaseId: foundPhase ? foundPhase.id : undefined,
       phaseName: foundPhase ? foundPhase.name : undefined,
       team,
-      assignee,
+      assignee: effAssignee,
       dueDate: initialDueDate,
-      priority: isUrgent ? 'Khẩn cấp' : 'Bình thường',
+      priority,
       recurringRuleId,
       isRecurring: Boolean(isRecurring && isAdmin),
       recurringFrequency: isRecurring && isAdmin ? recurringFrequency : undefined,
     });
 
+    // Giữ nguyên dự án & người phụ trách để thêm việc liên tiếp nhanh hơn
     setTitle('');
+    setQuality(null);
+    setManualOverride({});
     setDueDate(getTodayDateString());
     setIsUrgent(false);
     setIsRecurring(false);
     setRecurringEndType('never');
     setRecurringEndDate('');
-    setIsExpanded(false);
+    setJustAdded(finalTitle);
+    window.setTimeout(() => setJustAdded((cur) => (cur === finalTitle ? null : cur)), 2600);
+    titleInputRef.current?.focus();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Cảnh báo đã hiện mà vẫn nhấn Enter -> người dùng chủ động giữ tiêu đề
+    submitTask(Boolean(quality?.isVague));
   };
 
   return (
     <>
-      {/* 1. Mobile Quick Add Tap Pill (Hiển thị riêng trên thiết bị di động < md) */}
-      <div className="block md:hidden">
-        <div
-          onClick={() => setIsMobileDrawerOpen(true)}
-          className="bg-white border border-[#d6d6d6] hover:border-[#963861] active:scale-[0.99] rounded-[12px] p-3 shadow-2xs flex items-center justify-between gap-3 cursor-pointer transition-all"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-[#963861]/10 text-[#963861] flex items-center justify-center shrink-0">
-              <Plus className="w-4 h-4 stroke-[3]" />
-            </div>
-            <span className="text-xs font-title font-medium text-[#71717a] truncate">
-              Chạm để thêm công việc mới...
-            </span>
-          </div>
-          <span className="shrink-0 px-2.5 py-1 rounded-[6px] bg-[#963861] text-white text-[11px] font-ui font-bold shadow-2xs">
-            + Thêm việc
-          </span>
-        </div>
-      </div>
-
       {/* 2. Desktop Quick Add Form Box (Giữ nguyên trải nghiệm trên Desktop >= md) */}
-      <div className="hidden md:block bg-[#ffffff] border border-[#d6d6d6] focus-within:border-[#b13460] rounded-[10px] transition-all p-4 shadow-2xs">
+      <div className="hidden md:block bg-surface border border-line focus-within:border-line-accent rounded-vds-lg transition p-4 ">
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full border border-[#a8a8a8] flex items-center justify-center text-[#7f7f7f] shrink-0">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full border border-line-regular flex items-center justify-center text-subdued shrink-0">
               <Plus className="w-4 h-4" />
             </div>
-            <input
-              id="quick-add-input"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onFocus={() => setIsExpanded(true)}
-              placeholder="Thêm công việc mới... (Nhập tên công việc & nhấn Enter)"
-              className="w-full text-sm font-body text-[#202020] placeholder-[#7f7f7f] focus:outline-hidden bg-transparent"
-            />
+            <div className="flex-1 min-w-0">
+              <SmartTitleInput
+                id="quick-add-input"
+                inputRef={titleInputRef}
+                value={title}
+                onChange={(v) => {
+                  setTitle(v);
+                  if (quality) setQuality(null);
+                }}
+                members={productMembers}
+                projects={projects}
+                onParsedChange={setParsed}
+                onFocus={() => setIsExpanded(true)}
+                quality={quality}
+                onConfirmVague={() => submitTask(true)}
+                placeholder="Thêm việc… (gõ @tên #dự án mai ! rồi Enter)"
+                inputClassName="w-full text-sm font-body text-ink placeholder-subdued focus:outline-hidden focus-visible:shadow-none! bg-transparent py-0.5"
+              />
+              <AnimatePresence>
+                {justAdded && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -2 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="mt-1.5 text-xs font-ui text-positive truncate"
+                  >
+                    ✓ Đã thêm “{justAdded}”
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
             {title.trim() && (
               <motion.button
                 type="submit"
@@ -316,7 +353,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 exit={{ opacity: 0, scale: 0.9 }}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.95 }}
-                className="h-[32px] px-4 rounded-[6px] bg-[#b13460] text-white text-xs font-ui font-bold flex items-center gap-1.5 shrink-0 hover:bg-[#8f274c] transition-colors shadow-2xs cursor-pointer"
+                className="h-[32px] px-4 rounded-vds-lg bg-accent-solid text-on-color text-xs font-ui font-bold flex items-center gap-1.5 shrink-0 hover:bg-accent-solid-hover transition-colors cursor-pointer"
               >
                 <span>Thêm</span>
                 <CornerDownLeft className="w-3.5 h-3.5" />
@@ -334,19 +371,22 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="overflow-hidden"
             >
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#f0f0f0] text-xs font-ui">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-divider text-xs font-ui">
                 <div className="flex flex-wrap items-center gap-2">
               {/* Folder / Project selector */}
-              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
+              <div className="flex items-center gap-1.5 bg-surface-100 px-2.5 py-1.5 rounded-vds-lg border border-line">
                 {isDirectFolder ? (
-                  <Folder className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+                  <Folder className="w-3.5 h-3.5 text-accent shrink-0" />
                 ) : (
-                  <Briefcase className="w-3.5 h-3.5 text-[#b13460] shrink-0" />
+                  <Briefcase className="w-3.5 h-3.5 text-accent shrink-0" />
                 )}
                 <select
-                  value={projectId}
-                  onChange={(e) => handleProjectSelect(e.target.value)}
-                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[240px] truncate"
+                  value={effProjectId}
+                  onChange={(e) => {
+                    setManualOverride((o) => ({ ...o, project: true }));
+                    handleProjectSelect(e.target.value);
+                  }}
+                  className="bg-transparent text-ink text-xs font-ui focus:outline-hidden cursor-pointer max-w-[240px] truncate"
                   title="Chọn Thư mục (trực tiếp cho task tinh chỉnh nhỏ) hoặc Dự án"
                 >
                   <optgroup label="── 📁 Trực tiếp trong Thư mục (Tinh chỉnh nhỏ) ──">
@@ -394,12 +434,12 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
               {/* Phase selector if available */}
               {availablePhases.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                  <Layers className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
+                <div className="flex items-center gap-1.5 bg-surface-100 px-2.5 py-1.5 rounded-vds-lg border border-line">
+                  <Layers className="w-3.5 h-3.5 text-subdued shrink-0" />
                   <select
                     value={phaseId}
                     onChange={(e) => setPhaseId(e.target.value)}
-                    className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer max-w-[160px] truncate"
+                    className="bg-transparent text-ink text-xs font-ui focus:outline-hidden cursor-pointer max-w-[160px] truncate"
                   >
                     <option value="">-- Toàn dự án --</option>
                     {availablePhases.map((ph) => (
@@ -412,18 +452,19 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
               )}
 
               {/* Assignee selector */}
-              <div className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0]">
-                <User className="w-3.5 h-3.5 text-[#7f7f7f] shrink-0" />
+              <div className="flex items-center gap-1.5 bg-surface-100 px-2.5 py-1.5 rounded-vds-lg border border-line">
+                <User className="w-3.5 h-3.5 text-subdued shrink-0" />
                 <select
-                  value={assignee}
+                  value={effAssignee}
                   onChange={(e) => {
                     const newAssignee = e.target.value;
+                    setManualOverride((o) => ({ ...o, assignee: true }));
                     setAssignee(newAssignee);
                     if (currentUser?.name && isSamePersonName(newAssignee, currentUser.name) && !dueDate) {
                       setDueDate(getTodayDateString());
                     }
                   }}
-                  className="bg-transparent text-[#202020] text-xs font-ui focus:outline-hidden cursor-pointer"
+                  className="bg-transparent text-ink text-xs font-ui focus:outline-hidden cursor-pointer"
                 >
                   {productMembers.map((m) => (
                     <option key={m.id} value={m.name}>
@@ -437,20 +478,23 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
               <div className="flex items-center gap-1.5">
                 <div
                   onClick={handleTriggerDatePicker}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] border cursor-pointer transition-colors ${
-                    !dueDate
-                      ? 'bg-[#fffbeb] border-[#fde68a] text-[#b45309]'
-                      : 'bg-[#f9f9f9] border-[#e0e0e0] text-[#202020] hover:bg-[#f4f4f5]'
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-vds-lg border cursor-pointer transition-colors ${
+                    !effDueDate
+                      ? 'bg-surface-warning border-line text-warning'
+                      : 'bg-surface-100 border-line text-ink hover:bg-surface-200'
                   }`}
-                  title={dueDate ? 'Bấm để chọn hạn hoàn thành' : 'Chưa đặt hạn (người nhận sẽ tự chọn)'}
+                  title={effDueDate ? 'Bấm để chọn hạn hoàn thành' : 'Chưa đặt hạn (người nhận sẽ tự chọn)'}
                 >
-                  <Calendar className={`w-3.5 h-3.5 shrink-0 pointer-events-none ${!dueDate ? 'text-[#b45309]' : 'text-[#7f7f7f]'}`} />
+                  <Calendar className={`w-3.5 h-3.5 shrink-0 pointer-events-none ${!effDueDate ? 'text-warning' : 'text-subdued'}`} />
                   <input
                     ref={dateInputRef}
                     type="date"
                     min={minDueDate}
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    value={effDueDate}
+                    onChange={(e) => {
+                      setManualOverride((o) => ({ ...o, date: true }));
+                      setDueDate(e.target.value);
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       try {
@@ -458,18 +502,18 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                       } catch (_) {}
                     }}
                     className={`bg-transparent text-xs font-ui focus:outline-hidden cursor-pointer ${
-                      !dueDate ? 'w-0 opacity-0 pointer-events-none' : 'text-[#202020]'
+                      !effDueDate ? 'w-0 opacity-0 pointer-events-none' : 'text-ink'
                     }`}
                   />
-                  {dueDate ? (
+                  {effDueDate ? (
                     <span
                       onClick={handleTriggerDatePicker}
-                      className="text-[#52525b] text-xs font-ui font-medium cursor-pointer shrink-0 select-none hover:text-[#202020]"
+                      className="text-ink-lighter text-xs font-ui font-medium cursor-pointer shrink-0 select-none hover:text-ink"
                     >
-                      ({formatDateWithEnDay(dueDate)})
+                      ({formatDateWithEnDay(effDueDate)})
                     </span>
                   ) : (
-                    <span className="text-xs font-ui font-medium select-none text-[#b45309]">
+                    <span className="text-xs font-ui font-medium select-none text-warning">
                       Chưa đặt hạn (B chọn)
                     </span>
                   )}
@@ -480,53 +524,54 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (dueDate) {
+                      setManualOverride((o) => ({ ...o, date: true }));
+                      if (effDueDate) {
                         setDueDate('');
                       } else {
                         setDueDate(getTodayDateString());
                       }
                     }}
-                    className={`text-[11px] font-ui px-2 py-1.5 rounded-[6px] border transition-colors cursor-pointer shrink-0 ${
-                      !dueDate
-                        ? 'bg-[#963861] text-white border-[#963861] font-bold shadow-2xs'
-                        : 'bg-[#f9f9f9] text-[#52525b] border-[#e0e0e0] hover:bg-[#f4f4f5]'
+                    className={`text-xs font-ui px-2 py-1.5 rounded-vds-lg border transition-colors cursor-pointer shrink-0 ${
+                      !effDueDate
+                        ? 'bg-surface-selected text-accent border-line-accent-soft font-bold '
+                        : 'bg-surface-100 text-ink-lighter border-line hover:bg-surface-200'
                     }`}
-                    title={dueDate ? 'Bỏ chọn deadline để người nhận tự chọn' : 'Đặt lại hạn hoàn thành'}
+                    title={effDueDate ? 'Bỏ chọn deadline để người nhận tự chọn' : 'Đặt lại hạn hoàn thành'}
                   >
-                    {!dueDate ? '✓ Để B chọn hạn' : 'Để người nhận chọn hạn'}
+                    {!effDueDate ? '✓ Để B chọn hạn' : 'Để người nhận chọn hạn'}
                   </button>
                 )}
               </div>
 
               {/* Priority Checkbox */}
-              <label className="flex items-center gap-1.5 bg-[#f9f9f9] px-2.5 py-1.5 rounded-[6px] border border-[#e0e0e0] cursor-pointer text-xs font-ui text-[#202020] select-none hover:bg-[#f4f4f5]">
+              <label className="flex items-center gap-1.5 bg-surface-100 px-2.5 py-1.5 rounded-vds-lg border border-line cursor-pointer text-xs font-ui text-ink select-none hover:bg-surface-200">
                 <input
                   type="checkbox"
-                  checked={isUrgent}
+                  checked={effUrgent}
                   onChange={(e) => setIsUrgent(e.target.checked)}
-                  className="w-3.5 h-3.5 text-[#b13460] rounded border-[#d6d6d6] focus:ring-[#b13460] cursor-pointer"
+                  className="w-3.5 h-3.5 text-accent rounded border-line focus:ring-line-accent cursor-pointer"
                 />
-                <span className={isUrgent ? 'font-bold text-[#be123c]' : 'text-[#52525b]'}>
+                <span className={effUrgent ? 'font-bold text-negative' : 'text-ink-lighter'}>
                   🚨 Khẩn cấp
                 </span>
               </label>
 
               {/* Recurring Checkbox (Admin Only) */}
               {isAdmin && (
-                <label className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] border cursor-pointer text-xs font-ui select-none transition-colors ${
+                <label className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-vds-lg border cursor-pointer text-xs font-ui select-none transition-colors ${
                   isRecurring
-                    ? 'bg-[#fdf2f7] border-[#f3c2d4] text-[#963861] font-bold shadow-2xs'
-                    : 'bg-[#f9f9f9] border-[#e0e0e0] text-[#52525b] hover:bg-[#f4f4f5]'
+                    ? 'bg-surface-accent-faint border-line text-accent font-bold '
+                    : 'bg-surface-100 border-line text-ink-lighter hover:bg-surface-200'
                 }`}>
                   <input
                     type="checkbox"
                     checked={isRecurring}
                     onChange={(e) => setIsRecurring(e.target.checked)}
-                    className="w-3.5 h-3.5 text-[#963861] rounded border-[#d6d6d6] focus:ring-[#963861] cursor-pointer"
+                    className="w-3.5 h-3.5 text-accent rounded border-line focus:ring-line-accent cursor-pointer"
                   />
-                  <RotateCw className={`w-3.5 h-3.5 ${isRecurring ? 'text-[#963861]' : 'text-[#7f7f7f]'}`} />
+                  <RotateCw className={`w-3.5 h-3.5 ${isRecurring ? 'text-accent' : 'text-subdued'}`} />
                   <span>Lặp lại chu kỳ</span>
-                  <span className="text-[10px] bg-[#963861] text-white px-1 py-0.2 rounded font-ui font-bold ml-0.5">
+                  <span className="text-[10px] bg-accent-solid text-on-color px-1 py-0.2 rounded font-ui font-bold ml-0.5">
                     Admin
                   </span>
                 </label>
@@ -536,7 +581,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
-              className="text-[#7f7f7f] hover:text-[#202020] px-2 py-1 cursor-pointer"
+              className="text-subdued hover:text-ink px-2 py-1 cursor-pointer"
             >
               Thu gọn
             </button>
@@ -544,15 +589,15 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
           {/* Recurring Options Bar (Admin Only) */}
           {isAdmin && isRecurring && (
-            <div className="w-full mt-2.5 bg-[#fffbfd] border border-[#f3c2d4] rounded-[8px] p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-ui animate-fade-in">
+            <div className="w-full mt-2.5 bg-surface-100 border border-line rounded-vds-lg p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-ui animate-fade-in">
               <div className="flex flex-wrap items-center gap-4">
                 {/* Frequency selector: Weekly, Biweekly, Monthly */}
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-[#963861]">Chu kỳ:</span>
+                  <span className="font-bold text-accent">Chu kỳ:</span>
                   <select
                     value={recurringFrequency}
                     onChange={(e) => setRecurringFrequency(e.target.value as RecurrenceFrequency)}
-                    className="bg-white border border-[#d6d6d6] text-[#202020] text-xs font-ui rounded-[4px] px-2 py-1 focus:outline-hidden cursor-pointer"
+                    className="bg-surface border border-line text-ink text-xs font-ui rounded-vds-md px-2 py-1 focus:outline-hidden cursor-pointer"
                   >
                     <option value="weekly">Hàng tuần (Weekly)</option>
                     <option value="biweekly">2 tuần một lần (Biweekly)</option>
@@ -562,15 +607,15 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
                 {/* End condition: Never or Specific date */}
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#963861]">Kết thúc:</span>
-                  <div className="flex items-center gap-3 bg-white border border-[#d6d6d6] rounded-[4px] px-2.5 py-1">
+                  <span className="font-bold text-accent">Kết thúc:</span>
+                  <div className="flex items-center gap-3 bg-surface border border-line rounded-vds-md px-2.5 py-1">
                     <label className="flex items-center gap-1 cursor-pointer">
                       <input
                         type="radio"
                         name="recurring_end_type"
                         checked={recurringEndType === 'never'}
                         onChange={() => setRecurringEndType('never')}
-                        className="text-[#963861] focus:ring-[#963861] cursor-pointer"
+                        className="text-accent focus:ring-line-accent cursor-pointer"
                       />
                       <span>Không bao giờ (Never)</span>
                     </label>
@@ -580,7 +625,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                         name="recurring_end_type"
                         checked={recurringEndType === 'specific_date'}
                         onChange={() => setRecurringEndType('specific_date')}
-                        className="text-[#963861] focus:ring-[#963861] cursor-pointer"
+                        className="text-accent focus:ring-line-accent cursor-pointer"
                       />
                       <span>Chọn ngày cụ thể</span>
                     </label>
@@ -592,13 +637,13 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                       min={dueDate || getTodayDateString()}
                       value={recurringEndDate}
                       onChange={(e) => setRecurringEndDate(e.target.value)}
-                      className="bg-white border border-[#d6d6d6] text-[#202020] text-xs font-ui rounded-[4px] px-2 py-1 focus:outline-hidden cursor-pointer"
+                      className="bg-surface border border-line text-ink text-xs font-ui rounded-vds-md px-2 py-1 focus:outline-hidden cursor-pointer"
                     />
                   )}
                 </div>
               </div>
 
-              <span className="text-[11px] text-[#7f7f7f] italic">
+              <span className="text-xs text-subdued italic">
                 ⏰ Tự động tạo task lúc 08:00 AM mỗi chu kỳ
               </span>
             </div>
@@ -632,20 +677,6 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       )}
       </div>
 
-      {/* 3. Mobile Dedicated Quick Add Sheet Drawer */}
-      <MobileQuickAddDrawer
-        isOpen={isMobileDrawerOpen}
-        onClose={() => setIsMobileDrawerOpen(false)}
-        folders={folders}
-        projects={projects}
-        tasks={tasks}
-        members={members}
-        onAddTask={onAddTask}
-        defaultFolderId={defaultFolderId}
-        defaultProjectId={defaultProjectId || projectId}
-        defaultAssignee={defaultAssignee || assignee}
-        currentUser={currentUser}
-      />
     </>
   );
 };

@@ -21,6 +21,7 @@
    - [4.15. Quy chuẩn Friendly URL & Deep Linking (Semantic Routing Specification)](#415-quy-chuẩn-friendly-url--deep-linking-semantic-routing-specification)
    - [4.16. Quy chuẩn Cảnh báo Giai đoạn & Deadline Dự án trước 3 ngày (Project & Phase Deadline Alerts)](#416-quy-chuẩn-cảnh-báo-giai-đoạn--deadline-dự-án-trước-3-ngày-project--phase-deadline-alerts-specification)
    - [4.17. Quy chuẩn Tự động Refresh Hệ thống sau mỗi 3 Giờ (Auto-Refresh System Specification)](#417-quy-chuẩn-tự-động-refresh-hệ-thống-sau-mỗi-3-giờ-auto-refresh-system-specification)
+   - [4.18. Quy chuẩn Thao tác Nhanh & Trải nghiệm Mobile (Quick Actions & Mobile UX)](#418-quy-chuẩn-thao-tác-nhanh--trải-nghiệm-mobile-quick-actions--mobile-ux-specification)
 
 ---
 
@@ -1098,6 +1099,41 @@ Tại danh sách dự án thuộc Left Sidebar:
 
 ---
 
+### 4.18. Quy chuẩn Thao tác Nhanh & Trải nghiệm Mobile (Quick Actions & Mobile UX Specification)
+Mục tiêu: hoàn thành tác vụ hằng ngày với ít chạm nhất trên cả Mobile và Desktop.
+
+1. **Thêm việc bằng cú pháp gõ nhanh (`utils/quickAddParser.ts`, `components/smart/SmartTitleInput.tsx`)** — dùng chung cho `QuickAddBar` (desktop) và `MobileQuickAddDrawer`:
+   - `@tên` giao việc (username, tên gọi, họ+tên không dấu; trùng tên gọi như "Trung" thì không tự chọn, bắt chọn từ gợi ý).
+   - `#mã` hoặc `#tên dự án` gán dự án (VD: `#WMS`, `#ykien`).
+   - Hạn ở cuối câu: `hôm nay`, `mai`, `ngày kia`, `thứ 2`…`thứ 7`, `t2`…`t7`, `cn`, `tuần sau`; bất kỳ đâu: `dd/mm` hoặc `dd/mm/yyyy`. Chữ "Mai" viết hoa không bị hiểu là ngày (tên người).
+   - `!` đánh dấu Khẩn cấp.
+   - Gõ `@`/`#` bung danh sách gợi ý (↑↓ chọn, Enter/Tab chèn, Esc đóng). Mỗi token nhận diện hiện thành chip có nút ✕ để bỏ nhận diện (giữ nguyên chữ trong tiêu đề).
+   - Ưu tiên giá trị: token trong tiêu đề > ô chọn; nếu người dùng tự đổi ô chọn thì ô chọn thắng.
+   - Desktop: sau khi thêm, ô nhập giữ nguyên dự án/người phụ trách và focus lại để thêm việc liên tiếp. Mobile: phím Enter trên bàn phím = thêm và nhập tiếp; nút lớn = thêm và đóng.
+2. **Cảnh báo tiêu đề chung chung (`utils/titleQuality.ts`)**:
+   - Cảnh báo khi tiêu đề ≤ 2 từ, hoặc mở đầu bằng động từ mơ hồ (Tối ưu, Nâng cấp, Cải thiện, Xử lý, Fix, Review, Họp, Cập nhật, Kiểm tra…) mà phần còn lại thiếu đối tượng cụ thể (< 2 từ không chung chung).
+   - Khi tạo việc: lần đầu chặn và hiện gợi ý "làm gì + cho cái gì + kết quả"; nhấn Enter lần nữa hoặc "Vẫn tạo" để giữ nguyên. Trong `TaskDetailDrawer`: chỉ hiện cảnh báo, không chặn lưu.
+3. **Thanh lọc nhanh 1 chạm (`components/tasks/TaskViewBar.tsx`)** đặt ngay trên danh sách: `Tất cả · Quá hạn · Hôm nay · 3 ngày tới · Bị nghẽn` kèm bộ đếm theo phạm vi đang xem; chip rỗng tự ẩn. Bấm lại chip đang chọn để về "Tất cả".
+4. **Cách nhóm danh sách** (ghi nhớ trong `localStorage` khoá `wms_task_group_mode`):
+   - `Theo hạn`: Quá hạn → Hôm nay → Ngày mai → 7 ngày tới → Sau đó → Chưa có hạn. Mặc định cho Executive.
+   - `Theo dự án`: mặc định cho Manager/Admin. Nhóm có việc gấp nhất lên trước.
+   - Trong mọi nhóm, việc sắp theo độ gấp: hạn sớm nhất → Khẩn cấp → Bị nghẽn > Đang làm > Chưa làm (`utils/taskViewUtils.ts`).
+   - Khối "Đã hoàn thành" thu gọn mặc định, mở ra hiện 15 việc gần nhất kèm "Xem thêm".
+5. **Hàng công việc (`TaskItemRow`)**:
+   - Bấm vào hạn mở menu đổi hạn nhanh: Hôm nay / Ngày mai / Thứ 2 tới / Chọn ngày (desktop: popover; mobile: sheet đáy).
+   - Vùng chạm checkbox 36px; viền checkbox đỏ cho việc Khẩn cấp.
+   - Desktop: nút Xoá chỉ hiện khi rê chuột. Mobile: bỏ nút Xoá khỏi hàng (xoá trong drawer chi tiết).
+   - Mobile: hàng thông tin phẳng theo thứ tự trạng thái → hạn → mức độ → người (ẩn khi là việc của mình) → dự án → link; bỏ năm hiện tại khỏi ngày.
+   - Mobile vuốt phải = Hoàn thành (vẫn bắt nhập link kết quả nếu thiếu), vuốt trái = Dời sang mai.
+6. **Hoàn tác (`components/UndoToast.tsx`)**: sau đổi hạn, đổi trạng thái, hoàn thành từ hàng việc, hiện thông báo 5 giây kèm nút "Hoàn tác". Nội dung theo EDITOR.md, kết quả lên đầu: `Dời sang Ngày mai: <tiêu đề>`.
+7. **Bảng lệnh & tìm kiếm (`components/CommandPalette.tsx`)**: mở bằng `⌘K`/`Ctrl+K`, phím `/` hoặc nút tìm kiếm trên Header. Tìm không dấu theo việc, dự án, nhân sự; lệnh nhanh: Thêm việc, Việc hôm nay, Quá hạn, Việc của tôi, Toàn bộ phận, đổi cách nhóm, đi tới Dự án/Báo cáo, Thông báo. Mobile hiển thị toàn màn hình.
+8. **Phím tắt**: `N` thêm việc, `⌘K`/`/` mở bảng lệnh, `Esc` đóng. Không kích hoạt khi đang gõ trong ô nhập hoặc đang mở drawer.
+9. **Điều hướng Mobile (`components/MobileTabBar.tsx`)**: thanh đáy `Việc · Dự án · [+] · Báo cáo · Thêm` (Thêm mở Sidebar đầy đủ), huy hiệu đỏ trên tab Việc = số việc quá hạn, tôn trọng `safe-area-inset-bottom`. Header mobile bỏ nút menu, thêm nút tìm kiếm. `DailyCompletionAlert` thu gọn mặc định trên mobile (nhớ theo ngày).
+10. **Trang Dự án trên Mobile**: thẻ dự án dạng tóm tắt (tên, trạng thái, tiến độ giai đoạn, mốc kế tiếp); KPI, nhân sự, timeline, liên kết, ghi chú xem trong drawer "Chi tiết".
+11. **Hiệu năng tải trang**: `ProjectsManager`, `MembersManager`, `TrashManager`, `SettingsManager`, `AdminReportView`, `ProjectDetailsDrawer` tải theo nhu cầu (`React.lazy`) và được tải trước khi trình duyệt rảnh (`requestIdleCallback`).
+
+---
+
 ## 📌 Quy định Cập nhật & Duy trì (Maintenance Rules)
 1. Bất kỳ khi nào có sự bổ sung hoặc thay đổi nhân sự thuộc Ban Sản phẩm - Công nghệ hoặc Ban Biên tập, cập nhật trực tiếp bảng tại **Nhóm 3**.
 2. Khi phát sinh dự án mới hoặc thay đổi người phụ trách, cập nhật tại bảng danh mục tại **Nhóm 2**.
@@ -1107,5 +1143,127 @@ Tại danh sách dự án thuộc Left Sidebar:
 6. **Chuẩn hóa Biên tập Ngôn ngữ (EDITOR.md Compliance)**: Mọi trang, giao diện, bảng biểu hoặc tính năng mới thêm vào hệ thống **bắt buộc phải tuân thủ nghiêm ngặt phong cách biên tập từ `EDITOR.md`**: súc tích, trực diện, không dùng từ đệm rườm rà ("tiêu chuẩn", "danh mục các", "công cụ tra cứu"...), đặt danh từ/động từ trọng tâm lên đầu.
 7. **Ghi chú Cơ sở dữ liệu (Database Schemas)**: Khi phát triển tính năng mới có nhu cầu lưu trữ dữ liệu mới, bắt buộc phải ghi chú rõ ràng kèm cấu trúc bảng SQL (schema DDL, khóa chính, khóa ngoại, kiểu dữ liệu chuẩn) trong tài liệu kỹ thuật và giao diện quản trị.
 8. **Quy trình Triển khai Mã nguồn (Deployment & Git Rules)**: Tuyệt đối không tự ý chạy lệnh push Git (`git push`) hay tự động kích hoạt triển khai production (Vercel). Sau mỗi lần hoàn thiện task, luôn cung cấp đầy đủ danh sách câu lệnh Git chuẩn xác để người dùng tự chủ động kiểm tra và đẩy code lên repository khi có nhu cầu.
+9. **Giao diện theo VnExpress Design System (VDS)**: mọi giao diện làm theo khối VDS cuối file và mục "VDS trong dự án này". Mã hex xuất hiện ở các mục cũ phía trên (vd `#963861`, `#fffbfd`, `#e0e0e0`) là mô tả lịch sử; khi code luôn dùng token tương ứng ở bảng ánh xạ dưới đây.
 
+---
 
+## VDS trong dự án này
+
+**Phiên bản & bộ file**: VDS **0.5.0**, bản phát hành (production) tự host trong `public/vds/0.5.0/` (font, token, CSS component, khối hướng dẫn agent). Không gọi file từ trang tài liệu VDS.
+- `index.html` nạp `fonts/vds-fonts.css` → `tokens/vds.css` → `components/vds-components.css`. Không dùng Google Fonts.
+- Font Breakers Slab (bản quyền VnExpress, chỉ cho Góc nhìn) **không** đưa vào repo (repo công khai).
+- Icon: sprite `public/vds/0.5.0/icons/sprite.svg`, dựng bằng `node scripts/build-vds-icon-sprite.mjs <thư mục icons của bộ phát hành>`; chỉ chứa icon khai báo trong `src/components/vds/icon-map.json`.
+- Logo themeable: `src/components/vds/logos/` (nhúng inline để đổi màu theo theme).
+
+**Server dựng thẻ**: không có. WMS là SPA React (Vite), VDS không phát hành gói React, nên dùng HTML/class `vds-*` theo tab HTML của tài liệu (ngoại lệ "dự án React" của VDS), gói trong component React tại `src/components/vds/`:
+| Component VDS | React | Dùng ở |
+|---|---|---|
+| Button | `VdsButton` (`variant`, `size`, `iconLeft`, `iconRight`, `icon`, `circle`, `selected`, `fullWidth`) | CTA Sidebar, footer `TaskDetailDrawer`/`ProjectDetailsDrawer`, `MobileQuickAddDrawer`, empty state |
+| Selection Item Chip | `VdsChip` (`selected`, `size`, `icon`, `mode="radio"`) | Lọc nhanh `TaskViewBar` |
+| Tabs | `VdsTabs` | `GroupModeTabs` (Theo hạn / Theo dự án) |
+| Alert Toast | `VdsAlertToast` (`context`, `title`, `action`, `onDismiss`) | `UndoToast` |
+| Icon | `VdsIcon`, cùng các export trùng tên lucide cũ (`X`, `Plus`…) trong `src/components/vds/icons.tsx` | Toàn hệ thống (đã bỏ `lucide-react`) |
+| Logo | `VdsLogo` | Sidebar |
+
+**Token trong Tailwind** (`src/index.css`, khối `@theme inline`): dùng tên dưới đây, không viết `bg-[#...]`, `text-[#...]`.
+| Vai trò | Class Tailwind | Token VDS |
+|---|---|---|
+| Chữ mặc định / phụ / chìm / chìm sâu | `text-ink` / `text-ink-lighter` / `text-subdued` / `text-subdued-lighter` | `text/regular` / `regular-lighter` / `subdued` / `subdued-lighter` |
+| Chữ nhấn đỏ đô, mục đang chọn | `text-accent` | `text/accent/strong` |
+| Chữ trạng thái | `text-negative` `text-warning` `text-positive` `text-info` `text-support` `text-link` | `text/{status}/regular`, `text/link/regular` |
+| Chữ trên nền đặc | `text-on-color` | `text/on-color/regular` |
+| Nền | `bg-surface` `bg-surface-100/200/300` | `surface/000…300` |
+| Nền nhận diện "Việc của tôi" | `bg-surface-accent-faint` | `surface/special/B` |
+| Nền mục đang chọn | `bg-surface-selected` + `text-accent` + `ring-line-accent-soft` | `surface/input/accent/selected` |
+| Nền trạng thái | `bg-surface-negative/warning/positive/info/support/accent` | `surface/{status}` |
+| Nền đặc (nút chính, badge) | `bg-accent-solid` (hover `bg-accent-solid-hover`), `bg-negative-solid`… | `component/button/surface/accent/rest`… |
+| Đường kẻ giữa dòng / viền khung | `border-divider` / `border-line` | `component/divider/fill/subdued` / `border/subdued` |
+| Viền nhấn (việc của tôi, chọn) | `border-line-accent` | `border/accent/strong` |
+| Bo góc | `rounded-vds-sm/md/lg/xl` | `radii/sm` 2px, `md` 4px (input, toast, tab), `lg` 8px (button, popover, thẻ), `xl` 12px (chip) |
+| Bóng đổ (chỉ lớp nổi) | `shadow-pop` (menu, popover, toast) / `shadow-sheet` (drawer, modal, sheet) | `elavation/B` / `elavation/A` |
+
+**Giao diện sáng/tối**: mặc định Sáng; chọn Sáng / Tối / Tự động ở menu tài khoản (Header). Lưu `localStorage` khoá `wms_theme`, áp dụng bằng `data-theme="dark"` trên `<html>` (`src/utils/theme.ts`, script đầu `index.html`).
+
+**Ngoại lệ đang giữ (chờ quyết định)**: định dạng ngày theo mục 1.4/1.5 của dự án (`Sun, 02 Aug 2026`, `Hôm nay`, `Ngày mai`) khác Content Rules VDS (`21/10/2026`). Giữ định dạng dự án cho tới khi Ban Sản phẩm quyết định đổi.
+
+**Nợ còn lại**: phần lớn nút, ô nhập, select trong các modal/drawer cũ vẫn là `<button>`/`<input>` Tailwind dùng token (đúng màu, chưa phải component VDS). Khi sửa một màn hình, chuyển nút sang `VdsButton`, ô nhập sang HTML `vds-input-text-field`. Một số emoji trong nhãn cũ (🌐, ⭐, 📁) chưa thay bằng icon VDS.
+
+<!-- VDS:START 0.5.0 -->
+<!-- Khối hướng dẫn VnExpress Design System cho AI agent, bản 0.5.0. Không sửa tay trong khối: nâng VDS thì thay cả khối bằng agents/vds-agents.md của bộ phát hành mới (lệnh: node <thư mục VDS>/agents/install.mjs). Thông tin riêng của dự án ghi ngoài khối. -->
+
+## VnExpress Design System (VDS) 0.5.0
+
+Dự án này dùng VnExpress Design System (VDS) bản 0.5.0 cho mọi giao diện web: HTML, CSS, JS, template phía server. Làm đúng khối này; không dựa vào hiểu biết có sẵn về VDS hay về design system khác.
+
+### Cách làm việc
+
+- Việc giao diện nào cũng làm theo khối này, từ đầu tới cuối phiên.
+- Không chắc thì đọc đúng trang tài liệu (bản Markdown, link ở mục Tra cứu); không đoán, không tự đặt tên token, thẻ, thuộc tính, tên icon.
+- Bộ file VDS của dự án (thư mục bộ phát hành, server dựng thẻ ở đâu): xem mục "VDS trong dự án này" ngoài khối; chưa có thì hỏi người dùng rồi ghi vào mục đó.
+- Bộ phát hành dự án đang dùng khác bản 0.5.0 của khối này (vd thư mục `vds-x.y.z` khác số): khối không khớp với bộ file. Chạy `agents/install.mjs` của chính bộ đó để thay khối (không chạy được thì báo người dùng) trước khi làm tiếp.
+- Tài liệu luôn là bản mới nhất, có thể mới hơn 0.5.0: thẻ, thuộc tính, giá trị chỉ dùng loại có trong khối này.
+- Prototype (trang để xem, demo, review nội bộ) được gọi thẳng file trên tài liệu (https://vnexpress-design-system.vne-designops.workers.dev/generated/…); production (người dùng thật truy cập) chỉ dùng bộ phát hành đặt trên server của dự án.
+
+### Quy tắc bắt buộc
+
+- Chỉ dùng token VDS: biến CSS (CSS variable) `--vds-*`, class chữ `.vds-text-*` (vd `.vds-text-article-title-primary-bold-md`), variable shadow `--vds-shadow-*`. Không gán cứng màu, cỡ chữ (font size), khoảng cách (spacing), bo góc (radius), bóng đổ (shadow).
+- Chọn font theo vai trò, qua class chữ:
+  - tiêu đề tin bài: Merriweather (`article/title/primary/*`);
+  - chữ giao diện ngắn như nhãn, nút (button), menu, tiêu đề khối: Merriweather Sans (`microcopy/*`, `heading/*`);
+  - văn bản đọc liền mạch (dài quá 2 dòng hoặc là câu): Arial (`article/paragraph/standard/*`), Android dùng Roboto;
+  - số liệu: Roboto Mono (`numeric/*`);
+  - Breakers Slab chỉ cho chuyên mục Góc nhìn: tiêu đề bài và heading (`article/title/goc-nhin/*`), không dùng cho chỗ khác.
+- Nền `surface/000`, chữ mặc định `text/regular`. Màu nhấn đỏ đô (accent) dùng ít và có chủ đích, để dẫn mắt tới chỗ cần chú ý (vd heading khối tin, mục đang chọn (selected), button hành động chính); không dùng làm nền lớn hay để trang trí. Xanh dương dành cho link và tín hiệu của hệ thống: thông tin, vòng focus (focus ring).
+- Link trong nội dung luôn gạch chân (nét 1px), màu `text/link/regular`. Button, menu, tiêu đề tin (cả khối tin là link) không gạch chân.
+- Bố cục (layout) kiểu báo in: mỗi tin có padding bên trong nên các tin đặt sát nhau, phân tách bằng đường kẻ (divider) mảnh 1px (`component/divider/fill/*`). Không dùng card và shadow cho nội dung thường.
+- Hỗ trợ light và dark: đặt `data-theme="dark"` trên thẻ `<html>`, token Color tự đổi; không viết màu riêng cho dark.
+- Tương phản (contrast) theo WCAG 2.2 AA: chữ thường ≥ 4,5:1, chữ lớn ≥ 3:1, icon và viền (border) cần thấy ≥ 3:1. Đặt token chữ trên đúng nền đi kèm (bảng Contrast ở trang Color). `text/subdued`, `text/subdued-lighter` cố ý chìm, chỉ cho thông tin phụ (helper, placeholder, meta của tin) và thành phần bị vô hiệu hoá (disabled).
+- Component có sẵn trong VDS thì bắt buộc dùng, không tự vẽ lại: [Alert Inline](https://vnexpress-design-system.vne-designops.workers.dev/components/alert-inline.md), [Alert Toast](https://vnexpress-design-system.vne-designops.workers.dev/components/alert-toast.md), [Button](https://vnexpress-design-system.vne-designops.workers.dev/components/button.md), [Button Inline](https://vnexpress-design-system.vne-designops.workers.dev/components/button-inline.md), [Button Touch](https://vnexpress-design-system.vne-designops.workers.dev/components/button-touch.md), [Input Code Field](https://vnexpress-design-system.vne-designops.workers.dev/components/input-code-field.md), [Input Text Field](https://vnexpress-design-system.vne-designops.workers.dev/components/input-text-field.md), [Selection Item Chip](https://vnexpress-design-system.vne-designops.workers.dev/components/selection-item-chip.md), [Tabs](https://vnexpress-design-system.vne-designops.workers.dev/components/tabs.md). Viết thẻ VDS theo bảng thuộc tính ở trang của component (vd `<vds-tabs>`, `<vds-input-text-field>`); tab, ô nhập mã, chip, nút đóng thông báo cần `vds-components.js` để có hành vi. Chỉ chép HTML (tab HTML của ví dụ) ở nơi không dựng được thẻ: dự án React, email, CMS chặn thẻ lạ. Component chưa có (News Item, Header, Footer…): tự dựng từ token và class chữ, đặt tên và thuộc tính theo component trong Figma (vd Button: Type, Size, State).
+- Icon và logo chỉ lấy từ VDS, gọi theo tên (`<vds-icon name="…">`, `<vds-logo name="…">`); không dán SVG vào HTML, không dùng thẻ `<img>` (icon không đổi được màu, logo không đổi theo theme); riêng app icon (`AppIcon__*`, có ảnh nhúng, file nặng) dùng `<img>` trỏ tới file. Icon một màu xám, đen, trắng (`mono` trong manifest) nhận màu từ `color` (token `icon/fill/*`); icon nhiều màu, icon một màu có sắc giữ màu gốc.
+- Câu chữ trung lập, ngắn gọn. Ngày, giờ, số, địa điểm viết theo các trang Content Rules (vd `21/10/2026`, `09:00`).
+
+### Component: viết bằng thẻ VDS
+
+Thẻ VDS gọi component theo tên như instance trong Figma. Server dựng thẻ thành HTML trước khi gửi trang (`server/vds-tags.php`, `server/vds-tags.mjs` trong bộ phát hành); server chưa dựng thì `vds-components.js` dựng trên trình duyệt.
+
+- Không viết tay HTML, class `vds-*` của component: chỉ viết thẻ dưới đây. Luôn viết thẻ đóng, vd `</vds-button>`.
+- Thuộc tính khác (`id`, `aria-label`, `data-*`…) gắn vào phần tử ngoài cùng (Input Text Field: vào ô nhập); `class` nối thêm vào class của component.
+- Thuộc tính icon nhận tên icon bỏ cỡ, vd `icon-left="Share__Regular"`: component tự đặt đúng cỡ.
+- Ví dụ, ý nghĩa từng thuộc tính: cột Chi tiết.
+
+| Thẻ | Nội dung trong thẻ | Thuộc tính | Chi tiết |
+| --- | --- | --- | --- |
+| `<vds-alert-inline>` | Câu thông báo, một dòng | `context` = `info`, `info-alternative`, `positive`, `warning`, `negative` (mặc định `info`); `align` = `left`, `center`, `right` (mặc định `left`) | [alert-inline.md](https://vnexpress-design-system.vne-designops.workers.dev/components/alert-inline.md) |
+| `<vds-alert-toast>` | Nội dung thông báo (Has message) | `context` = `info`, `positive`, `warning`, `negative` (mặc định `info`); `title` (Tiêu đề); `dismissible`; `dismiss-label` (`aria-label` của button đóng; mặc định `Đóng`); `action` (Nhãn button hành động); `action-below`; `action-href` (Có đường dẫn thì button hành động thành link) | [alert-toast.md](https://vnexpress-design-system.vne-designops.workers.dev/components/alert-toast.md) |
+| `<vds-button>` | Nhãn (bỏ trống khi dùng icon) | `variant` = `uncontained`, `contained`, `contained-bordered`, `ghost`, `ghost-subdued`, `ghost-on-color`, `accent`, `accent-subdued`, `support`, `link-subtle`, `link`, `info-uncontained`, `info-contained`, `positive-uncontained`, `positive-contained`, `warning-uncontained`, `warning-contained`, `negative-uncontained`, `negative-contained` (mặc định `contained`); `size` = `sm`, `md`, `lg` (mặc định `md`); `icon-left` (tên icon bỏ cỡ); `icon-right` (tên icon bỏ cỡ); `icon` (tên icon bỏ cỡ); `circle`; `far`; `selected` = `a`, `b`; `disabled`; `full-width`; `href` (Có `href` thì dựng thẻ `a`); `type` (`type` của thẻ `button`; mặc định `button`) | [button.md](https://vnexpress-design-system.vne-designops.workers.dev/components/button.md) |
+| `<vds-button-inline>` | Nhãn | `strong`; `icon-left` (tên icon bỏ cỡ); `icon-right` (tên icon bỏ cỡ); `disabled`; `type` (`type` của thẻ `button`; mặc định `button`) | [button-inline.md](https://vnexpress-design-system.vne-designops.workers.dev/components/button-inline.md) |
+| `<vds-button-touch>` | Để trống (chỉ có icon) | `variant` = `touch`, `contained`, `on-color`, `on-image` (mặc định `touch`); `size` = `sm`, `md` (mặc định `md`); `icon` (tên icon bỏ cỡ); `selected`; `disabled`; `href` (Có `href` thì dựng thẻ `a`); `type` (`type` của thẻ `button`; mặc định `button`) | [button-touch.md](https://vnexpress-design-system.vne-designops.workers.dev/components/button-touch.md) |
+| `<vds-input-code-field>` | Để trống | `length` (Số ô; mặc định `5`); `allow` = `numeric`, `alphanumeric` (mặc định `numeric`); `label` (Tên của nhóm ô cho trình đọc màn hình; mặc định `Mã xác thực`); `name` (Tên trường khi gửi form); `value` (Mã đã nhập (vd hiện lại khi báo lỗi)); `helper` (Dòng phụ); `error` (Thông báo lỗi); `disabled` | [input-code-field.md](https://vnexpress-design-system.vne-designops.workers.dev/components/input-code-field.md) |
+| `<vds-input-text-field>` | Phần cuối ô (Has button), thường là vds-button-inline; để trống nếu không có | `size` = `sm`, `md`, `lg` (mặc định `md`); `label` (Nhãn); `label-hidden`; `icon` (tên icon bỏ cỡ); `helper` (Dòng phụ); `error` (Thông báo lỗi); `disabled`; `id` (`id` của ô nhập) | [input-text-field.md](https://vnexpress-design-system.vne-designops.workers.dev/components/input-text-field.md) |
+| `<vds-selection-item-chip>` | Nhãn | `size` = `sm`, `md`, `lg` (mặc định `md`); `selected`; `icon` (tên icon bỏ cỡ); `role` = `radio`; `disabled`; `type` (`type` của thẻ `button`; mặc định `button`) | [selection-item-chip.md](https://vnexpress-design-system.vne-designops.workers.dev/components/selection-item-chip.md) |
+| `<vds-tab>` | Nhãn tab | `selected`; `disabled`; `panel` (`id` của vùng nội dung tab điều khiển (`aria-controls`)) | [tabs.md](https://vnexpress-design-system.vne-designops.workers.dev/components/tabs.md) |
+| `<vds-tabs>` | Các thẻ vds-tab | `width` = `hug`, `fixed` (mặc định `hug`) | [tabs.md](https://vnexpress-design-system.vne-designops.workers.dev/components/tabs.md) |
+
+Icon đứng riêng: `<vds-icon name="Bookmark__Regular__24"></vds-icon>` (thêm `size` để đổi cỡ trong tên); logo: `<vds-logo name="Logo__VnExpress__Standard"></vds-logo>`. Tra tên icon: [danh sách icon](https://vnexpress-design-system.vne-designops.workers.dev/generated/icons/index.md); tên logo: trang [Logo](https://vnexpress-design-system.vne-designops.workers.dev/foundations/logo.md).
+
+### Tra cứu (bản Markdown)
+
+- Foundations: [VnExpress Identity](https://vnexpress-design-system.vne-designops.workers.dev/foundations/identity.md), [Color](https://vnexpress-design-system.vne-designops.workers.dev/foundations/color.md), [Typography](https://vnexpress-design-system.vne-designops.workers.dev/foundations/typography.md), [Spacing & Sizing](https://vnexpress-design-system.vne-designops.workers.dev/foundations/spacing.md), [Elevation](https://vnexpress-design-system.vne-designops.workers.dev/foundations/elevation.md), [Iconography](https://vnexpress-design-system.vne-designops.workers.dev/foundations/iconography.md), [Logo](https://vnexpress-design-system.vne-designops.workers.dev/foundations/logo.md), [Layout & Grid](https://vnexpress-design-system.vne-designops.workers.dev/foundations/layout.md)
+- Design Tokens: [Overview](https://vnexpress-design-system.vne-designops.workers.dev/tokens/overview.md), [Usage](https://vnexpress-design-system.vne-designops.workers.dev/tokens/usage.md)
+- Content Rules: [Date & Time](https://vnexpress-design-system.vne-designops.workers.dev/content/time.md), [Numbers](https://vnexpress-design-system.vne-designops.workers.dev/content/numbers.md), [Locations](https://vnexpress-design-system.vne-designops.workers.dev/content/locations.md), [Truncation](https://vnexpress-design-system.vne-designops.workers.dev/content/truncation.md)
+- Toàn bộ tài liệu, tóm tắt: [llms.txt](https://vnexpress-design-system.vne-designops.workers.dev/llms.txt)
+
+### Trước khi giao
+
+Tự kiểm từng mục; mục nào chưa đạt thì sửa trước khi báo xong.
+
+- Không có mã màu hex, cỡ chữ (font size) hay khoảng cách (spacing) gán cứng trong code.
+  Mọi giá trị đi qua `var(--vds-*)`.
+- Đã nhúng `vds-fonts.css`: tiêu đề tin hiện Merriweather, không phải font dự phòng.
+- Tiêu đề tin dùng Merriweather; đoạn văn dài dùng Arial; nhãn, button, menu dùng Merriweather Sans.
+- Giao diện đúng ở cả light và dark, không có chữ chìm mất hay nền lệch tông.
+- Nội dung phân tách bằng đường kẻ (divider) mảnh, không có card đổ bóng (shadow).
+- Button, input, tab, chip, alert viết bằng thẻ VDS (`<vds-button>`, `<vds-input-text-field>`…), không tự vẽ lại.
+- Icon và logo gọi theo tên (`<vds-icon>`, `<vds-logo>`), không có SVG dán thẳng trong HTML.
+- Ngày giờ viết dạng `21/10/2026`, `09:00`; không `21/10/26`, `9h`.
+<!-- VDS:END -->

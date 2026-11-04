@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus } from '../types';
 import { formatDateWithEnDay, formatPercentage } from '../utils/formatters';
-import { X, Send, History, AlertCircle } from 'lucide-react';
+import { X, Send, History, AlertCircle } from './vds/icons';
 
 interface QuickLogModalProps {
   task: TaskItem;
@@ -66,20 +66,20 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       {/* Modal Container: Flat, 4px border radius, no drop-shadow */}
-      <div className="bg-[#ffffff] border border-[#5f5f5f] rounded-[4px] w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-surface border border-line-strong rounded-vds-md w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 bg-[#fafafa] border-b border-[rgba(0,0,0,0.15)] flex items-center justify-between">
+        <div className="px-4 py-3 bg-surface-100 border-b border-line flex items-center justify-between">
           <div>
-            <span className="font-ui text-xs text-[#b13460] font-bold">
+            <span className="font-ui text-xs text-accent font-bold">
               Nhật ký và Cập nhật tiến độ
             </span>
-            <h3 className="font-title text-base font-bold text-[#202020] line-clamp-1">
+            <h3 className="font-title text-base font-bold text-ink line-clamp-1">
               {task.title}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-[#7f7f7f] hover:text-[#202020] rounded-[4px]"
+            className="p-1 text-subdued hover:text-ink rounded-vds-md"
             title="Đóng"
           >
             <X className="w-5 h-5" />
@@ -90,7 +90,7 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {/* Quick Progress Buttons */}
           <div>
-            <label className="block font-ui text-xs text-[#5f5f5f] mb-1.5 font-bold">
+            <label className="block font-ui text-xs text-ink-lighter mb-1.5 font-bold">
               Cập nhật tỷ lệ hoàn thành:
             </label>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -99,16 +99,16 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
                   key={val}
                   type="button"
                   onClick={() => handleQuickProgress(val)}
-                  className={`h-[32px] px-3 rounded-[4px] font-num text-xs transition-colors ${
+                  className={`h-[32px] px-3 rounded-vds-md font-num text-xs transition-colors ${
                     progress === val
-                      ? 'bg-[#b13460] text-white font-bold'
-                      : 'bg-[#f3f3f3] text-[#5f5f5f] hover:bg-[#e1e1e1] border border-[#d6d6d6]'
+                      ? 'bg-surface-selected text-accent font-bold ring-1 ring-inset ring-line-accent-soft'
+                      : 'bg-surface-200 text-ink-lighter hover:bg-surface-300 border border-line'
                   }`}
                 >
                   {val}%
                 </button>
               ))}
-              <span className="font-num text-xs text-[#202020] ml-2">
+              <span className="font-num text-xs text-ink ml-2">
                 Hiện tại: <strong>{formatPercentage(progress, 0)}</strong>
               </span>
             </div>
@@ -116,7 +116,7 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
 
           {/* Status Selection */}
           <div>
-            <label className="block font-ui text-xs text-[#5f5f5f] mb-1.5 font-bold">
+            <label className="block font-ui text-xs text-ink-lighter mb-1.5 font-bold">
               Trạng thái công việc:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -125,16 +125,16 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
                   key={s}
                   type="button"
                   onClick={() => setStatus(s)}
-                  className={`py-1.5 px-2 rounded-[4px] border font-ui text-xs transition-colors text-center cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-vds-md border font-ui text-xs transition-colors text-center cursor-pointer ${
                     status === s
                       ? s === 'Đang làm'
-                        ? 'bg-[#eef4fb] text-[#1d508d] font-bold border-[#c2d7f0]'
+                        ? 'bg-surface-support text-support font-bold border-line'
                         : s === 'Bị nghẽn'
-                        ? 'bg-[#fef2f2] text-[#b91c1c] font-bold border-[#fecaca]'
+                        ? 'bg-surface-negative text-negative font-bold border-line'
                         : s === 'Hoàn thành'
-                        ? 'bg-[#f0fdf4] text-[#166534] font-bold border-[#bbf7d0]'
-                        : 'bg-[#f1f5f9] text-[#1e293b] font-bold border-[#cbd5e1]'
-                      : 'bg-[#fafafa] text-[#5f5f5f] border-[#d6d6d6] hover:bg-white hover:border-[#9f9f9f]'
+                        ? 'bg-surface-positive text-positive font-bold border-line'
+                        : 'bg-surface-200 text-ink font-bold border-line'
+                      : 'bg-surface-100 text-ink-lighter border-line hover:bg-surface hover:border-line-regular'
                   }`}
                 >
                   {s}
@@ -145,8 +145,8 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
 
           {/* If Status is 'Bị nghẽn', show Blocker reason field */}
           {status === 'Bị nghẽn' && (
-            <div className="p-3 bg-[#f8d4d6]/60 border border-[#da1e28] rounded-[4px]">
-              <label className="flex items-center gap-1 font-ui text-xs text-[#da1e28] font-bold mb-1">
+            <div className="p-3 bg-surface-negative/60 border border-line-negative rounded-vds-md">
+              <label className="flex items-center gap-1 font-ui text-xs text-negative font-bold mb-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 Nguyên nhân bị nghẽn / Cần hỗ trợ gì:
               </label>
@@ -155,14 +155,14 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
                 value={blocker}
                 onChange={(e) => setBlocker(e.target.value)}
                 placeholder="Ví dụ: Đang chờ ban biên tập duyệt slug, thiếu dữ liệu từ đội Data..."
-                className="w-full h-[36px] px-3 bg-[#ffffff] border border-[#da1e28] rounded-[4px] font-body text-xs text-[#202020] focus:outline-none"
+                className="w-full h-[36px] px-3 bg-surface border border-line-negative rounded-vds-md font-body text-xs text-ink focus:outline-none"
               />
             </div>
           )}
 
           {/* Fast Note Input */}
           <div>
-            <label className="block font-ui text-xs text-[#5f5f5f] mb-1 font-bold">
+            <label className="block font-ui text-xs text-ink-lighter mb-1 font-bold">
               Ghi chú tiến độ mới:
             </label>
             <textarea
@@ -170,19 +170,19 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
               onChange={(e) => setNote(e.target.value)}
               placeholder="Nhập nội dung ngắn: kết quả vừa hoàn thành, công việc tiếp theo trong ngày..."
               rows={3}
-              className="w-full p-2.5 bg-[#fafafa] border border-[#9f9f9f] rounded-[4px] font-body text-xs text-[#202020] placeholder-[#9f9f9f] focus:outline-none"
+              className="w-full p-2.5 bg-surface-100 border border-line-regular rounded-vds-md font-body text-xs text-ink placeholder-subdued-lighter focus:outline-none"
             />
           </div>
 
           {/* History Timeline */}
           <div>
-            <div className="flex items-center gap-1.5 font-ui text-xs text-[#7f7f7f] mb-2 font-bold border-t border-[rgba(0,0,0,0.06)] pt-3">
+            <div className="flex items-center gap-1.5 font-ui text-xs text-subdued mb-2 font-bold border-t border-divider pt-3">
               <History className="w-3.5 h-3.5" />
               <span>Lịch sử cập nhật ({task.logs.length}):</span>
             </div>
 
             {task.logs.length === 0 ? (
-              <div className="text-xs font-body text-[#9f9f9f]">
+              <div className="text-xs font-body text-subdued-lighter">
                 Chưa có ghi chú cập nhật nào trước đây.
               </div>
             ) : (
@@ -190,17 +190,17 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
                 {task.logs.map((log) => (
                   <div
                     key={log.id}
-                    className="p-2 bg-[#fafafa] border border-[#ececec] rounded-[4px] text-xs font-body"
+                    className="p-2 bg-surface-100 border border-divider rounded-vds-md text-xs font-body"
                   >
-                    <div className="flex items-center justify-between text-[#7f7f7f] mb-1">
-                      <span className="font-ui font-bold text-[#5f5f5f]">{log.author}</span>
-                      <span className="font-ui text-[11px] text-[#7f7f7f]">
+                    <div className="flex items-center justify-between text-subdued mb-1">
+                      <span className="font-ui font-bold text-ink-lighter">{log.author}</span>
+                      <span className="font-ui text-xs text-subdued">
                         {formatDateWithEnDay(log.timestamp, true)}
                       </span>
                     </div>
-                    <p className="text-[#202020]">{log.note}</p>
+                    <p className="text-ink">{log.note}</p>
                     {((log as any).previousProgress !== undefined || (log as any).newProgress !== undefined) && (
-                      <div className="mt-1 text-[11px] font-num text-[#7f7f7f]">
+                      <div className="mt-1 text-xs font-num text-subdued">
                         Tiến độ: {(log as any).previousProgress ?? 0}% → {(log as any).newProgress ?? 0}%
                       </div>
                     )}
@@ -212,18 +212,18 @@ export const QuickLogModal: React.FC<QuickLogModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-4 py-3 bg-[#fafafa] border-t border-[rgba(0,0,0,0.15)] flex items-center justify-end gap-2">
+        <div className="px-4 py-3 bg-surface-100 border-t border-line flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="h-[36px] px-3 rounded-[8px] border border-[#d6d6d6] bg-[#ffffff] font-ui text-xs text-[#5f5f5f] hover:text-[#202020] state-layer-std"
+            className="h-[36px] px-3 rounded-vds-lg border border-line bg-surface font-ui text-xs text-ink-lighter hover:text-ink state-layer-std"
           >
             Hủy
           </button>
           <button
             type="button"
             onClick={handleSubmit}
-            className="h-[36px] px-4 rounded-[8px] bg-[#466fa1] text-white font-ui text-xs font-bold flex items-center gap-1.5 state-layer-on-color"
+            className="h-[36px] px-4 rounded-vds-lg bg-support-solid text-on-color font-ui text-xs font-bold flex items-center gap-1.5 state-layer-on-color"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Lưu cập nhật</span>

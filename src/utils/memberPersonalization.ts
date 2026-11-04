@@ -110,7 +110,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'Product Manager',
-      roleBadgeColor: 'bg-[#fcf0f5] text-[#b13460] border-[#f3c2d4]',
+      roleBadgeColor: 'bg-surface-accent-faint text-accent border-line',
       assignedTasksCount: tasksCount,
     };
   }
@@ -124,7 +124,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'UX/UI Designer',
-      roleBadgeColor: 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]',
+      roleBadgeColor: 'bg-surface-info text-info border-line',
       assignedTasksCount: tasksCount,
     };
   }
@@ -138,7 +138,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'SEO Specialist',
-      roleBadgeColor: 'bg-[#faf5ff] text-[#7e22ce] border-[#e9d5ff]',
+      roleBadgeColor: 'bg-surface-100 text-extreme border-line',
       assignedTasksCount: tasksCount,
     };
   }
@@ -152,7 +152,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'Data Specialist',
-      roleBadgeColor: 'bg-[#f0fdfa] text-[#0f766e] border-[#99f6e4]',
+      roleBadgeColor: 'bg-surface-positive text-positive border-line',
       assignedTasksCount: tasksCount,
     };
   }
@@ -168,7 +168,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'Phụ trách chính',
-      roleBadgeColor: 'bg-[#fdf2f8] text-[#be185d] border-[#fbcfe8]',
+      roleBadgeColor: 'bg-surface-accent-faint text-accent border-line',
       assignedTasksCount: tasksCount,
     };
   }
@@ -181,7 +181,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: `${memberTasksInProj.length} việc được giao`,
-      roleBadgeColor: 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]',
+      roleBadgeColor: 'bg-surface-positive text-positive border-line',
       assignedTasksCount: memberTasksInProj.length,
     };
   }
@@ -192,7 +192,7 @@ export function getMemberProjectRelation(
     return {
       isRelated: true,
       roleLabel: 'Tham gia trao đổi',
-      roleBadgeColor: 'bg-[#f8fafc] text-[#475569] border-[#e2e8f0]',
+      roleBadgeColor: 'bg-surface-100 text-ink-lighter border-line',
       assignedTasksCount: 0,
     };
   }

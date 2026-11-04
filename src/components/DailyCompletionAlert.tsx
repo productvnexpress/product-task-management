@@ -17,7 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-} from 'lucide-react';
+} from './vds/icons';
 
 interface DailyCompletionAlertProps {
   members: MemberItem[];
@@ -50,7 +50,21 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
   onSelectAssignee,
   selectedAssignee,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Mobile: thu gọn mặc định để danh sách việc lên đầu màn hình; ghi nhớ lựa chọn trong ngày
+  const expandKey = `wms_daily_alert_expanded_${new Date().toDateString()}`;
+  const [isExpanded, setIsExpandedState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(expandKey);
+      if (saved !== null) return saved === '1';
+    } catch {}
+    return typeof window === 'undefined' || window.innerWidth >= 768;
+  });
+  const setIsExpanded = (v: boolean) => {
+    setIsExpandedState(v);
+    try {
+      localStorage.setItem(expandKey, v ? '1' : '0');
+    } catch {}
+  };
 
   // Không hiển thị cảnh báo vào ngày nghỉ (cuối tuần không làm bù) hoặc ngày lễ
   const isWorkingDay = workingTimeService.isWorkingDay(new Date());
@@ -77,12 +91,12 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
 
     // Executive chưa có task đến hạn hôm nay
     return (
-      <div className="bg-[#fffbeb] border border-[#fde68a] rounded-[10px] px-3.5 py-2.5 shadow-2xs transition-all flex items-center justify-between gap-3">
+      <div className="bg-surface-warning border border-line rounded-vds-lg px-3.5 py-2.5 transition flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#f59e0b]/20 text-[#b45309] flex items-center justify-center shrink-0">
-            <Clock className="w-3.5 h-3.5 text-[#d97706]" />
+          <div className="w-6 h-6 rounded-full bg-warning-solid/20 text-warning flex items-center justify-center shrink-0">
+            <Clock className="w-3.5 h-3.5 text-warning" />
           </div>
-          <h4 className="font-title text-xs font-semibold text-[#92400e]">
+          <h4 className="font-title text-xs font-semibold text-warning">
             Cảnh báo: Bạn chưa có task đến hạn hôm nay
           </h4>
         </div>
@@ -90,7 +104,7 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
         <button
           type="button"
           onClick={() => onSelectAssignee(execMember.member.name)}
-          className="px-2.5 py-1 rounded-[6px] text-xs font-ui font-semibold bg-[#ea580c] text-white hover:bg-[#c2410c] shadow-2xs cursor-pointer transition-all shrink-0"
+          className="px-2.5 py-1 rounded-vds-lg text-xs font-ui font-semibold bg-warning-solid text-on-color hover:bg-warning-solid cursor-pointer transition shrink-0"
         >
           Xem việc của tôi ({execMember.activeTasksCount})
         </button>
@@ -116,17 +130,17 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
   });
 
   return (
-    <div className="h-full flex flex-col bg-[#fffdfa] border border-[#f59e0b]/40 rounded-[10px] shadow-2xs overflow-hidden transition-all">
+    <div className="h-full flex flex-col bg-surface-100 border border-line-warning/40 rounded-vds-lg overflow-hidden transition">
       {/* Header Banner - Ngắn gọn, súc tích */}
       <div
-        className="px-3.5 py-2.5 bg-[#fffbeb] flex items-center justify-between gap-2 cursor-pointer select-none min-h-[44px] border-b border-[#fef08a]"
+        className="px-3.5 py-2.5 bg-surface-warning flex items-center justify-between gap-2 cursor-pointer select-none min-h-[44px] border-b border-line"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-6 h-6 rounded-full bg-[#f59e0b]/20 text-[#b45309] flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-3.5 h-3.5 text-[#d97706]" />
+          <div className="w-6 h-6 rounded-full bg-warning-solid/20 text-warning flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning" />
           </div>
-          <h4 className="font-title text-[13px] font-semibold text-[#92400e] truncate">
+          <h4 className="font-title text-[13px] font-semibold text-warning truncate">
             Cảnh báo: {stats.missingMembers.length} nhân sự chưa có task đến hạn hôm nay
           </h4>
         </div>
@@ -134,7 +148,7 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
         {/* Nút thu gọn / mở rộng */}
         <button
           type="button"
-          className="p-1 text-[#b45309] hover:bg-[#fef3c7] rounded-[4px] transition-colors shrink-0 cursor-pointer"
+          className="p-1 text-warning hover:bg-surface-warning rounded-vds-md transition-colors shrink-0 cursor-pointer"
           title={isExpanded ? 'Thu gọn' : 'Mở rộng'}
         >
           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -143,10 +157,10 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
 
       {/* Body: Liệt kê tên ngắn gọn dạng Tên Họ sắp xếp ABC */}
       {isExpanded && (
-        <div className="flex-1 px-3.5 py-2.5 bg-white flex flex-col justify-start">
+        <div className="flex-1 px-3.5 py-2.5 bg-surface flex flex-col justify-start">
           {/* Danh sách tên Tên Họ sắp xếp ABC */}
           <div className="text-xs font-ui leading-relaxed">
-            <div className="text-[#78350f] font-semibold mb-1">
+            <div className="text-warning font-semibold mb-1">
               Nhân sự cần nhập task đến hạn hôm nay:
             </div>
             <div className="flex flex-wrap items-center gap-y-1">
@@ -160,15 +174,15 @@ export const DailyCompletionAlert: React.FC<DailyCompletionAlertProps> = ({
                       onClick={() => onSelectAssignee(isSelected ? 'Tất cả' : item.member.name)}
                       className={`font-medium transition-colors cursor-pointer rounded hover:underline ${
                         isSelected
-                          ? 'bg-[#92400e] text-white font-semibold px-1.5 py-0.5 shadow-2xs'
-                          : 'text-[#92400e] hover:text-[#78350f]'
+                          ? 'bg-surface-selected text-accent font-semibold px-1.5 py-0.5 ring-1 ring-inset ring-line-accent-soft'
+                          : 'text-warning hover:text-warning'
                       }`}
                       title={`${item.member.name} (${item.member.team || item.role}) - ${item.activeTasksCount} việc đang phụ trách`}
                     >
                       {displayName}
                     </button>
                     {idx < sortedMissingMembers.length - 1 && (
-                      <span className="text-[#b45309] select-none mr-1.5">,</span>
+                      <span className="text-warning select-none mr-1.5">,</span>
                     )}
                   </span>
                 );

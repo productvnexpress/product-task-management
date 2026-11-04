@@ -12,7 +12,7 @@ import {
   ChevronUp,
   PlusCircle,
   HelpCircle,
-} from 'lucide-react';
+} from './vds/icons';
 import { ProjectChecklistItem, ProjectChecklistStatus, MemberItem } from '../types';
 import {
   CHECKLIST_PHASES,
@@ -105,27 +105,27 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
   });
 
   return (
-    <div className="bg-[#fcfcfc] p-4 rounded-[10px] border border-[#e0e0e0] space-y-4 shadow-2xs">
+    <div className="bg-surface-100 p-4 rounded-vds-lg border border-line space-y-4 ">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e6e6e6] pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-full bg-[#fcf0f5] border border-[#f3c2d4] text-[#b13460] flex items-center justify-center font-bold">
+          <div className="w-6 h-6 rounded-full bg-surface-accent-faint border border-line text-accent flex items-center justify-center font-bold">
             <CheckSquare className="w-3.5 h-3.5" />
           </div>
-          <h3 className="font-title text-sm font-bold text-[#b13460]">
+          <h3 className="font-title text-sm font-bold text-accent">
             5: Checklist
           </h3>
         </div>
 
         {/* Status Filters */}
-        <div className="flex items-center gap-1 bg-white p-0.5 rounded-[6px] border border-[#d0d0d0] shrink-0 text-xs font-ui">
+        <div className="flex items-center gap-1 bg-surface p-0.5 rounded-vds-lg border border-line shrink-0 text-xs font-ui">
           <button
             type="button"
             onClick={() => setFilterStatus('all')}
-            className={`px-2 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+            className={`px-2 py-1 rounded-vds-md font-semibold transition-colors cursor-pointer ${
               filterStatus === 'all'
-                ? 'bg-[#b13460] text-white'
-                : 'text-[#606060] hover:text-[#202020]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Tất cả ({stats.total})
@@ -133,10 +133,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
           <button
             type="button"
             onClick={() => setFilterStatus('pending')}
-            className={`px-2 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+            className={`px-2 py-1 rounded-vds-md font-semibold transition-colors cursor-pointer ${
               filterStatus === 'pending'
-                ? 'bg-[#8f6b00] text-white'
-                : 'text-[#606060] hover:text-[#202020]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Chưa xong ({stats.pending})
@@ -144,10 +144,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
           <button
             type="button"
             onClick={() => setFilterStatus('completed')}
-            className={`px-2 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+            className={`px-2 py-1 rounded-vds-md font-semibold transition-colors cursor-pointer ${
               filterStatus === 'completed'
-                ? 'bg-[#24a148] text-white'
-                : 'text-[#606060] hover:text-[#202020]'
+                ? 'bg-surface-selected text-accent ring-1 ring-inset ring-line-accent-soft'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Đã xong ({stats.completed})
@@ -155,10 +155,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
           <button
             type="button"
             onClick={() => setFilterStatus('skipped')}
-            className={`px-2 py-1 rounded-[4px] font-semibold transition-colors cursor-pointer ${
+            className={`px-2 py-1 rounded-vds-md font-semibold transition-colors cursor-pointer ${
               filterStatus === 'skipped'
-                ? 'bg-[#505050] text-white'
-                : 'text-[#606060] hover:text-[#202020]'
+                ? 'bg-icon-strong text-on-color'
+                : 'text-ink-lighter hover:text-ink'
             }`}
           >
             Bỏ qua ({stats.skipped})
@@ -167,12 +167,12 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
       </div>
 
       {/* Progress Bar & Metric Cards */}
-      <div className="bg-white p-3.5 rounded-[8px] border border-[#e6e6e6] space-y-2.5">
+      <div className="bg-surface p-3.5 rounded-vds-lg border border-line space-y-2.5">
         <div className="flex items-center justify-between text-xs font-ui">
-          <span className="font-semibold text-[#202020]">Tiến độ tuân thủ tiêu chuẩn:</span>
+          <span className="font-semibold text-ink">Tiến độ tuân thủ tiêu chuẩn:</span>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#b13460]">{stats.percent}%</span>
-            <span className="text-[11px] text-[#707070]">
+            <span className="font-bold text-accent">{stats.percent}%</span>
+            <span className="text-xs text-ink-lighter">
               ({stats.completed}/{stats.total - stats.skipped} hoàn thành
               {stats.skipped > 0 ? `, ${stats.skipped} loại bỏ` : ''})
             </span>
@@ -180,14 +180,14 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
         </div>
 
         {/* Multi-segment Progress Bar */}
-        <div className="h-2 w-full bg-[#e8e8e8] rounded-full overflow-hidden flex">
+        <div className="h-2 w-full bg-surface-300 rounded-full overflow-hidden flex">
           <div
-            className="h-full bg-[#24a148] transition-all duration-300"
+            className="h-full bg-positive-solid transition duration-300"
             style={{ width: `${(stats.completed / Math.max(1, stats.total)) * 100}%` }}
             title={`Hoàn thành: ${stats.completed}`}
           />
           <div
-            className="h-full bg-[#a0a0a0] transition-all duration-300"
+            className="h-full bg-icon-subdued transition duration-300"
             style={{ width: `${(stats.skipped / Math.max(1, stats.total)) * 100}%` }}
             title={`Bỏ qua: ${stats.skipped}`}
           />
@@ -211,27 +211,27 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
           return (
             <div
               key={phase.id}
-              className="bg-white rounded-[8px] border border-[#e2e2e2] overflow-hidden shadow-2xs"
+              className="bg-surface rounded-vds-lg border border-line overflow-hidden "
             >
               {/* Phase Header */}
               <div
                 onClick={() => togglePhaseExpand(phase.id)}
-                className="flex items-center justify-between p-3 bg-[#fafafa] hover:bg-[#f5f5f5] cursor-pointer transition-colors border-b border-[#ececec] select-none"
+                className="flex items-center justify-between p-3 bg-surface-100 hover:bg-surface-200 cursor-pointer transition-colors border-b border-divider select-none"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="font-title text-xs font-bold text-[#202020]">
+                  <span className="font-title text-xs font-bold text-ink">
                     {phase.title}
                   </span>
                   <span
-                    className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-[4px] border ${phase.badgeColor}`}
+                    className={`text-[10px] font-ui font-semibold px-2 py-0.5 rounded-vds-md border ${phase.badgeColor}`}
                   >
                     {phaseCompleted}/{phase.itemCount} hoàn thành
                     {phaseSkipped > 0 ? ` (${phaseSkipped} bỏ qua)` : ''}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[#707070]">
-                  <span className="text-[11px] font-ui hidden sm:inline">
+                <div className="flex items-center gap-2 text-ink-lighter">
+                  <span className="text-xs font-ui hidden sm:inline">
                     {isExpanded ? 'Thu gọn' : 'Mở rộng'}
                   </span>
                   {isExpanded ? (
@@ -244,9 +244,9 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
 
               {/* Items List */}
               {isExpanded && (
-                <div className="divide-y divide-[#f2f2f2]">
+                <div className="divide-y divide-divider">
                   {phaseItems.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-[#7f7f7f] italic font-ui">
+                    <div className="p-3 text-center text-xs text-subdued italic font-ui">
                       Không có mục nào trong giai đoạn này khớp bộ lọc hiện tại.
                     </div>
                   ) : (
@@ -259,10 +259,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
                           key={item.id}
                           className={`p-2.5 px-3 flex items-start gap-2.5 transition-colors group ${
                             isCompleted
-                              ? 'bg-[#f8fdf9]'
+                              ? 'bg-surface-100'
                               : isSkipped
-                              ? 'bg-[#fcfcfc] opacity-65'
-                              : 'bg-white hover:bg-[#fcfcfc]'
+                              ? 'bg-surface-100 opacity-65'
+                              : 'bg-surface hover:bg-surface-100'
                           }`}
                         >
                           {/* Complete Checkbox */}
@@ -275,10 +275,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
                                 ? 'Bấm để hủy hoàn thành'
                                 : 'Đánh dấu đã hoàn thành'
                             }
-                            className={`mt-0.5 w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                            className={`mt-0.5 w-4 h-4 rounded-vds-md border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                               isCompleted
-                                ? 'bg-[#24a148] border-[#24a148] text-white'
-                                : 'border-[#b5b5b5] bg-white hover:border-[#24a148]'
+                                ? 'bg-positive-solid border-line-positive text-on-color'
+                                : 'border-line-regular bg-surface hover:border-line-positive'
                             }`}
                           >
                             {isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
@@ -287,16 +287,16 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
                           {/* Index & Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-1.5">
-                              <span className="text-[11px] font-ui font-semibold text-[#808080] shrink-0">
+                              <span className="text-xs font-ui font-semibold text-subdued shrink-0">
                                 {idx + 1}.
                               </span>
                               <span
                                 className={`text-xs font-ui leading-relaxed ${
                                   isCompleted
-                                    ? 'text-[#1e5a2b] font-medium'
+                                    ? 'text-positive font-medium'
                                     : isSkipped
-                                    ? 'line-through text-[#808080]'
-                                    : 'text-[#202020]'
+                                    ? 'line-through text-subdued'
+                                    : 'text-ink'
                                 }`}
                               >
                                 {item.text}
@@ -305,8 +305,8 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
 
                             {/* Metadata audit */}
                             {(item.completedAt || item.completedBy) && (
-                              <div className="mt-1 text-[10px] text-[#808080] font-ui flex items-center gap-1.5">
-                                <span className={isCompleted ? 'text-[#24a148]' : 'text-[#707070]'}>
+                              <div className="mt-1 text-[10px] text-subdued font-ui flex items-center gap-1.5">
+                                <span className={isCompleted ? 'text-positive' : 'text-ink-lighter'}>
                                   ● {isCompleted ? 'Đã hoàn thành' : 'Đã bỏ qua'}
                                 </span>
                                 {item.completedBy && <span>bởi {item.completedBy}</span>}
@@ -326,10 +326,10 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
                                   ? 'Khôi phục lại tiêu chuẩn này'
                                   : 'Không áp dụng cho dự án này (Gạch ngang loại bỏ)'
                               }
-                              className={`p-1 rounded-[4px] text-xs font-ui transition-colors cursor-pointer flex items-center gap-1 ${
+                              className={`p-1 rounded-vds-md text-xs font-ui transition-colors cursor-pointer flex items-center gap-1 ${
                                 isSkipped
-                                  ? 'bg-[#505050] text-white hover:bg-[#303030]'
-                                  : 'text-[#808080] hover:text-[#da1e28] hover:bg-[#fff0f1]'
+                                  ? 'bg-icon-strong text-on-color hover:bg-surface-dark'
+                                  : 'text-subdued hover:text-negative hover:bg-surface-negative'
                               }`}
                             >
                               <Ban className="w-3.5 h-3.5" />
@@ -344,7 +344,7 @@ export const ProjectChecklistSection: React.FC<ProjectChecklistSectionProps> = (
                                 type="button"
                                 onClick={() => onCreateTaskFromItem(item.text, phase.shortTitle)}
                                 title="Tạo công việc thực hiện mục này"
-                                className="p-1 rounded-[4px] text-[#b13460] hover:bg-[#fcf0f5] transition-colors cursor-pointer flex items-center gap-1"
+                                className="p-1 rounded-vds-md text-accent hover:bg-surface-accent-faint transition-colors cursor-pointer flex items-center gap-1"
                               >
                                 <PlusCircle className="w-3.5 h-3.5" />
                                 <span className="text-[10px] hidden md:inline font-semibold">

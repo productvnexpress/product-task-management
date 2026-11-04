@@ -11,7 +11,7 @@ import {
   requestWebPushPermission,
   WebPushPermissionState,
 } from '../utils/webPushNotifications';
-import { BellRing, AlertTriangle, X, ChevronRight } from 'lucide-react';
+import { BellRing, AlertTriangle, X, ChevronRight } from './vds/icons';
 
 interface WebPushPromptBannerProps {
   onOpenNotifications: () => void;
@@ -59,17 +59,17 @@ export const WebPushPromptBanner: React.FC<WebPushPromptBannerProps> = ({
 
   return (
     <div
-      className={`rounded-[8px] px-3 py-2 flex items-center justify-between gap-3 text-xs font-ui transition-all shadow-2xs border ${
+      className={`rounded-vds-lg px-3 py-2 flex items-center justify-between gap-3 text-xs font-ui transition border ${
         isDenied
-          ? 'bg-[#fffbeb] border-[#fde68a] text-[#92400e]'
-          : 'bg-[#fffbfd] border-[#f4c2d7] text-[#78234a]'
+          ? 'bg-surface-warning border-line text-warning'
+          : 'bg-surface-100 border-line text-accent'
       }`}
     >
       <div className="flex items-center gap-2 min-w-0">
         {isDenied ? (
-          <AlertTriangle className="w-3.5 h-3.5 text-[#d97706] shrink-0" />
+          <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
         ) : (
-          <BellRing className="w-3.5 h-3.5 text-[#963861] shrink-0" />
+          <BellRing className="w-3.5 h-3.5 text-accent shrink-0" />
         )}
         <span className="truncate">
           {isDenied ? (
@@ -89,7 +89,7 @@ export const WebPushPromptBanner: React.FC<WebPushPromptBannerProps> = ({
           <button
             type="button"
             onClick={onOpenNotifications}
-            className="px-2 py-0.5 rounded-[4px] bg-[#92400e] text-white hover:bg-[#78350f] font-semibold text-[11px] transition-colors cursor-pointer flex items-center gap-0.5"
+            className="px-2 py-0.5 rounded-vds-md bg-warning-solid text-on-color hover:bg-warning-solid font-semibold text-xs transition-colors cursor-pointer flex items-center gap-0.5"
           >
             <span>Xem cách mở</span>
             <ChevronRight className="w-3 h-3" />
@@ -98,7 +98,7 @@ export const WebPushPromptBanner: React.FC<WebPushPromptBannerProps> = ({
           <button
             type="button"
             onClick={handleQuickEnable}
-            className="px-2 py-0.5 rounded-[4px] bg-[#963861] text-white hover:bg-[#78234a] font-semibold text-[11px] transition-colors cursor-pointer"
+            className="px-2 py-0.5 rounded-vds-md bg-accent-solid text-on-color hover:bg-accent-solid-hover font-semibold text-xs transition-colors cursor-pointer"
           >
             Bật ngay
           </button>
@@ -107,7 +107,7 @@ export const WebPushPromptBanner: React.FC<WebPushPromptBannerProps> = ({
         <button
           type="button"
           onClick={handleDismiss}
-          className="p-1 text-[#94a3b8] hover:text-[#475569] hover:bg-black/5 rounded transition-colors cursor-pointer"
+          className="p-1 text-subdued-lighter hover:text-ink-lighter hover:bg-black/5 rounded transition-colors cursor-pointer"
           title="Không nhắc lại"
         >
           <X className="w-3.5 h-3.5" />

@@ -1,63 +1,157 @@
 @import "tailwindcss";
 
-@theme {
-  --font-serif: "Merriweather", Georgia, serif;
-  --font-ui: "Merriweather Sans", sans-serif;
-  --font-body: Arial, Helvetica, sans-serif;
-  --font-mono: "Roboto Mono", monospace;
+/*
+ * VnExpress Design System (VDS) 0.5.0
+ * Font, token (--vds-*) và CSS component nạp từ public/vds/0.5.0 trong index.html.
+ * Khối @theme dưới đây nối token Semantic của VDS vào Tailwind: chỉ dùng các tên này,
+ * không gán cứng mã màu hex. Dark mode: data-theme="dark" trên <html>, token tự đổi.
+ */
+@theme inline {
+  --font-serif: var(--vds-article-title-primary-font-family);
+  --font-ui: var(--vds-microcopy-font-family);
+  --font-body: var(--vds-article-paragraph-standard-font-family);
+  --font-mono: var(--vds-numeric-font-family);
+
+  /* Chữ */
+  --color-ink: var(--vds-text-regular);
+  --color-ink-strong: var(--vds-text-strong);
+  --color-ink-lighter: var(--vds-text-regular-lighter);
+  --color-subdued: var(--vds-text-subdued);
+  --color-subdued-lighter: var(--vds-text-subdued-lighter);
+  --color-on-color: var(--vds-text-on-color-regular);
+  --color-accent: var(--vds-text-accent-strong);
+  --color-link: var(--vds-text-link-regular);
+  --color-info: var(--vds-text-info-regular);
+  --color-support: var(--vds-text-support-regular);
+  --color-positive: var(--vds-text-positive-regular);
+  --color-warning: var(--vds-text-warning-regular);
+  --color-negative: var(--vds-text-negative-regular);
+  --color-extreme: var(--vds-text-extreme-regular);
+
+  /* Nền */
+  --color-surface: var(--vds-surface-000);
+  --color-surface-100: var(--vds-surface-100);
+  --color-surface-200: var(--vds-surface-200);
+  --color-surface-300: var(--vds-surface-300);
+  --color-surface-dark: var(--vds-surface-dark-000);
+  --color-surface-input: var(--vds-surface-input-rest);
+  --color-surface-selected: var(--vds-surface-input-accent-selected);
+  --color-surface-accent: var(--vds-surface-accent);
+  --color-surface-accent-faint: var(--vds-surface-special-B);
+  --color-surface-info: var(--vds-surface-info);
+  --color-surface-support: var(--vds-surface-support);
+  --color-surface-positive: var(--vds-surface-positive);
+  --color-surface-warning: var(--vds-surface-warning);
+  --color-surface-negative: var(--vds-surface-negative);
+
+  /* Nền đặc (button, badge, chấm trạng thái) — đi kèm text-on-color */
+  --color-accent-solid: var(--vds-component-button-surface-accent-rest);
+  --color-accent-solid-hover: var(--vds-icon-background-accent-strong-hover);
+  --color-support-solid: var(--vds-surface-input-support-selected);
+  --color-positive-solid: var(--vds-surface-input-positive-selected);
+  --color-negative-solid: var(--vds-surface-input-negative-selected);
+  --color-warning-solid: var(--vds-icon-fill-warning-regular);
+  --color-extreme-solid: var(--vds-text-extreme-regular);
+
+  /* Icon */
+  --color-icon: var(--vds-icon-fill-regular);
+  --color-icon-strong: var(--vds-icon-fill-strong);
+  --color-icon-subdued: var(--vds-icon-fill-subdued);
+
+  /* Đường kẻ, viền */
+  --color-divider: var(--vds-component-divider-fill-subdued);
+  --color-line: var(--vds-border-subdued);
+  --color-line-regular: var(--vds-border-regular);
+  --color-line-strong: var(--vds-border-strong);
+  --color-line-accent: var(--vds-border-accent-strong);
+  --color-line-accent-soft: var(--vds-border-accent-subdued);
+  --color-line-info: var(--vds-border-info-regular);
+  --color-line-support: var(--vds-border-support-regular);
+  --color-line-positive: var(--vds-border-positive-regular);
+  --color-line-warning: var(--vds-border-warning-regular);
+  --color-line-negative: var(--vds-border-negative-regular);
+  --color-focus: var(--vds-border-focus);
+
+  /* Bo góc theo thang radii */
+  --radius-vds-sm: var(--vds-radii-sm);
+  --radius-vds-md: var(--vds-radii-md);
+  --radius-vds-lg: var(--vds-radii-lg);
+  --radius-vds-xl: var(--vds-radii-xl);
+
+  /* Shadow chỉ cho lớp nổi: popover/menu (pop), drawer/sheet/modal (sheet) */
+  --shadow-pop: var(--vds-shadow-elavation-B);
+  --shadow-sheet: var(--vds-shadow-elavation-A);
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
-    font-family: Arial, Helvetica, sans-serif;
-    color: #202020;
-    background-color: #ffffff;
+    font-family: var(--vds-article-paragraph-standard-font-family);
+    color: var(--vds-text-regular);
+    background-color: var(--vds-surface-000);
     line-height: 1.4;
     letter-spacing: 0;
   }
 
-  /* Focus ring following VnExpress DESIGN.md */
+  /* Viền mặc định theo VDS (Tailwind v4 mặc định currentColor) */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--vds-border-subdued);
+  }
+
+  /* Vòng focus VDS: border/focus + quầng sáng textfield */
   :focus-visible {
     outline: none;
-    border-color: #0590de !important;
-    box-shadow: 0 0 8px rgba(66, 144, 217, 0.5) !important;
+    border-color: var(--vds-border-focus) !important;
+    box-shadow: 0 0 0 1px var(--vds-border-focus), var(--vds-shadow-component-textfield-focus) !important;
+  }
+
+  ::placeholder {
+    color: var(--vds-text-subdued-lighter);
   }
 }
 
-/* Custom font utilities respecting typography rules */
+/* Font theo vai trò (VDS Typography) */
 .font-ui {
-  font-family: "Merriweather Sans", sans-serif;
+  font-family: var(--vds-microcopy-font-family);
   line-height: 1.5;
   letter-spacing: 0;
 }
 
 .font-body {
-  font-family: Arial, Helvetica, sans-serif;
-  line-height: 1.4;
+  font-family: var(--vds-article-paragraph-standard-font-family);
+  line-height: 1.5;
   letter-spacing: 0;
 }
 
-/* UI Title / Heading: Merriweather Sans (Never Merriweather serif for UI) */
+/* Tiêu đề giao diện, tiêu đề việc: Merriweather Sans */
 .font-title {
-  font-family: "Merriweather Sans", sans-serif;
+  font-family: var(--vds-microcopy-font-family);
   line-height: 1.4;
   letter-spacing: 0;
 }
 
-/* Exclusively for Article Titles per DESIGN.md Section 3.1 */
+/* Chỉ cho tiêu đề nội dung báo chí: Merriweather */
 .font-article-title {
-  font-family: "Merriweather", Georgia, serif;
+  font-family: var(--vds-article-title-primary-font-family);
   line-height: 1.6;
   letter-spacing: 0;
 }
 
 .font-num {
-  font-family: "Roboto Mono", monospace;
+  font-family: var(--vds-numeric-font-family);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
 
-/* StateLayer overlay utility */
+/* State layer theo token VDS */
 .state-layer-std {
   position: relative;
   overflow: hidden;
@@ -71,10 +165,10 @@
   transition: background-color 100ms ease-out;
 }
 .state-layer-std:hover::after {
-  background-color: rgba(54, 68, 76, 0.08);
+  background-color: var(--vds-component-state-layer-hover);
 }
 .state-layer-std:active::after {
-  background-color: rgba(54, 68, 76, 0.18);
+  background-color: var(--vds-component-state-layer-pressed);
 }
 
 .state-layer-on-color {
@@ -90,8 +184,59 @@
   transition: background-color 100ms ease-out;
 }
 .state-layer-on-color:hover::after {
-  background-color: rgba(222, 235, 255, 0.15);
+  background-color: var(--vds-component-state-layer-on-color-hover);
 }
 .state-layer-on-color:active::after {
-  background-color: rgba(222, 235, 255, 0.20);
+  background-color: var(--vds-component-state-layer-on-color-pressed);
+}
+
+/* ===== Hoạt họa & tiện ích dùng chung ===== */
+@keyframes wms-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wms-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.animate-fade-in { animation: wms-fade-in 160ms ease-out both; }
+.animate-shake { animation: wms-shake 240ms ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in, .animate-shake { animation: none; }
+}
+
+/* Vùng an toàn cho thanh điều hướng đáy trên iPhone */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Ẩn thanh cuộn ngang cho hàng chip lọc trên mobile */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+@layer components {
+/* Phím tắt */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--vds-radii-md);
+  border: var(--vds-border-weight-md) solid var(--vds-border-subdued);
+  border-bottom-width: var(--vds-border-weight-lg);
+  background: var(--vds-surface-100);
+  color: var(--vds-text-regular-lighter);
+  font-family: var(--vds-numeric-font-family);
+  font-size: var(--vds-typography-font-size-050);
+  line-height: 1;
+}
+}
+
+/* Hover chỉ áp dụng trên thiết bị có chuột */
+@media (hover: hover) and (pointer: fine) {
+  .hover-reveal { opacity: 0; }
+  .group:hover .hover-reveal,
+  .hover-reveal:focus-visible { opacity: 1; }
 }

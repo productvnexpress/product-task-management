@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MemberItem } from '../types';
 import { forceUpdatePassword, DEFAULT_PRODUCT_PASSWORD } from '../utils/authService';
-import { Lock, Eye, EyeOff, ShieldAlert, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, ShieldAlert, CheckCircle2, AlertCircle } from './vds/icons';
 
 interface ForceChangePasswordModalProps {
   isOpen: boolean;
@@ -75,20 +75,20 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="w-full max-w-md bg-white rounded-[16px] shadow-2xl border border-[#e2e8f0] overflow-hidden"
+        className="w-full max-w-md bg-surface rounded-vds-xl shadow-sheet border border-line overflow-hidden"
       >
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-[#fff1f2] to-[#fdf2f8] border-b border-[#fecdd3]">
+        <div className="p-6 bg-gradient-to-r from-surface-negative to-surface-accent-faint border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#be123c] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-negative-solid text-on-color flex items-center justify-center shrink-0 ">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-title text-base sm:text-lg font-bold text-[#1e293b]">
+              <h2 className="font-title text-base sm:text-lg font-bold text-ink">
                 Yêu cầu đổi mật khẩu mới
               </h2>
-              <p className="text-xs text-[#64748b] font-ui mt-0.5">
-                Tài khoản: <strong className="text-[#963861]">@{member.username || member.id}</strong> ({member.name})
+              <p className="text-xs text-subdued font-ui mt-0.5">
+                Tài khoản: <strong className="text-accent">@{member.username || member.id}</strong> ({member.name})
               </p>
             </div>
           </div>
@@ -96,7 +96,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
 
         {/* Content & Form */}
         <div className="p-6 space-y-4">
-          <p className="text-xs font-ui text-[#475569] leading-relaxed">
+          <p className="text-xs font-ui text-ink-lighter leading-relaxed">
             Để đảm bảo an toàn dữ liệu hệ thống WMS, bạn cần thiết lập mật khẩu riêng trước khi tiếp tục làm việc.
           </p>
 
@@ -106,9 +106,9 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="p-3 bg-[#fef2f2] border border-[#fecaca] rounded-[8px] flex items-start gap-2 text-xs text-[#b91c1c]"
+                className="p-3 bg-surface-negative border border-line rounded-vds-lg flex items-start gap-2 text-xs text-negative"
               >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#dc2626]" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-negative" />
                 <span className="font-medium leading-relaxed">{errorMsg}</span>
               </motion.div>
             )}
@@ -117,7 +117,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-ui font-bold text-[#334155]">
+              <label className="block text-xs font-ui font-bold text-ink-lighter">
                 Mật khẩu mới
               </label>
               <div className="relative">
@@ -129,13 +129,13 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
                     if (errorMsg) setErrorMsg('');
                   }}
                   placeholder="Tối thiểu 6 ký tự..."
-                  className="w-full px-3 py-2.5 bg-white border border-[#cbd5e1] focus:border-[#963861] focus:ring-2 focus:ring-[#963861]/10 rounded-[8px] text-xs font-medium text-[#1e293b] outline-hidden font-mono"
+                  className="w-full px-3 py-2.5 bg-surface border border-line focus:border-line-accent focus:ring-2 focus:ring-line-accent/10 rounded-vds-lg text-xs font-medium text-ink outline-hidden font-mono"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#94a3b8] hover:text-[#475569] cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-subdued-lighter hover:text-ink-lighter cursor-pointer"
                 >
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -144,7 +144,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
 
             {/* Confirm Password */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-ui font-bold text-[#334155]">
+              <label className="block text-xs font-ui font-bold text-ink-lighter">
                 Xác nhận mật khẩu mới
               </label>
               <div className="relative">
@@ -156,12 +156,12 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
                     if (errorMsg) setErrorMsg('');
                   }}
                   placeholder="Nhập lại mật khẩu mới..."
-                  className="w-full px-3 py-2.5 bg-white border border-[#cbd5e1] focus:border-[#963861] focus:ring-2 focus:ring-[#963861]/10 rounded-[8px] text-xs font-medium text-[#1e293b] outline-hidden font-mono"
+                  className="w-full px-3 py-2.5 bg-surface border border-line focus:border-line-accent focus:ring-2 focus:ring-line-accent/10 rounded-vds-lg text-xs font-medium text-ink outline-hidden font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#94a3b8] hover:text-[#475569] cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-subdued-lighter hover:text-ink-lighter cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -171,11 +171,11 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-[#963861] hover:bg-[#832e52] text-white font-ui text-xs font-bold rounded-[8px] transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 mt-2"
+              className="w-full py-2.5 px-4 bg-accent-solid hover:bg-accent-solid-hover text-on-color font-ui text-xs font-bold rounded-vds-lg transition-colors shadow-pop flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 mt-2"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="w-3.5 h-3.5 border-2 border-surface/30 border-t-white rounded-full animate-spin" />
                   Đang lưu mật khẩu...
                 </span>
               ) : (
@@ -190,7 +190,7 @@ export const ForceChangePasswordModal: React.FC<ForceChangePasswordModalProps> =
               <button
                 type="button"
                 onClick={onLogout}
-                className="w-full text-center text-xs font-ui text-[#64748b] hover:text-[#0f172a] hover:underline pt-1 cursor-pointer"
+                className="w-full text-center text-xs font-ui text-subdued hover:text-ink hover:underline pt-1 cursor-pointer"
               >
                 Đăng xuất tài khoản
               </button>

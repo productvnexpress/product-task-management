@@ -165,25 +165,25 @@ export function calculateProjectForecast(
 
   // Health label and colors
   let healthLabel = 'Đúng tiến độ';
-  let healthColor = 'text-[#24a148]';
-  let healthBg = 'bg-[#e2f6e9]';
-  let healthBorder = 'border-[#b8e8c4]';
+  let healthColor = 'text-positive';
+  let healthBg = 'bg-surface-positive';
+  let healthBorder = 'border-line';
 
   if (health === 'Completed') {
     healthLabel = 'Đã hoàn thành';
-    healthColor = 'text-[#15803d]';
-    healthBg = 'bg-[#f0fdf4]';
-    healthBorder = 'border-[#bbf7d0]';
+    healthColor = 'text-positive';
+    healthBg = 'bg-surface-positive';
+    healthBorder = 'border-line';
   } else if (health === 'At Risk') {
     healthLabel = 'Có nguy cơ trễ';
-    healthColor = 'text-[#b26b00]';
-    healthBg = 'bg-[#fcf5e8]';
-    healthBorder = 'border-[#f5dbb0]';
+    healthColor = 'text-warning';
+    healthBg = 'bg-surface-warning';
+    healthBorder = 'border-line';
   } else if (health === 'Delayed') {
     healthLabel = 'Dự báo trễ hạn';
-    healthColor = 'text-[#da1e28]';
-    healthBg = 'bg-[#fff0f1]';
-    healthBorder = 'border-[#ffd0d3]';
+    healthColor = 'text-negative';
+    healthBg = 'bg-surface-negative';
+    healthBorder = 'border-line';
   }
 
   // Variance text

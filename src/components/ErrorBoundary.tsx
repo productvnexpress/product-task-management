@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { AlertTriangle, RotateCcw } from './vds/icons';
 
 interface Props {
   children: React.ReactNode;
@@ -42,19 +42,19 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-[300px] flex items-center justify-center p-6">
-          <div className="bg-white rounded-[12px] border border-[#fecdd3] p-6 max-w-md w-full shadow-lg text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#fff1f2] text-[#be123c] flex items-center justify-center mx-auto border border-[#fecdd3]">
+          <div className="bg-surface rounded-vds-lg border border-line p-6 max-w-md w-full shadow-pop text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-surface-negative text-negative flex items-center justify-center mx-auto border border-line">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-title text-base font-bold text-[#202020]">
+              <h3 className="font-title text-base font-bold text-ink">
                 {this.props.fallbackTitle || 'Đã xảy ra lỗi hiển thị'}
               </h3>
-              <p className="text-xs font-ui text-[#71717a] leading-relaxed">
+              <p className="text-xs font-ui text-subdued leading-relaxed">
                 Hệ thống gặp sự cố khi xử lý dữ liệu của mục này. Bạn có thể tải lại trang hoặc bấm thử lại.
               </p>
               {this.state.error && (
-                <div className="p-2 bg-[#fafafa] rounded-[6px] text-[11px] font-mono text-[#be123c] text-left overflow-x-auto max-h-24">
+                <div className="p-2 bg-surface-100 rounded-vds-lg text-xs font-mono text-negative text-left overflow-x-auto max-h-24">
                   {this.state.error.message}
                 </div>
               )}
@@ -62,7 +62,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="pt-2">
               <button
                 onClick={this.handleReset}
-                className="h-8 px-4 rounded-[6px] bg-[#963861] hover:bg-[#7d2c4f] text-white text-xs font-ui font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="h-8 px-4 rounded-vds-lg bg-accent-solid hover:bg-accent-solid-hover text-on-color text-xs font-ui font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Thử tải lại</span>

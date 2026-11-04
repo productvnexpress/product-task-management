@@ -342,13 +342,15 @@ class NotificationRuleService {
           },
           { onConflict: 'key' }
         )
-        .then(({ error }) => {
-          if (error) {
-            // Không làm gián đoạn UI nếu bảng chưa tạo
-            console.debug('Supabase notification_rules sync notice:', error.message);
-          }
-        })
-        .catch(() => {});
+        .then(
+          ({ error }) => {
+            if (error) {
+              // Không làm gián đoạn UI nếu bảng chưa tạo
+              console.debug('Supabase notification_rules sync notice:', error.message);
+            }
+          },
+          () => {}
+        );
     } catch {}
   }
 
@@ -404,7 +406,7 @@ class NotificationRuleService {
   /**
    * Tìm quy tắc kích hoạt phù hợp cho một triggerType
    */
-  public getActiveRuleForTrigger(triggerType: NotificationTriggerType): NotificationRuleConfig | undefined {
+  public getActiveRuleForTrigger(triggerType: NotificationTriggerType | string): NotificationRuleConfig | undefined {
     const rules = this.getRules();
     return rules.find((r) => r.enabled && r.triggerType === triggerType);
   }

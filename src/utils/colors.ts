@@ -17,43 +17,43 @@ export const getTeamColor = (team?: TeamType | string): TeamColorScheme => {
   switch (team) {
     case 'Product Manager':
       return {
-        bg: 'bg-[#963861]',
-        lightBg: 'bg-[#fcf0f5]',
-        text: 'text-[#963861]',
-        border: 'border-[#f3c2d4]',
-        dot: 'bg-[#963861]',
+        bg: 'bg-accent-solid',
+        lightBg: 'bg-surface-accent-faint',
+        text: 'text-accent',
+        border: 'border-line',
+        dot: 'bg-accent-solid',
       };
     case 'UX/UI Designer':
       return {
-        bg: 'bg-[#0f62fe]',
-        lightBg: 'bg-[#eff6ff]',
-        text: 'text-[#1d4ed8]',
-        border: 'border-[#bfdbfe]',
-        dot: 'bg-[#0f62fe]',
+        bg: 'bg-support-solid',
+        lightBg: 'bg-surface-info',
+        text: 'text-info',
+        border: 'border-line',
+        dot: 'bg-support-solid',
       };
     case 'SEO':
       return {
-        bg: 'bg-[#7c3aed]',
-        lightBg: 'bg-[#faf5ff]',
-        text: 'text-[#7e22ce]',
-        border: 'border-[#e9d5ff]',
-        dot: 'bg-[#7c3aed]',
+        bg: 'bg-extreme-solid',
+        lightBg: 'bg-surface-100',
+        text: 'text-extreme',
+        border: 'border-line',
+        dot: 'bg-extreme-solid',
       };
     case 'Data':
       return {
-        bg: 'bg-[#0d9488]',
-        lightBg: 'bg-[#f0fdfa]',
-        text: 'text-[#0f766e]',
-        border: 'border-[#99f6e4]',
-        dot: 'bg-[#0d9488]',
+        bg: 'bg-positive-solid',
+        lightBg: 'bg-surface-positive',
+        text: 'text-positive',
+        border: 'border-line',
+        dot: 'bg-positive-solid',
       };
     default:
       return {
-        bg: 'bg-[#52525b]',
-        lightBg: 'bg-[#f4f4f5]',
-        text: 'text-[#52525b]',
-        border: 'border-[#e4e4e7]',
-        dot: 'bg-[#52525b]',
+        bg: 'bg-icon-strong',
+        lightBg: 'bg-surface-200',
+        text: 'text-ink-lighter',
+        border: 'border-line',
+        dot: 'bg-icon-strong',
       };
   }
 };

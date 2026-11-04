@@ -65,16 +65,16 @@ export const getRoleDisplayInfo = (role: UserRole) => {
         role,
         label: 'Admin (Quản trị)',
         shortLabel: 'Admin',
-        badgeClass: 'bg-[#fff1f2] text-[#be123c] border-[#fecdd3]',
-        dotColor: 'bg-[#be123c]',
+        badgeClass: 'bg-surface-negative text-negative border-line',
+        dotColor: 'bg-negative-solid',
       };
     case 'Manager':
       return {
         role,
         label: 'Manager (Quản lý)',
         shortLabel: 'Manager',
-        badgeClass: 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]',
-        dotColor: 'bg-[#1d4ed8]',
+        badgeClass: 'bg-surface-info text-info border-line',
+        dotColor: 'bg-support-solid',
       };
     case 'Executive':
     default:
@@ -82,8 +82,8 @@ export const getRoleDisplayInfo = (role: UserRole) => {
         role,
         label: 'Executive (Chuyên viên)',
         shortLabel: 'Executive',
-        badgeClass: 'bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]',
-        dotColor: 'bg-[#15803d]',
+        badgeClass: 'bg-surface-positive text-positive border-line',
+        dotColor: 'bg-positive-solid',
       };
   }
 };
