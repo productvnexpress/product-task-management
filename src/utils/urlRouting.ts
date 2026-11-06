@@ -25,6 +25,8 @@ const TAB_PATH_MAP: Record<string, ActiveTab> = {
   'thung-rac': 'trash',
   reports: 'reports',
   'bao-cao': 'reports',
+  performance: 'performance',
+  'hieu-qua': 'performance',
 };
 
 /**

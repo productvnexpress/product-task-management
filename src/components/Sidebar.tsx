@@ -34,9 +34,12 @@ import {
   Trash2,
   Settings,
   BarChart3,
+  TrendingUp,
+  Lock,
   CalendarDays
 } from './vds/icons';
 import { canCreateProject, canCreateMember, getUserRole } from '../utils/rbac';
+import { canViewTeamPerformance } from '../utils/teamPerformance';
 import { VdsButton, VdsLogo } from './vds';
 
 interface SidebarProps {
@@ -412,6 +415,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>Báo cáo</span>
               </div>
             </button>
+
+            {/* Hiệu quả team: chỉ tài khoản tienngoc */}
+            {canViewTeamPerformance(currentAuthUser) && (
+              <button
+                onClick={() => onTabChange('performance')}
+                className={`w-full px-3 py-2.5 rounded-vds-lg text-xs font-ui font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                  activeTab === 'performance'
+                    ? 'bg-surface-accent-faint text-accent border border-line'
+                    : 'text-ink-lighter hover:bg-surface-200 hover:text-ink'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <TrendingUp className="w-4 h-4 text-accent" />
+                  <span>Hiệu quả team</span>
+                </div>
+                <Lock className="w-3.5 h-3.5 text-icon-subdued" aria-label="Riêng tư" />
+              </button>
+            )}
 
             {/* When expanded: show Nhân sự, Thùng rác */}
             {isWorkspaceExpanded ? (

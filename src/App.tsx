@@ -81,6 +81,7 @@ import { deduplicateNotifications } from './utils/notificationDeduplication';
 import { recordTaskChanges, createCreationLog, deduplicateTaskLogs } from './utils/taskLogUtils';
 import { wmsDataService } from './services/wmsDataService';
 import { getUserRole, canPermanentDeleteTrash, canEmptyTrash } from './utils/rbac';
+import { canViewTeamPerformance } from './utils/teamPerformance';
 import { normalizeProjectStatus } from './utils/projectSortingUtils';
 import {
   initWebPushListener,
@@ -88,7 +89,7 @@ import {
   showWebPushNotification,
   isWebPushEnabledByUser,
 } from './utils/webPushNotifications';
-import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder, CheckCircle2, ChevronRight, Bell, BarChart3, FolderKanban, Sun, AlertOctagon, CalendarClock, User as UserIcon, Users as UsersIcon } from './components/vds/icons';
+import { Filter, CheckSquare, Plus, AlertTriangle, Layers, Globe, Star, Briefcase, Folder, CheckCircle2, ChevronRight, Bell, BarChart3, FolderKanban, Sun, AlertOctagon, CalendarClock, User as UserIcon, Users as UsersIcon, TrendingUp } from './components/vds/icons';
 import { VdsButton } from './components/vds';
 
 export function App() {
@@ -239,6 +240,9 @@ const ProjectDetailsDrawer = lazy(() =>
   import('./components/ProjectDetailsDrawer').then((m) => ({ default: m.ProjectDetailsDrawer }))
 );
 const AdminReportView = lazy(() => import('./components/AdminReportView').then((m) => ({ default: m.AdminReportView })));
+const TeamPerformanceView = lazy(() =>
+  import('./components/TeamPerformanceView').then((m) => ({ default: m.TeamPerformanceView }))
+);
 
 // Tải trước các gói phụ khi trình duyệt rảnh để chuyển trang không phải chờ
 const prefetchSecondaryViews = () => {
@@ -324,6 +328,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   useEffect(() => {
     currentAuthUserRef.current = currentAuthUser;
   }, [currentAuthUser]);
+
+  // Trang Hiệu quả team: chỉ tài khoản tienngoc. Tài khoản khác bị đưa về Công việc.
+  const canViewPerformance = canViewTeamPerformance(currentAuthUser);
+  useEffect(() => {
+    if (activeTab === 'performance' && currentAuthUser && !canViewPerformance) {
+      setActiveTab('tasks');
+    }
+  }, [activeTab, currentAuthUser, canViewPerformance]);
 
   // Modal bắt buộc đổi mật khẩu khi đăng nhập bằng mật khẩu mặc định
   const [forceChangePasswordUser, setForceChangePasswordUser] = useState<MemberItem | null>(null);
@@ -2433,6 +2445,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     trash: 'Thùng rác',
     settings: 'Thiết lập',
     reports: 'Báo cáo',
+    performance: 'Hiệu quả team',
   };
 
   // If not authenticated, display LoginView
@@ -2567,6 +2580,9 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     },
     { id: 'projects', label: 'Đi tới Dự án', icon: FolderKanban, keywords: 'du an project', run: () => setActiveTab('projects') },
     { id: 'reports', label: 'Đi tới Báo cáo', icon: BarChart3, keywords: 'bao cao report lich', run: () => setActiveTab('reports') },
+    ...(canViewPerformance
+      ? [{ id: 'performance', label: 'Đi tới Hiệu quả team', icon: TrendingUp, keywords: 'hieu qua team performance danh gia', run: () => setActiveTab('performance') }]
+      : []),
     {
       id: 'notifs',
       label: 'Mở thông báo',
@@ -3421,6 +3437,20 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                     onOpenDateInTasks={(dateStr) => {
                       setFilterState((f) => ({ ...f, dueFilter: 'custom', customDueDate: dateStr }));
                       setActiveTab('tasks');
+                    }}
+                  />
+                </ErrorBoundary>
+              )}
+              {/* VIEW 7: HIỆU QUẢ TEAM (CHỈ TÀI KHOẢN tienngoc) */}
+              {activeTab === 'performance' && canViewPerformance && (
+                <ErrorBoundary fallbackTitle="Không thể tải giao diện Hiệu quả team">
+                  <TeamPerformanceView
+                    tasks={tasks}
+                    projects={projects}
+                    members={members}
+                    onOpenTaskDetail={(task) => {
+                      setSelectedTask(task);
+                      setIsDrawerOpen(true);
                     }}
                   />
                 </ErrorBoundary>

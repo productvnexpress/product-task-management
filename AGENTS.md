@@ -22,6 +22,7 @@
    - [4.16. Quy chuẩn Cảnh báo Giai đoạn & Deadline Dự án trước 3 ngày (Project & Phase Deadline Alerts)](#416-quy-chuẩn-cảnh-báo-giai-đoạn--deadline-dự-án-trước-3-ngày-project--phase-deadline-alerts-specification)
    - [4.17. Quy chuẩn Tự động Refresh Hệ thống sau mỗi 3 Giờ (Auto-Refresh System Specification)](#417-quy-chuẩn-tự-động-refresh-hệ-thống-sau-mỗi-3-giờ-auto-refresh-system-specification)
    - [4.18. Quy chuẩn Thao tác Nhanh & Trải nghiệm Mobile (Quick Actions & Mobile UX)](#418-quy-chuẩn-thao-tác-nhanh--trải-nghiệm-mobile-quick-actions--mobile-ux-specification)
+   - [4.19. Phân tích Hiệu quả Team (Team Performance Analysis)](#419-phân-tích-hiệu-quả-team-team-performance-analysis)
 
 ---
 
@@ -1131,6 +1132,21 @@ Mục tiêu: hoàn thành tác vụ hằng ngày với ít chạm nhất trên c
 9. **Điều hướng Mobile (`components/MobileTabBar.tsx`)**: thanh đáy `Việc · Dự án · [+] · Báo cáo · Thêm` (Thêm mở Sidebar đầy đủ), huy hiệu đỏ trên tab Việc = số việc quá hạn, tôn trọng `safe-area-inset-bottom`. Header mobile bỏ nút menu, thêm nút tìm kiếm. `DailyCompletionAlert` thu gọn mặc định trên mobile (nhớ theo ngày).
 10. **Trang Dự án trên Mobile**: thẻ dự án dạng tóm tắt (tên, trạng thái, tiến độ giai đoạn, mốc kế tiếp); KPI, nhân sự, timeline, liên kết, ghi chú xem trong drawer "Chi tiết".
 11. **Hiệu năng tải trang**: `ProjectsManager`, `MembersManager`, `TrashManager`, `SettingsManager`, `AdminReportView`, `ProjectDetailsDrawer` tải theo nhu cầu (`React.lazy`) và được tải trước khi trình duyệt rảnh (`requestIdleCallback`).
+
+---
+
+### 4.19. Phân tích Hiệu quả Team (Team Performance Analysis)
+1. **Quyền truy cập**: Dành riêng tài khoản `tienngoc` (kiểm tra `username`/`email` qua `canViewTeamPerformance`, không mở theo role Admin được gán). Tài khoản khác không thấy mục Sidebar, không có lệnh trong Command Palette và bị đưa về `/tasks` nếu mở link trực tiếp.
+2. **Đường dẫn**: `/hieu-qua` (alias `/performance`). Mục Sidebar `Hiệu quả team` nằm ngay sau `Báo cáo`.
+3. **Kỳ phân tích**: `Theo tuần` (Thứ Hai – Chủ Nhật) hoặc `Theo tháng`, chuyển kỳ trước/sau, so sánh tỷ lệ đúng hạn với kỳ trước. Task thuộc kỳ là task có `dueDate` trong kỳ.
+4. **Không dùng API AI**: Toàn bộ xử lý chạy trên trình duyệt (`src/utils/teamPerformance.ts`) từ dữ liệu đã tải (tasks, logs, projects, nghỉ phép, ngày lễ):
+   - *Đúng hạn*: theo `getTaskCompletionDate` (cho phép đóng bù/điều chỉnh thời điểm hoàn thành).
+   - *Ngày công*: mỗi ngày làm việc (`workingTimeService.getWorkingDayWeight`, đã trừ lễ, nghỉ phép) chia đều cho các task đang mở trong ngày (từ "Đang làm" đến lần bấm "Hoàn thành" đầu tiên).
+   - *Dòng việc*: gom theo dự án; task ở Others/folder gom theo tiền tố tiêu đề (`X | ...`, `X: ...`) hoặc folder con.
+   - *Tín hiệu nội dung*: từ khoá tiêu đề (đầu ra, làm lại, điều phối/kiểm thử, báo cáo định kỳ, việc nhỏ) và chất lượng tiêu đề (`checkTitleQuality`).
+   - *Đánh giá*: cộng điểm (dự án chiến lược, có KPI, ≥30% task có đầu ra) và trừ điểm (chưa có dự án mà tốn ≥3 ngày, làm lại ≥40%, trễ ≥40%, điều phối ≥50%, báo cáo định kỳ, việc nhỏ chiếm trọn ngày, dự án quá hạn). Điểm ≥1: `Đáng`; ≤−2: `Không đáng`; còn lại: `Xem lại`. Mỗi đánh giá hiển thị kèm lý do.
+5. **Giao diện** (`TeamPerformanceView`): 4 số liệu chính, thanh phân bổ công theo đánh giá, 2 lớp xem `Theo thành viên` / `Theo dự án` (mở rộng xem lý do và danh sách task, bấm task mở `TaskDetailDrawer`), mục `Việc nên xử lý` (ước tính ngày công lấy lại) và mục `Cách tính`.
+6. **Lưu trữ**: Không phát sinh bảng mới trên Supabase.
 
 ---
 
