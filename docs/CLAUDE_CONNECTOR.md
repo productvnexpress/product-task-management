@@ -5,6 +5,7 @@ Claude thêm, cập nhật, xem công việc thẳng trong app "Quản lý công
 - Địa chỉ connector: `https://product-task-management-qr39.vercel.app/api/mcp`
 - Mã nguồn: `api/mcp.ts`, `api/_wms/`
 - Giao thức: MCP Streamable HTTP, không trạng thái, chạy dạng Vercel Function
+- Checklist triển khai: [CLAUDE_CONNECTOR_TRIEN_KHAI.md](CLAUDE_CONNECTOR_TRIEN_KHAI.md)
 
 ## 1. Công cụ
 
