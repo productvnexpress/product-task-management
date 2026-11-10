@@ -22,6 +22,7 @@
    - [4.16. Quy chuẩn Cảnh báo Giai đoạn & Deadline Dự án trước 3 ngày (Project & Phase Deadline Alerts)](#416-quy-chuẩn-cảnh-báo-giai-đoạn--deadline-dự-án-trước-3-ngày-project--phase-deadline-alerts-specification)
    - [4.17. Quy chuẩn Tự động Refresh Hệ thống sau mỗi 3 Giờ (Auto-Refresh System Specification)](#417-quy-chuẩn-tự-động-refresh-hệ-thống-sau-mỗi-3-giờ-auto-refresh-system-specification)
    - [4.18. Quy chuẩn Thao tác Nhanh & Trải nghiệm Mobile (Quick Actions & Mobile UX)](#418-quy-chuẩn-thao-tác-nhanh--trải-nghiệm-mobile-quick-actions--mobile-ux-specification)
+   - [4.20. Connector Claude (MCP Server)](#420-connector-claude-mcp-server)
    - [4.19. Phân tích Hiệu quả Team (Team Performance Analysis)](#419-phân-tích-hiệu-quả-team-team-performance-analysis)
 
 ---
@@ -1147,6 +1148,21 @@ Mục tiêu: hoàn thành tác vụ hằng ngày với ít chạm nhất trên c
    - *Đánh giá*: cộng điểm (dự án chiến lược, có KPI, ≥30% task có đầu ra) và trừ điểm (chưa có dự án mà tốn ≥3 ngày, làm lại ≥40%, trễ ≥40%, điều phối ≥50%, báo cáo định kỳ, việc nhỏ chiếm trọn ngày, dự án quá hạn). Điểm ≥1: `Đáng`; ≤−2: `Không đáng`; còn lại: `Xem lại`. Mỗi đánh giá hiển thị kèm lý do.
 5. **Giao diện** (`TeamPerformanceView`): 4 số liệu chính, thanh phân bổ công theo đánh giá, 2 lớp xem `Theo thành viên` / `Theo dự án` (mở rộng xem lý do và danh sách task, bấm task mở `TaskDetailDrawer`), mục `Việc nên xử lý` (ước tính ngày công lấy lại) và mục `Cách tính`.
 6. **Lưu trữ**: Không phát sinh bảng mới trên Supabase.
+
+---
+
+### 4.20. Connector Claude (MCP Server)
+Claude thêm, cập nhật, xem công việc thẳng trong WMS qua máy chủ MCP chạy dạng Vercel Function. Hướng dẫn triển khai và sử dụng: [docs/CLAUDE_CONNECTOR.md](docs/CLAUDE_CONNECTOR.md).
+
+1. **Kiến trúc**: `api/mcp.ts` (điểm vào `POST /api/mcp`, Streamable HTTP không trạng thái) và `api/_wms/` (`auth.ts` xác thực token, `store.ts` truy cập Supabase, `domain.ts` tra cứu nhân sự/dự án và ngày giờ Việt Nam, `tools.ts` khai báo công cụ). `vercel.json` loại `/api/` khỏi rewrite SPA.
+2. **8 công cụ**: `list_tasks`, `get_task`, `add_task`, `add_tasks` (tối đa 50 việc), `update_task`, `daily_brief`, `list_projects`, `list_members`. Không có công cụ xoá.
+3. **Bảo mật (repo public)**:
+   - Biến môi trường Vercel: `WMS_MCP_TOKENS` (`username:token`, cách nhau dấu phẩy, token ≥ 32 ký tự, sinh bằng `npm run mcp:token`) và `SUPABASE_SERVICE_ROLE_KEY`. Tuyệt đối không đưa hai giá trị này vào repo.
+   - Token truyền qua `Authorization: Bearer` hoặc `?token=`. Mỗi nhân sự một token; token xác định tác giả thao tác và quyền sửa.
+4. **Quy tắc nghiệp vụ dùng chung với app** (import từ `src/utils`, không viết bản sao): RBAC mục 4.9 (`canEditTask`), nhật ký công việc (`createCreationLog`, `recordTaskChanges`), kiểm tra URL (`isValidUrl`), cảnh báo tiêu đề chung chung (`checkTitleQuality`), thư mục dự án (`folderUtils`). Hoàn thành bắt buộc link kết quả hợp lệ; Bị nghẽn bắt buộc lý do; ghi chú nhật ký có đuôi `(qua Claude)`; giao việc cho người khác sinh thông báo `task_assigned`; chống trùng theo tiêu đề + người phụ trách.
+5. **Cơ sở dữ liệu**: không thêm bảng, không đổi schema. Đọc `members`, `projects`, `folders`, `tasks`, `task_logs`, `member_leaves`; ghi `tasks`, `task_logs`, `notifications`. `update_task` chỉ ghi các cột thực sự đổi.
+6. **Ràng buộc kỹ thuật**: Vercel chạy function bằng Node ESM. Import tương đối trong `api/` và trong các file `src/utils` mà `api/` dùng bắt buộc có đuôi `.js`.
+7. **Kiểm thử**: `npm run test:mcp` (dữ liệu trong bộ nhớ, không chạm Supabase). Bắt buộc chạy đạt trước khi commit thay đổi trong `api/` hoặc các file `src/utils` dùng chung.
 
 ---
 

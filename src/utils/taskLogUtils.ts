@@ -4,7 +4,7 @@
  */
 
 import { TaskItem, TaskLogItem, TaskLogChange } from '../types';
-import { formatDateWithEnDay } from './formatters';
+import { formatDateWithEnDay } from './formatters.js';
 
 /**
  * Format timestamp into readable date & time conforming to RULE.md section 2.3
