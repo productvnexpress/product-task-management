@@ -4,13 +4,14 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, AtSign, BellRing, Calendar, Folder, Hash, X } from '../vds/icons';
+import { AlertTriangle, AtSign, BellRing, Calendar, Clock, Folder, Hash, X } from '../vds/icons';
 import { MemberItem, ProjectItem } from '../../types';
 import { QuickAddParseResult, QuickTokenType, parseQuickAdd } from '../../utils/quickAddParser';
 import { TitleQualityResult, stripDiacritics } from '../../utils/titleQuality';
 import { getInitials } from '../../utils/formatters';
 import { getTeamColor } from '../../utils/colors';
 import { formatDateWithEnDay } from '../../utils/formatters';
+import { formatEstimate } from '../../utils/estimate';
 
 interface Suggestion {
   id: string;
@@ -221,6 +222,14 @@ export const SmartTitleInput: React.FC<SmartTitleInputProps> = ({
       icon: <Calendar className="w-3 h-3" />,
       label: `${parsed.dueLabel} · ${formatDateWithEnDay(parsed.dueDate)}`,
       tone: 'bg-surface-warning text-warning border-line',
+    });
+  }
+  if (parsed.estimateMinutes) {
+    chips.push({
+      type: 'estimate',
+      icon: <Clock className="w-3 h-3" />,
+      label: formatEstimate(parsed.estimateMinutes),
+      tone: 'bg-surface-200 text-ink border-line',
     });
   }
   if (parsed.isUrgent) {

@@ -6,6 +6,7 @@
 import type { MemberItem, ProjectItem, TaskItem, TaskStatus, PriorityLevel, TeamType } from '../../src/types.js';
 import { stripDiacritics } from '../../src/utils/titleQuality.js';
 import { getFolderPath, inferProjectFolderId } from '../../src/utils/folderUtils.js';
+import { formatEstimate, isValidEstimate } from '../../src/utils/estimate.js';
 import type { FolderRow, MemberRow, ProjectRow, TaskRow } from './store.js';
 
 export const TASK_STATUSES = ['Chưa làm', 'Đang làm', 'Bị nghẽn', 'Hoàn thành'] as const;
@@ -190,6 +191,7 @@ export function toTaskItem(row: TaskRow): TaskItem {
     status: row.status as TaskStatus,
     priority: row.priority as PriorityLevel,
     dueDate: row.due_date ? row.due_date.slice(0, 10) : undefined,
+    estimateMinutes: isValidEstimate(Number(row.estimate_minutes)) ? Number(row.estimate_minutes) : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     progress: row.progress !== null && row.progress !== undefined ? Number(row.progress) : 0,
@@ -226,6 +228,7 @@ export function toEditableColumns(task: TaskItem): Partial<TaskRow> {
     result_link: task.resultLink || null,
     latest_update_note: task.latestUpdateNote || null,
     completed_at: task.completedAt || null,
+    estimate_minutes: task.estimateMinutes ?? null,
   };
 }
 
@@ -235,7 +238,7 @@ export function diffColumns(before: Partial<TaskRow>, after: Partial<TaskRow>): 
   for (const key of Object.keys(after) as (keyof TaskRow)[]) {
     const a = before[key] ?? null;
     const b = after[key] ?? null;
-    const same = key === 'progress' ? Number(a) === Number(b) : a === b;
+    const same = key === 'progress' || key === 'estimate_minutes' ? Number(a) === Number(b) : a === b;
     if (!same) patch[key] = b;
   }
   return patch as Partial<TaskRow>;
@@ -266,6 +269,8 @@ export function taskLine(row: TaskRow, opts: LineOptions): string {
     row.status,
   ];
   if (row.priority === 'Khẩn cấp') parts.push('Khẩn cấp');
+  const estimate = formatEstimate(Number(row.estimate_minutes));
+  if (estimate) parts.push(`~${estimate}`);
   if (opts.showAssignee) parts.push(row.assignee);
   parts.push(projectTag(row, opts.projects));
   let line = `- ${row.title} — ${parts.join(' · ')} · id: ${row.id}`;
@@ -281,4 +286,36 @@ export function byUrgency(a: TaskRow, b: TaskRow): number {
   if (urgent(a) !== urgent(b)) return urgent(a) - urgent(b);
   const rank: Record<string, number> = { 'Bị nghẽn': 0, 'Đang làm': 1, 'Chưa làm': 2, 'Hoàn thành': 3 };
   return (rank[a.status] ?? 9) - (rank[b.status] ?? 9);
+}
+
+// ---------------------------------------------------------------------------
+// Chống trùng theo nghĩa: hai tiêu đề gần giống nhau dù khác vài chữ.
+// ---------------------------------------------------------------------------
+
+const STOP_WORDS = new Set([
+  'cho', 'cua', 'va', 'cac', 'nhung', 'tren', 'trong', 'voi', 'de', 'la', 'mot', 'theo', 'tai', 've', 'ban',
+  'viec', 'task', 'phan', 'lai', 'tu', 'den', 'khi', 'thi', 'the', 'a', 'an', 'of', 'for', 'to',
+]);
+
+export function titleTokens(title: string): string[] {
+  return [...new Set(fold(title).replace(/-/g, ' ').split(' ').filter((w) => w.length >= 2 && !STOP_WORDS.has(w)))];
+}
+
+/** Hai tiêu đề gần trùng: phần lớn từ khoá giống nhau (không tính từ đệm, không phân biệt dấu). */
+export function isSimilarTitle(a: string, b: string): boolean {
+  const ta = titleTokens(a);
+  const tb = titleTokens(b);
+  if (ta.length < 2 || tb.length < 2) return false;
+  const shared = ta.filter((w) => tb.includes(w)).length;
+  const union = new Set([...ta, ...tb]).size;
+  const smaller = Math.min(ta.length, tb.length);
+  return shared / union >= 0.6 || (smaller >= 3 && shared / smaller >= 0.8);
+}
+
+/** Số ngày từ lần cập nhật cuối tới hôm nay (giờ Việt Nam). */
+export function daysSinceUpdate(row: TaskRow, today: string): number {
+  const stamp = row.updated_at || row.created_at;
+  if (!stamp) return 0;
+  const day = vnToday(new Date(stamp));
+  return Math.max(0, dayDiff(today, day));
 }

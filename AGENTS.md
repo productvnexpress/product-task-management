@@ -24,6 +24,7 @@
    - [4.18. Quy chuẩn Thao tác Nhanh & Trải nghiệm Mobile (Quick Actions & Mobile UX)](#418-quy-chuẩn-thao-tác-nhanh--trải-nghiệm-mobile-quick-actions--mobile-ux-specification)
    - [4.20. Connector Claude (MCP Server)](#420-connector-claude-mcp-server)
    - [4.19. Phân tích Hiệu quả Team (Team Performance Analysis)](#419-phân-tích-hiệu-quả-team-team-performance-analysis)
+   - [4.21. Ước lượng thời gian & Gợi ý việc tiếp theo](#421-ước-lượng-thời-gian--gợi-ý-việc-tiếp-theo-estimate--next-task-suggestions)
 
 ---
 
@@ -42,6 +43,7 @@ Mỗi công việc trong hệ thống được định nghĩa đầy đủ theo 
 | `assignee` | `string` | Có | Họ tên thành viên phụ trách chính (thuộc nhóm Product hoặc Stakeholder). |
 | `priority` | `PriorityLevel` | Có | Mức độ ưu tiên: `'Khẩn cấp'` (Đỏ) \| `'Bình thường'` (Xám/Trung tính). |
 | `dueDate` | `string` | Có | Ngày hạn hoàn thành theo định dạng chuẩn ISO `YYYY-MM-DD`. |
+| `estimateMinutes` | `number` | Không | Ước lượng thời gian làm, tính bằng phút. Bắt buộc khi tự đăng ký việc trên app (mục 4.21). |
 | `status` | `TaskStatus` | Có | 4 trạng thái công việc chuẩn: `'Chưa làm'` (Mặc định khi tạo việc) \| `'Đang làm'` \| `'Bị nghẽn'` \| `'Hoàn thành'`. |
 | `progress` | `number` | Có | Tiến độ hoàn thành thực tế từ `0` đến `100` (%). Mặc định khởi tạo `0%`. |
 | `notes` | `string` | Không | Ghi chú hướng dẫn thực hiện, tiêu chí nghiệm thu hoặc checklist nội bộ. |
@@ -1109,6 +1111,7 @@ Mục tiêu: hoàn thành tác vụ hằng ngày với ít chạm nhất trên c
    - `#mã` hoặc `#tên dự án` gán dự án (VD: `#WMS`, `#ykien`).
    - Hạn ở cuối câu: `hôm nay`, `mai`, `ngày kia`, `thứ 2`…`thứ 7`, `t2`…`t7`, `cn`, `tuần sau`; bất kỳ đâu: `dd/mm` hoặc `dd/mm/yyyy`. Chữ "Mai" viết hoa không bị hiểu là ngày (tên người).
    - `!` đánh dấu Khẩn cấp.
+   - `~2h` ước lượng thời gian (`~30p`, `~1,5h`, `~1d`).
    - Gõ `@`/`#` bung danh sách gợi ý (↑↓ chọn, Enter/Tab chèn, Esc đóng). Mỗi token nhận diện hiện thành chip có nút ✕ để bỏ nhận diện (giữ nguyên chữ trong tiêu đề).
    - Ưu tiên giá trị: token trong tiêu đề > ô chọn; nếu người dùng tự đổi ô chọn thì ô chọn thắng.
    - Desktop: sau khi thêm, ô nhập giữ nguyên dự án/người phụ trách và focus lại để thêm việc liên tiếp. Mobile: phím Enter trên bàn phím = thêm và nhập tiếp; nút lớn = thêm và đóng.
@@ -1155,14 +1158,49 @@ Mục tiêu: hoàn thành tác vụ hằng ngày với ít chạm nhất trên c
 Claude thêm, cập nhật, xem công việc thẳng trong WMS qua máy chủ MCP chạy dạng Vercel Function. Hướng dẫn triển khai và sử dụng: [docs/CLAUDE_CONNECTOR.md](docs/CLAUDE_CONNECTOR.md).
 
 1. **Kiến trúc**: `api/mcp.ts` (điểm vào `POST /api/mcp`, Streamable HTTP không trạng thái) và `api/_wms/` (`auth.ts` xác thực token, `store.ts` truy cập Supabase, `domain.ts` tra cứu nhân sự/dự án và ngày giờ Việt Nam, `tools.ts` khai báo công cụ). `vercel.json` loại `/api/` khỏi rewrite SPA.
-2. **8 công cụ**: `list_tasks`, `get_task`, `add_task`, `add_tasks` (tối đa 50 việc), `update_task`, `daily_brief`, `list_projects`, `list_members`. Không có công cụ xoá.
+2. **12 công cụ**: `list_tasks`, `get_task`, `add_task`, `add_tasks` (tối đa 50 việc), `update_task`, `delete_task` (chỉ xoá mềm vào Thùng rác), `add_comment`, `daily_brief`, `member_summary`, `workload_today`, `list_projects`, `list_members`.
 3. **Bảo mật (repo public)**:
    - Biến môi trường Vercel: `WMS_MCP_TOKENS` (`username:token`, cách nhau dấu phẩy, token ≥ 32 ký tự, sinh bằng `npm run mcp:token`) và `SUPABASE_SERVICE_ROLE_KEY`. Tuyệt đối không đưa hai giá trị này vào repo.
    - Token truyền qua `Authorization: Bearer` hoặc `?token=`. Mỗi nhân sự một token; token xác định tác giả thao tác và quyền sửa.
-4. **Quy tắc nghiệp vụ dùng chung với app** (import từ `src/utils`, không viết bản sao): RBAC mục 4.9 (`canEditTask`), nhật ký công việc (`createCreationLog`, `recordTaskChanges`), kiểm tra URL (`isValidUrl`), cảnh báo tiêu đề chung chung (`checkTitleQuality`), thư mục dự án (`folderUtils`). Hoàn thành bắt buộc link kết quả hợp lệ; Bị nghẽn bắt buộc lý do; ghi chú nhật ký có đuôi `(qua Claude)`; giao việc cho người khác sinh thông báo `task_assigned`; chống trùng theo tiêu đề + người phụ trách.
-5. **Cơ sở dữ liệu**: không thêm bảng, không đổi schema. Đọc `members`, `projects`, `folders`, `tasks`, `task_logs`, `member_leaves`; ghi `tasks`, `task_logs`, `notifications`. `update_task` chỉ ghi các cột thực sự đổi.
+4. **Quy tắc nghiệp vụ dùng chung với app** (import từ `src/utils`, không viết bản sao): RBAC mục 4.9 (`canEditTask`), nhật ký công việc (`createCreationLog`, `recordTaskChanges`), kiểm tra URL (`isValidUrl`), cảnh báo tiêu đề chung chung (`checkTitleQuality`), thư mục dự án (`folderUtils`). Hoàn thành bắt buộc link kết quả hợp lệ; Bị nghẽn bắt buộc lý do; ghi chú nhật ký có đuôi `(qua Claude)`; giao việc cho người khác sinh thông báo `task_assigned`; chống trùng theo tiêu đề + người phụ trách, tiêu đề gần giống việc đang mở thì dừng lại hỏi (`isSimilarTitle`); quyền xoá theo `canDeleteTask`; `workload_today` giới hạn Executive chỉ xem của mình.
+5. **Cơ sở dữ liệu**: schema bổ sung ở mục 4.21. Đọc `members`, `projects`, `project_phases`, `folders`, `tasks`, `task_logs`, `member_leaves`; ghi `tasks`, `task_logs`, `notifications`, `trash`. `update_task` chỉ ghi các cột thực sự đổi. Cột tuỳ chọn chưa có trên cơ sở dữ liệu (`completed_at`, `estimate_minutes`) được bỏ qua khi ghi.
 6. **Ràng buộc kỹ thuật**: Vercel chạy function bằng Node ESM. Import tương đối trong `api/` và trong các file `src/utils` mà `api/` dùng bắt buộc có đuôi `.js`.
 7. **Kiểm thử**: `npm run test:mcp` (dữ liệu trong bộ nhớ, không chạm Supabase). Bắt buộc chạy đạt trước khi commit thay đổi trong `api/` hoặc các file `src/utils` dùng chung.
+
+---
+
+### 4.21. Ước lượng thời gian & Gợi ý việc tiếp theo (Estimate & Next-Task Suggestions)
+1. **Ước lượng thời gian (`estimateMinutes`, `src/utils/estimate.ts`)**:
+   - 6 mức: 30 phút, 1 giờ, 2 giờ, Nửa ngày (240), 1 ngày (480), Hơn 1 ngày (960). Gõ nhanh `~2h` trong tiêu đề.
+   - Bắt buộc khi tự đăng ký việc trên `QuickAddBar` và `MobileQuickAddDrawer` (`ESTIMATE_REQUIRED`). Giao việc cho người khác: không bắt buộc, người nhận bổ sung trong `TaskDetailDrawer`.
+   - Hiển thị `~2h` trên hàng công việc chưa hoàn thành. Thay đổi ước lượng ghi vào nhật ký công việc (trường `Ước lượng`).
+   - Tải ngày: tổng ước lượng việc đến hạn so với 8 giờ; dưới 6 giờ là tải nhẹ (`workload_today` của connector).
+2. **Gợi ý việc tiếp theo (`api/suggest.ts`, `components/NextTaskSuggestions.tsx`)**:
+   - Sau khi thêm hoặc đóng việc, app gọi `POST /api/suggest`. Máy chủ gom mốc dự án, checklist còn dở, thành viên, việc đang mở (`api/_wms/next.ts`), gọi Claude Haiku (`claude-haiku-5-5`), lọc gợi ý trùng, mơ hồ, sai người (`api/_wms/suggest.ts`).
+   - Tối đa 3 gợi ý. Chỉ đề xuất: người dùng bấm "Thêm" mới tạo việc; việc mới kế thừa dự án, giai đoạn của việc gốc.
+   - Khoá `ANTHROPIC_API_KEY` chỉ nằm ở biến môi trường Vercel. Giới hạn 30 lượt mỗi người mỗi ngày, 300 lượt toàn hệ thống.
+   - Tiết kiệm token: chỉ gọi cho việc gắn dự án thật (không gọi với Others, việc trong thư mục, việc lặp lại); dự án không có mốc, thành viên, checklist thì không gọi; chờ 6 giây sau khi thêm, 2,5 giây sau khi đóng, thao tác liên tiếp chỉ tính việc cuối; hết lượt hoặc người dùng bấm "Tắt hôm nay" thì ngừng gọi; tắt suy luận mở rộng, trần đầu ra 700 token.
+   - Thiếu khoá, thiếu bảng hoặc API lỗi: không hiện gợi ý, không ảnh hưởng thao tác khác.
+3. **Cơ sở dữ liệu** (`docs/sql/2026-11-claude-assist.sql`):
+   ```sql
+   ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS estimate_minutes INTEGER
+     CHECK (estimate_minutes IS NULL OR (estimate_minutes BETWEEN 5 AND 4800));
+   ALTER TABLE public.tasks ALTER COLUMN due_date DROP NOT NULL;
+   CREATE TABLE IF NOT EXISTS public.ai_suggestion_log (
+     id TEXT PRIMARY KEY,
+     username TEXT NOT NULL,
+     trigger TEXT NOT NULL,                 -- 'created' | 'completed'
+     task_id TEXT,
+     task_title TEXT,
+     suggestions JSONB NOT NULL DEFAULT '[]'::jsonb,
+     accepted_titles JSONB NOT NULL DEFAULT '[]'::jsonb,
+     model TEXT,
+     input_tokens INTEGER,
+     output_tokens INTEGER,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   );
+   ALTER TABLE public.ai_suggestion_log ENABLE ROW LEVEL SECURITY; -- không tạo policy: chỉ service key truy cập
+   ```
 
 ---
 

@@ -76,6 +76,15 @@ import { isTaskForMember, isTaskInMemberProjects, getMemberProjectRelation, isSa
 import { isTaskOverdue, isTaskDueToday, isTaskDueSoon, getTodayDateString, normalizeDateString, formatTaskDueDisplay } from './utils/dateUtils';
 import { formatDateWithEnDay } from './utils/formatters';
 import { extractMentions, getTaskThreadParticipants } from './utils/mentionUtils';
+import { NextTaskSuggestions, type NextSuggestState } from './components/NextTaskSuggestions';
+import {
+  canSuggestFor,
+  turnSuggestOffToday,
+  fetchNextSuggestions,
+  reportSuggestionAccepted,
+  type NextSuggestion,
+  type SuggestTrigger,
+} from './services/suggestService';
 import { isValidUrl, normalizeUrl } from './utils/urlValidator';
 import { deduplicateNotifications } from './utils/notificationDeduplication';
 import { recordTaskChanges, createCreationLog, deduplicateTaskLogs } from './utils/taskLogUtils';
@@ -363,6 +372,11 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     prefetchSecondaryViews();
   }, []);
   const [undoToast, setUndoToast] = useState<UndoToastState | null>(null);
+  const [nextSuggest, setNextSuggest] = useState<NextSuggestState | null>(null);
+  const nextSuggestSource = useRef<{ task: TaskItem; logId: string } | null>(null);
+  const nextSuggestRequest = useRef(0);
+  const nextSuggestTimer = useRef<number | undefined>(undefined);
+  const dismissNextSuggest = useCallback(() => setNextSuggest(null), []);
   const dismissUndoToast = useCallback(() => setUndoToast(null), []);
 
   // Cách nhóm danh sách việc: theo hạn (mặc định cho Chuyên viên) hoặc theo dự án
@@ -1635,6 +1649,22 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   };
 
   // Task Operations
+  // Gợi ý việc tiếp theo (Claude Haiku qua /api/suggest). Phần phụ: lỗi hay chậm đều không ảnh hưởng thao tác chính.
+  const requestNextSuggestions = (task: TaskItem, trigger: SuggestTrigger) => {
+    if (!currentAuthUser || !canSuggestFor(task)) return;
+    const requestId = ++nextSuggestRequest.current;
+    window.clearTimeout(nextSuggestTimer.current);
+    // Chờ một nhịp rồi mới gọi: thêm hay đóng nhiều việc liên tiếp thì chỉ việc cuối cùng tốn một lượt gọi Claude.
+    nextSuggestTimer.current = window.setTimeout(() => {
+      fetchNextSuggestions(currentAuthUser, trigger, task).then((result) => {
+        // Bỏ kết quả cũ nếu người dùng đã thao tác việc khác trong lúc chờ.
+        if (!result || requestId !== nextSuggestRequest.current) return;
+        nextSuggestSource.current = { task, logId: result.logId };
+        setNextSuggest({ id: Date.now(), trigger, sourceTitle: task.title, items: result.suggestions, added: [] });
+      });
+    }, trigger === 'created' ? 6000 : 2500);
+  };
+
   const handleToggleComplete = (taskId: string, authorName?: string) => {
     const actor = authorName || currentAuthUser?.name || activeProductMember?.name;
     const task = tasks.find((t) => t.id === taskId);
@@ -1663,6 +1693,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
           createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, { oldStatus: t.status });
+          if (!isComp) requestNextSuggestions(logged, 'completed');
           if (!isComp && t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
           }
@@ -1701,6 +1732,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
           }
           wmsDataService.saveTask(logged, logged.logs?.[0]).catch((e) => console.error('Supabase error:', e));
           createAndDispatchNotifications(logged, 'status_changed', actor || logged.assignee, { oldStatus: t.status, note: customNote });
+          if (isComp && t.status !== 'Hoàn thành') requestNextSuggestions(logged, 'completed');
           if (isComp && t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
           }
@@ -1736,6 +1768,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             oldStatus: t.status,
             note,
           });
+          requestNextSuggestions(logged, 'completed');
           if (t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
           }
@@ -1757,6 +1790,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       team: TeamType;
       assignee: string;
       dueDate?: string;
+      estimateMinutes?: number;
       priority: PriorityLevel;
       details?: string;
       phaseId?: string;
@@ -1786,6 +1820,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       progress: 0,
       priority: newTaskData.priority,
       dueDate: taskDueDate,
+      estimateMinutes: newTaskData.estimateMinutes,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       details: newTaskData.details || '',
@@ -1808,6 +1843,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     setTasks((prev) => [newTask, ...prev]);
     wmsDataService.saveTask(newTask, initLog).catch((e) => console.error('Supabase error:', e));
     createAndDispatchNotifications(newTask, 'created', creator);
+    return newTask;
   };
 
   const handleUpdateTaskDueDate = (taskId: string, newDueDate: string, authorName?: string) => {
@@ -1886,6 +1922,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
             ) ? 'comment' : 'updated';
             createAndDispatchNotifications(logged, actType, actor || logged.assignee, { note: customNote });
           }
+          if (isComp && t.status !== 'Hoàn thành') requestNextSuggestions(logged, 'completed');
           if (isComp && t.status !== 'Hoàn thành' && t.recurringRuleId) {
             recurringTaskService.onTaskCompleted(t.recurringRuleId);
           }
@@ -2477,6 +2514,35 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
   const showUndo = (message: string, onUndo?: () => void) =>
     setUndoToast({ id: Date.now(), message, onUndo });
 
+  /** Thêm việc từ form của người dùng rồi hỏi gợi ý việc tiếp theo. */
+  const handleAddTaskWithSuggestions = (data: Parameters<typeof handleAddTask>[0]) => {
+    const created = handleAddTask(data);
+    requestNextSuggestions(created, 'created');
+  };
+
+  /** Biến một gợi ý thành việc thật, kế thừa dự án và giai đoạn của việc gốc. */
+  const handleAddSuggestedTask = (item: NextSuggestion) => {
+    const source = nextSuggestSource.current;
+    if (!source) return;
+    const member = members.find((m) => isSamePersonName(m.name, item.assignee));
+    handleAddTask({
+      title: item.title,
+      projectId: source.task.projectId,
+      projectName: source.task.projectName,
+      folderId: source.task.folderId,
+      folderName: source.task.folderName,
+      phaseId: source.task.phaseId,
+      phaseName: source.task.phaseName,
+      team: member?.team || source.task.team,
+      assignee: member?.name || source.task.assignee,
+      dueDate: item.dueDate,
+      estimateMinutes: item.estimateMinutes,
+      priority: 'Bình thường',
+    });
+    reportSuggestionAccepted(currentAuthUser, source.logId, item.title);
+    setNextSuggest((cur) => (cur ? { ...cur, added: [...cur.added, item.title] } : cur));
+  };
+
   const quickUpdateDueDate = (taskId: string, newDate: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -2865,7 +2931,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
                         folders={folders}
                         tasks={tasks}
                         members={members}
-                        onAddTask={handleAddTask}
+                        onAddTask={handleAddTaskWithSuggestions}
                         defaultProjectId={
                           filterState.projectId !== 'all' ? filterState.projectId : undefined
                         }
@@ -3600,6 +3666,16 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
       />
 
       <UndoToast toast={undoToast} onDismiss={dismissUndoToast} />
+      <NextTaskSuggestions
+        state={nextSuggest}
+        currentUserName={currentAuthUser?.name}
+        onAdd={handleAddSuggestedTask}
+        onDismiss={dismissNextSuggest}
+        onTurnOffToday={() => {
+          turnSuggestOffToday();
+          setNextSuggest(null);
+        }}
+      />
 
       {/* Bảng lệnh & tìm kiếm nhanh (⌘K) */}
       <CommandPalette
@@ -3629,7 +3705,7 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
         folders={folders}
         tasks={tasks}
         members={members}
-        onAddTask={handleAddTask}
+        onAddTask={handleAddTaskWithSuggestions}
         defaultProjectId={filterState.projectId !== 'all' ? filterState.projectId : undefined}
         defaultFolderId={filterState.folderId && filterState.folderId !== 'all' ? filterState.folderId : undefined}
         defaultAssignee={activeProductMember?.name || currentAuthUser?.name}

@@ -178,6 +178,7 @@ export interface TaskItem {
   status: TaskStatus;
   priority: PriorityLevel;
   dueDate?: string; // YYYY-MM-DD (hoặc rỗng khi chưa đặt hạn)
+  estimateMinutes?: number; // Ước lượng thời gian làm (phút)
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
   details?: string;

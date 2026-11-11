@@ -66,6 +66,8 @@ export interface TaskRow {
   is_recurring?: boolean | null;
   recurring_rule_id?: string | null;
   recurring_frequency?: string | null;
+  /** Ước lượng thời gian làm (phút). Cột tuỳ chọn: xem docs/sql/2026-11-claude-assist.sql */
+  estimate_minutes?: number | null;
 }
 
 export interface TaskLogRow {
@@ -102,6 +104,41 @@ export interface LeaveRow {
   status?: string | null;
 }
 
+/** Dòng trong bảng `trash`: đúng cấu trúc app dùng để khôi phục. */
+export interface TrashRow {
+  id: string;
+  original_id: string;
+  type: 'task';
+  title: string;
+  subtitle: string | null;
+  data: unknown;
+  deleted_by: string;
+  deleted_at: string;
+}
+
+export interface PhaseRow {
+  id: string;
+  name: string;
+  due_date: string | null;
+  status: string | null;
+  sort_order?: number | null;
+}
+
+export interface ChecklistRow {
+  phaseId?: number;
+  phaseTitle?: string;
+  text: string;
+  status?: string;
+}
+
+/** Chi tiết dự án phục vụ gợi ý việc tiếp theo. */
+export interface ProjectDetail extends ProjectRow {
+  description?: string | null;
+  kpi?: string | null;
+  phases: PhaseRow[];
+  checklist: ChecklistRow[];
+}
+
 export interface TaskQuery {
   /** Chỉ lấy việc chưa hoàn thành. */
   openOnly?: boolean;
@@ -110,6 +147,7 @@ export interface TaskQuery {
   projectId?: string;
   dueFrom?: string;
   dueTo?: string;
+  createdBy?: string;
   limit?: number;
 }
 
@@ -126,17 +164,25 @@ export interface WmsStore {
   addLog(row: TaskLogRow): Promise<void>;
   addNotification(row: NotificationRow): Promise<void>;
   leavesOn(date: string): Promise<LeaveRow[]>;
+  /** Chuyển việc vào Thùng rác (xoá mềm), khôi phục được trong app. */
+  trashTask(row: TaskRow, trash: TrashRow): Promise<void>;
+  /** Toàn bộ nhật ký của một việc, cũ trước mới sau. */
+  allTaskLogs(taskId: string): Promise<TaskLogRow[]>;
+  projectDetail(id: string): Promise<ProjectDetail | null>;
 }
 
 const MEMBER_COLUMNS = 'id,name,first_name,last_name,username,email,group_type,role,team,title';
 const PROJECT_COLUMNS = 'id,name,code,status,folder_id,lead_name,roles,target_date,created_by,is_strategic';
+
+const OPTIONAL_TASK_COLUMNS = ['completed_at', 'estimate_minutes'] as const;
 
 const isMissingColumn = (error: { code?: string; message?: string }, column: string): boolean =>
   (error.code === 'PGRST204' || error.code === '42703') && (error.message || '').includes(column);
 
 export class SupabaseStore implements WmsStore {
   private readonly db: SupabaseClient;
-  private noCompletedAt = false;
+  /** Cột tuỳ chọn mà cơ sở dữ liệu chưa có: phát hiện khi ghi lỗi rồi bỏ qua ở các lần sau. */
+  private readonly missingColumns = new Set<string>();
 
   constructor(url: string, serviceKey: string) {
     this.db = createClient(url, serviceKey, {
@@ -171,6 +217,7 @@ export class SupabaseStore implements WmsStore {
     if (query.projectId) q = q.eq('project_id', query.projectId);
     if (query.dueFrom) q = q.gte('due_date', query.dueFrom);
     if (query.dueTo) q = q.lte('due_date', query.dueTo);
+    if (query.createdBy) q = q.eq('created_by', query.createdBy);
     const { data, error } = await q
       .order('due_date', { ascending: !!query.openOnly, nullsFirst: false })
       .limit(query.limit ?? 1000);
@@ -204,24 +251,25 @@ export class SupabaseStore implements WmsStore {
   }
 
   /**
-   * Bảng `tasks` trên production chưa có cột `completed_at` (app cũng bỏ cột này khi ghi lỗi).
-   * Ngày hoàn thành khi đó suy ra từ nhật ký công việc (`getTaskCompletionDate`).
+   * Cột tuỳ chọn của bảng `tasks`: production có thể chưa có (`completed_at`, `estimate_minutes`).
+   * Thiếu cột nào thì bỏ cột đó và ghi phần còn lại, giống cách app xử lý.
+   * Ngày hoàn thành khi thiếu `completed_at` suy ra từ nhật ký công việc (`getTaskCompletionDate`).
    */
   private async writeTask(
     payload: Partial<TaskRow>,
     run: (payload: Partial<TaskRow>) => PromiseLike<{ error: { code?: string; message?: string } | null }>
   ): Promise<void> {
-    const send = { ...payload };
-    if (this.noCompletedAt) delete send.completed_at;
-    if (!Object.keys(send).length) return;
-    let { error } = await run(send);
-    if (error && 'completed_at' in send && isMissingColumn(error, 'completed_at')) {
-      this.noCompletedAt = true;
-      delete send.completed_at;
+    const send: Record<string, unknown> = { ...payload };
+    for (const column of this.missingColumns) delete send[column];
+    for (let attempt = 0; attempt <= OPTIONAL_TASK_COLUMNS.length; attempt += 1) {
       if (!Object.keys(send).length) return;
-      ({ error } = await run(send));
+      const { error } = await run(send as Partial<TaskRow>);
+      if (!error) return;
+      const missing = OPTIONAL_TASK_COLUMNS.find((column) => column in send && isMissingColumn(error, column));
+      if (!missing) throw error;
+      this.missingColumns.add(missing);
+      delete send[missing];
     }
-    if (error) throw error;
   }
 
   async addLog(row: TaskLogRow): Promise<void> {
@@ -243,5 +291,42 @@ export class SupabaseStore implements WmsStore {
       .gte('end_date', date);
     if (error) return [];
     return ((data || []) as LeaveRow[]).filter((l) => !l.status || l.status === 'Đã duyệt');
+  }
+
+  async trashTask(row: TaskRow, trash: TrashRow): Promise<void> {
+    // Lưu vào Thùng rác trước: nếu bước xoá lỗi thì việc vẫn còn nguyên, không mất dữ liệu.
+    const { error: trashErr } = await this.db.from('trash').upsert(trash, { onConflict: 'id' });
+    if (trashErr) throw trashErr;
+    const { error } = await this.db.from('tasks').delete().eq('id', row.id);
+    if (error) throw error;
+  }
+
+  async allTaskLogs(taskId: string): Promise<TaskLogRow[]> {
+    const { data, error } = await this.db
+      .from('task_logs')
+      .select('*')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true })
+      .limit(500);
+    if (error) throw error;
+    return (data || []) as TaskLogRow[];
+  }
+
+  async projectDetail(id: string): Promise<ProjectDetail | null> {
+    const { data, error } = await this.db.from('projects').select('*').eq('id', id).maybeSingle();
+    if (error || !data) return null;
+    const { data: phases } = await this.db
+      .from('project_phases')
+      .select('id,name,due_date,status,sort_order')
+      .eq('project_id', id)
+      .order('sort_order', { ascending: true });
+    let checklist: ChecklistRow[] = [];
+    try {
+      const raw = typeof data.checklist === 'string' ? JSON.parse(data.checklist) : data.checklist;
+      if (Array.isArray(raw)) checklist = raw as ChecklistRow[];
+    } catch {
+      checklist = [];
+    }
+    return { ...(data as ProjectDetail), phases: (phases || []) as PhaseRow[], checklist };
   }
 }

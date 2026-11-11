@@ -24,6 +24,7 @@ import {
 } from './vds/icons';
 import { formatDateWithEnDay, formatMemberNameOnly } from '../utils/formatters';
 import { getTaskDueDateInfo, formatTaskDueDisplay } from '../utils/dateUtils';
+import { ESTIMATE_OPTIONS, formatEstimate } from '../utils/estimate';
 import { canEditTask, canDeleteTask } from '../utils/rbac';
 import { QuickDueMenu } from './tasks/QuickDueMenu';
 import { addDaysToToday } from '../utils/taskViewUtils';
@@ -138,6 +139,10 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
     : 'text-subdued';
 
   const DueIcon = !isCompleted && dueInfo.status === 'overdue' ? AlertTriangle : !isCompleted && dueInfo.status === 'due_today' ? Clock : Calendar;
+  // Việc đã xong không cần hiện ước lượng trên hàng: giữ danh sách gọn.
+  const estimateLabel = isCompleted
+    ? ''
+    : ESTIMATE_OPTIONS.find((o) => o.minutes === task.estimateMinutes)?.short || formatEstimate(task.estimateMinutes);
   const currentYear = String(new Date().getFullYear());
   const dueText = task.dueDate
     ? formatTaskDueDisplay(task.dueDate).replace(new RegExp(` ${currentYear}$`), '')
@@ -349,6 +354,7 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
             {renderStatusSelect(true)}
           </span>
           {dueButton}
+          {estimateLabel && <span title="Ước lượng thời gian làm">~{estimateLabel}</span>}
           {task.priority === 'Khẩn cấp' && (
             <span className="inline-flex items-center gap-0.5 font-semibold text-negative">
               <BellRing className="w-3 h-3" />
@@ -473,6 +479,13 @@ export const TaskItemRow: React.FC<TaskItemRowProps> = ({
             )}
 
             {dueButton}
+
+            {estimateLabel && (
+              <>
+                <span className="text-icon-subdued">•</span>
+                <span title="Ước lượng thời gian làm">~{estimateLabel}</span>
+              </>
+            )}
 
             {task.priority === 'Khẩn cấp' && (
               <>

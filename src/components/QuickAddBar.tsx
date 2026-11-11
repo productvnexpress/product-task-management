@@ -35,6 +35,8 @@ import { recurringTaskService, calculateNextCycleDate } from '../services/recurr
 import { SmartTitleInput } from './smart/SmartTitleInput';
 import { QuickAddParseResult } from '../utils/quickAddParser';
 import { TitleQualityResult, checkTitleQuality } from '../utils/titleQuality';
+import { ESTIMATE_REQUIRED } from '../utils/estimate';
+import { EstimateSelect } from './tasks/EstimateField';
 
 interface QuickAddBarProps {
   folders?: FolderItem[];
@@ -53,6 +55,7 @@ interface QuickAddBarProps {
     team: TeamType;
     assignee: string;
     dueDate?: string;
+    estimateMinutes?: number;
     priority: PriorityLevel;
     details?: string;
     recurringRuleId?: string;
@@ -135,6 +138,11 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   const effProjectId = (!manualOverride.project && parsed?.project?.id) || projectId;
   const effDueDate = !manualOverride.date && parsed?.dueDate ? parsed.dueDate : dueDate;
   const effUrgent = Boolean(parsed?.isUrgent) || isUrgent;
+  const [estimate, setEstimate] = useState<number | undefined>(undefined);
+  const [estimateMissing, setEstimateMissing] = useState(false);
+  const [estimateManual, setEstimateManual] = useState(false);
+  // Token ~2h trong tiêu đề thắng ô chọn; người dùng tự đổi ô chọn thì ô chọn thắng.
+  const effEstimate = estimateManual ? estimate : parsed?.estimateMinutes ?? estimate;
   const isAssigningToOther = Boolean(
     currentUser?.name && effAssignee && !isSamePersonName(effAssignee, currentUser.name)
   );
@@ -218,6 +226,13 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       }
     }
 
+    // Việc tự đăng ký phải có ước lượng thời gian. Việc giao cho người khác: người nhận bổ sung sau.
+    if (ESTIMATE_REQUIRED && !effEstimate && !isAssigningToOther) {
+      setEstimateMissing(true);
+      setIsExpanded(true);
+      return;
+    }
+
     const resolvedFolderId = isDirectFolder
       ? effProjectId.replace(/^folder:/, '')
       : selectedProj?.folderId || inferProjectFolderId(selectedProj || {});
@@ -278,6 +293,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
       team,
       assignee: effAssignee,
       dueDate: initialDueDate,
+      estimateMinutes: effEstimate,
       priority,
       recurringRuleId,
       isRecurring: Boolean(isRecurring && isAdmin),
@@ -290,6 +306,9 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
     setManualOverride({});
     setDueDate(getTodayDateString());
     setIsUrgent(false);
+    setEstimate(undefined);
+    setEstimateManual(false);
+    setEstimateMissing(false);
     setIsRecurring(false);
     setRecurringEndType('never');
     setRecurringEndDate('');
@@ -328,9 +347,14 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                 onFocus={() => setIsExpanded(true)}
                 quality={quality}
                 onConfirmVague={() => submitTask(true)}
-                placeholder="Thêm việc… (gõ @tên #dự án mai ! rồi Enter)"
+                placeholder="Thêm việc… (gõ @tên #dự án mai ~2h ! rồi Enter)"
                 inputClassName="w-full text-sm font-body text-ink placeholder-subdued focus:outline-hidden focus-visible:shadow-none! bg-transparent py-0.5"
               />
+              {estimateMissing && !effEstimate && (
+                <p role="alert" className="mt-1.5 text-xs font-ui text-warning">
+                  Chọn ước lượng thời gian làm, hoặc gõ ~2h trong tiêu đề, rồi nhấn Enter.
+                </p>
+              )}
               <AnimatePresence>
                 {justAdded && (
                   <motion.p
@@ -542,6 +566,17 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* Ước lượng thời gian làm */}
+              <EstimateSelect
+                value={effEstimate}
+                invalid={estimateMissing && !effEstimate}
+                onChange={(minutes) => {
+                  setEstimate(minutes);
+                  setEstimateManual(true);
+                  if (minutes) setEstimateMissing(false);
+                }}
+              />
 
               {/* Priority Checkbox */}
               <label className="flex items-center gap-1.5 bg-surface-100 px-2.5 py-1.5 rounded-vds-lg border border-line cursor-pointer text-xs font-ui text-ink select-none hover:bg-surface-200">

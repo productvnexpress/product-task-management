@@ -25,6 +25,7 @@ import {
   Sparkles,
   ArrowRight,
   Check,
+  Clock,
 } from './vds/icons';
 import { VdsButton } from './vds';
 import { formatDateWithEnDay } from '../utils/formatters';
@@ -40,6 +41,8 @@ import {
 import { SmartTitleInput } from './smart/SmartTitleInput';
 import { QuickAddParseResult } from '../utils/quickAddParser';
 import { TitleQualityResult, checkTitleQuality } from '../utils/titleQuality';
+import { ESTIMATE_REQUIRED, formatEstimate } from '../utils/estimate';
+import { EstimateChips } from './tasks/EstimateField';
 
 export interface MobileQuickAddDrawerProps {
   isOpen: boolean;
@@ -60,6 +63,7 @@ export interface MobileQuickAddDrawerProps {
     team: TeamType;
     assignee: string;
     dueDate?: string;
+    estimateMinutes?: number;
     priority: PriorityLevel;
     details?: string;
     recurringRuleId?: string;
@@ -119,6 +123,10 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
   const effProjectId = (!manualOverride.project && parsed?.project?.id) || projectId;
   const effDueDate = !manualOverride.date && parsed?.dueDate ? parsed.dueDate : dueDate;
   const effUrgent = Boolean(parsed?.isUrgent) || isUrgent;
+  const [estimate, setEstimate] = useState<number | undefined>(undefined);
+  const [estimateManual, setEstimateManual] = useState(false);
+  // Token ~2h trong tiêu đề thắng chip; người dùng tự chạm chip thì chip thắng.
+  const effEstimate = estimateManual ? estimate : parsed?.estimateMinutes ?? estimate;
 
   // Group dự án thông minh
   const projectGroups = useMemo(() => {
@@ -225,6 +233,12 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
       }
     }
 
+    // Việc tự đăng ký phải có ước lượng thời gian. Việc giao cho người khác: người nhận bổ sung sau.
+    if (ESTIMATE_REQUIRED && !effEstimate && !isAssigningToOther) {
+      setErrorMsg('Chọn ước lượng thời gian làm');
+      return;
+    }
+
     const resolvedFolderId = isDirectFolder
       ? effProjectId.replace(/^folder:/, '')
       : selectedProj?.folderId || inferProjectFolderId(selectedProj || {});
@@ -251,6 +265,7 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
       team,
       assignee: effAssignee,
       dueDate: finalDueDate,
+      estimateMinutes: effEstimate,
       priority: effUrgent ? 'Khẩn cấp' : 'Bình thường',
     });
 
@@ -259,6 +274,9 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
     setQuality(null);
     setManualOverride({});
     setIsUrgent(false);
+    setEstimate(undefined);
+    setEstimateManual(false);
+    setErrorMsg('');
     if (opts?.keepOpen) {
       setAddedCount((n) => n + 1);
       setLastAdded(finalTitle);
@@ -440,6 +458,27 @@ export const MobileQuickAddDrawer: React.FC<MobileQuickAddDrawerProps> = ({
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Ước lượng thời gian làm: 1 chạm */}
+            <div className="space-y-1.5">
+              <label className="font-ui text-xs font-bold text-ink-lighter flex items-center justify-between gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-accent" />
+                  <span>Ước lượng thời gian:</span>
+                </div>
+                <span className="text-xs font-semibold text-accent">
+                  {formatEstimate(effEstimate) || (isAssigningToOther ? 'Người nhận bổ sung' : 'Chưa chọn')}
+                </span>
+              </label>
+              <EstimateChips
+                value={effEstimate}
+                onChange={(minutes) => {
+                  setEstimate(minutes);
+                  setEstimateManual(true);
+                  if (minutes && errorMsg) setErrorMsg('');
+                }}
+              />
             </div>
 
             {/* 3. Thư mục / Dự án & Giai đoạn */}

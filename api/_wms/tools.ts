@@ -5,23 +5,32 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { canEditTask } from '../../src/utils/rbac.js';
+import { canDeleteTask, canEditTask, getUserRole } from '../../src/utils/rbac.js';
 import { createCreationLog, recordTaskChanges } from '../../src/utils/taskLogUtils.js';
 import { isValidUrl, normalizeUrl } from '../../src/utils/urlValidator.js';
 import { checkTitleQuality } from '../../src/utils/titleQuality.js';
+import {
+  LIGHT_DAY_MINUTES,
+  MAX_ESTIMATE_MINUTES,
+  MIN_ESTIMATE_MINUTES,
+  formatDuration,
+  formatEstimate,
+} from '../../src/utils/estimate.js';
 import type { TaskItem, TaskStatus } from '../../src/types.js';
-import type { FolderRow, MemberRow, ProjectRow, TaskRow, WmsStore } from './store.js';
+import type { FolderRow, MemberRow, ProjectRow, TaskLogRow, TaskRow, WmsStore } from './store.js';
 import {
   TASK_STATUSES,
   addDays,
   byUrgency,
   dayDiff,
+  daysSinceUpdate,
   diffColumns,
   dueLabel,
   fold,
   formatDate,
   isIsoDate,
   isProductMember,
+  isSimilarTitle,
   projectFolder,
   projectTag,
   resolveMember,
@@ -36,10 +45,15 @@ import {
   weekday,
   type Resolved,
 } from './domain.js';
+import { gatherNextContext, renderNextHint } from './next.js';
 
 export const SERVER_NAME = 'vnexpress-wms';
-export const SERVER_VERSION = '1.0.0';
+export const SERVER_VERSION = '1.1.0';
 export const MAX_BATCH = 50;
+/** Việc đang mở không được cập nhật từ ngần này ngày bị coi là "lâu không động tới". */
+export const STALE_DAYS = 5;
+/** Việc đã giao im lặng từ ngần này ngày thì đưa vào danh sách cần đôn đốc. */
+export const NUDGE_DAYS = 3;
 
 export interface WmsContext {
   store: WmsStore;
@@ -66,7 +80,11 @@ Cách dùng:
 - Người dùng nhắc tới một việc cần làm, một cam kết, một việc vừa xong: ghi vào app bằng add_task hoặc update_task, không chỉ ghi trong hội thoại.
 - Trước khi cập nhật, tìm id bằng list_tasks (lọc theo query, assignee, project).
 - Tiêu đề việc: bắt đầu bằng động từ, nêu rõ làm gì + cho cái gì + kết quả. VD: "Viết PRD trang Ý kiến bản mobile".
-- Ngày dùng định dạng YYYY-MM-DD theo giờ Việt Nam. Không truyền hạn thì mặc định hôm nay.
+- Ngày dùng định dạng YYYY-MM-DD theo giờ Việt Nam. Không truyền hạn thì mặc định hôm nay; việc chưa có hạn truyền due_date = "none".
+- Mỗi việc nên có estimate_minutes (ước lượng thời gian làm). Người dùng không nói thì hỏi, không tự đặt.
+- add_task báo "Có thể trùng": đọc việc được nêu, hỏi người dùng rồi mới gọi lại với allow_duplicate = true.
+- Không tự đặt số liệu, hạn, tên người. Mọi con số lấy từ kết quả công cụ.
+- Nhắc việc, đôn đốc người khác: soạn nội dung cho người dùng duyệt, rồi mới gửi bằng add_comment (kèm @username).
 - Chuyển sang "Hoàn thành" bắt buộc có result_link là URL hợp lệ. Chuyển sang "Bị nghẽn" bắt buộc có blocker_reason.
 - Nhân sự: dùng username (vd tienngoc) hoặc họ tên; "me" là chủ token. Dự án: dùng mã (vd WMS, YKIEN) hoặc tên.
 - Trả lời người dùng ngắn gọn, kết quả lên đầu, kèm link mở việc trong app.`;
@@ -95,6 +113,15 @@ function cleanDate(value: string | undefined, label: string): string | undefined
   return trimmed;
 }
 
+const NO_DATE_WORDS = new Set(['none', 'null', 'khong', 'khong co', 'chua co han', 'no']);
+
+/** undefined = không truyền; null = chủ động để trống hạn; chuỗi = ngày hợp lệ. */
+function cleanDueDate(value: string | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (NO_DATE_WORDS.has(fold(value))) return null;
+  return cleanDate(value, 'due_date');
+}
+
 const randomSuffix = () => Math.random().toString(36).slice(2, 6);
 
 // ---------------------------------------------------------------------------
@@ -102,6 +129,8 @@ const randomSuffix = () => Math.random().toString(36).slice(2, 6);
 // ---------------------------------------------------------------------------
 
 const statusSchema = z.enum(TASK_STATUSES);
+
+const estimateSchema = z.number().int().min(MIN_ESTIMATE_MINUTES).max(MAX_ESTIMATE_MINUTES).optional();
 
 const newTaskShape = {
   title: z
@@ -117,7 +146,13 @@ const newTaskShape = {
     .string()
     .optional()
     .describe('Dự án: mã (vd "WMS", "YKIEN") hoặc tên. Bỏ trống = "Chưa xác định (Others)".'),
-  due_date: z.string().optional().describe('Hạn hoàn thành YYYY-MM-DD (giờ Việt Nam). Bỏ trống = hôm nay.'),
+  due_date: z
+    .string()
+    .optional()
+    .describe('Hạn hoàn thành YYYY-MM-DD (giờ Việt Nam). Bỏ trống = hôm nay. "none" = chưa có hạn (việc làm sau).'),
+  estimate_minutes: estimateSchema.describe(
+    'Ước lượng thời gian làm, tính bằng phút: 30, 60, 120, 240 (nửa ngày), 480 (1 ngày), 960 (hơn 1 ngày).'
+  ),
   urgent: z.boolean().optional().describe('true = Khẩn cấp. Mặc định Bình thường.'),
   details: z.string().max(4000).optional().describe('Mô tả, tiêu chí nghiệm thu, bối cảnh (không bắt buộc).'),
   work_link: z.string().optional().describe('Link làm việc (Figma, Google Docs, Notion...).'),
@@ -131,7 +166,7 @@ const newTaskShape = {
   allow_duplicate: z
     .boolean()
     .optional()
-    .describe('Mặc định false: nếu người phụ trách đã có việc trùng tiêu đề thì không tạo thêm.'),
+    .describe('Mặc định false: người phụ trách đã có việc trùng hoặc gần trùng tiêu đề thì không tạo thêm. Chỉ đặt true sau khi người dùng xác nhận đây là việc khác.'),
 };
 
 type NewTaskInput = z.infer<z.ZodObject<typeof newTaskShape>>;
@@ -142,7 +177,8 @@ const updateTaskShape = {
   status: statusSchema.optional().describe('Trạng thái mới.'),
   assignee: z.string().optional().describe('Người phụ trách mới: username hoặc họ tên.'),
   project: z.string().optional().describe('Chuyển sang dự án khác: mã hoặc tên.'),
-  due_date: z.string().optional().describe('Hạn mới YYYY-MM-DD.'),
+  due_date: z.string().optional().describe('Hạn mới YYYY-MM-DD. "none" = bỏ hạn.'),
+  estimate_minutes: estimateSchema.describe('Ước lượng thời gian làm (phút).'),
   urgent: z.boolean().optional().describe('true = Khẩn cấp, false = Bình thường.'),
   details: z.string().max(4000).optional().describe('Mô tả mới (ghi đè mô tả cũ).'),
   work_link: z.string().optional().describe('Link làm việc. Chuỗi rỗng để xoá.'),
@@ -226,7 +262,8 @@ export function createWmsServer(ctx: WmsContext): McpServer {
     const assignee = unwrap(resolveMember(input.assignee, r.members, r.actor));
     const project = unwrap(resolveProject(input.project, r.projects));
     const today = vnToday(now());
-    const due = cleanDate(input.due_date, 'due_date') ?? today;
+    const dueInput = cleanDueDate(input.due_date);
+    const due = dueInput === undefined ? today : dueInput;
     const status: TaskStatus = input.status ?? 'Chưa làm';
     const workLink = cleanLink(input.work_link, 'work_link') || null;
     const resultLink = cleanLink(input.result_link, 'result_link') || null;
@@ -248,10 +285,18 @@ export function createWmsServer(ctx: WmsContext): McpServer {
       }
       const key = fold(title);
       const duplicate = existing.find(
-        (t) => fold(t.title) === key && (t.status !== 'Hoàn thành' || (t.due_date || '').slice(0, 10) === due)
+        (t) => fold(t.title) === key && (t.status !== 'Hoàn thành' || (t.due_date || '').slice(0, 10) === (due || ''))
       );
       if (duplicate) {
         return `Đã có sẵn, không tạo thêm: ${duplicate.title} — ${dueLabel(duplicate.due_date, today)} · ${duplicate.status} · ${duplicate.assignee} · id: ${duplicate.id}\n  ${taskUrl(duplicate.id)}`;
+      }
+      // Gần trùng: khác vài chữ nhưng cùng người, cùng từ khoá, việc còn mở. Dừng lại để người dùng quyết định.
+      const similar = existing.filter((t) => t.status !== 'Hoàn thành' && isSimilarTitle(t.title, title)).slice(0, 3);
+      if (similar.length) {
+        const list = similar
+          .map((t) => `  - ${t.title} — ${dueLabel(t.due_date, today)} · ${t.status} · id: ${t.id}\n    ${taskUrl(t.id)}`)
+          .join('\n');
+        return `Có thể trùng, chưa tạo: "${title}" gần giống việc đang mở của ${assignee.name}:\n${list}\n  Cập nhật việc cũ bằng update_task, hoặc gọi lại với allow_duplicate = true nếu đây là việc khác.`;
       }
     }
 
@@ -285,6 +330,7 @@ export function createWmsServer(ctx: WmsContext): McpServer {
       is_recurring: false,
       recurring_rule_id: null,
       recurring_frequency: null,
+      ...(input.estimate_minutes ? { estimate_minutes: input.estimate_minutes } : {}),
     };
 
     await store.insertTask(row);
@@ -308,10 +354,14 @@ export function createWmsServer(ctx: WmsContext): McpServer {
 
     const parts = [dueLabel(due, today), status];
     if (row.priority === 'Khẩn cấp') parts.push('Khẩn cấp');
+    if (input.estimate_minutes) parts.push(`~${formatEstimate(input.estimate_minutes)}`);
     parts.push(assignee.name, projectTag(row, r.projects));
     let line = `Đã thêm: ${title} — ${parts.join(' · ')} · id: ${row.id}\n  ${taskUrl(row.id)}`;
     const quality = checkTitleQuality(title);
     if (quality.isVague) line += `\n  Lưu ý tiêu đề: ${quality.reason} ${quality.hint}`;
+    if (!input.estimate_minutes && status !== 'Hoàn thành') {
+      line += '\n  Chưa có ước lượng thời gian: hỏi người dùng rồi bổ sung bằng update_task (estimate_minutes).';
+    }
     return line;
   }
 
@@ -347,8 +397,9 @@ export function createWmsServer(ctx: WmsContext): McpServer {
         next.phaseName = undefined;
       }
     }
-    const due = cleanDate(input.due_date, 'due_date');
-    if (due !== undefined) next.dueDate = due;
+    const due = cleanDueDate(input.due_date);
+    if (due !== undefined) next.dueDate = due || undefined;
+    if (input.estimate_minutes !== undefined) next.estimateMinutes = input.estimate_minutes;
     if (input.urgent !== undefined) next.priority = input.urgent ? 'Khẩn cấp' : 'Bình thường';
     if (input.details !== undefined) next.details = input.details.trim() || undefined;
     const workLink = cleanLink(input.work_link, 'work_link');
@@ -421,11 +472,27 @@ export function createWmsServer(ctx: WmsContext): McpServer {
       .map((c) => `  ${c.field}: ${c.oldValue ?? '(trống)'} → ${c.newValue ?? '(trống)'}`)
       .join('\n');
     const head = becameDone ? 'Đã hoàn thành' : 'Đã cập nhật';
+    let nextHint = '';
+    if (becameDone) {
+      // Gợi ý là phần phụ: lỗi khi gom dữ liệu không được làm hỏng thao tác chính.
+      try {
+        const ctx = await gatherNextContext(
+          store,
+          { title: updatedRow.title, assignee: updatedRow.assignee, projectId: updatedRow.project_id, trigger: 'completed', taskId: row.id },
+          r.members,
+          today
+        );
+        nextHint = renderNextHint(ctx);
+      } catch (err) {
+        console.warn('[wms-mcp] Không gom được dữ liệu gợi ý việc tiếp theo:', (err as Error)?.message);
+      }
+    }
     return [
       `${head}: ${updatedRow.title} — ${dueLabel(updatedRow.due_date, today)} · ${updatedRow.status} · ${updatedRow.assignee} · id: ${row.id}`,
       changes,
       note ? `  Ghi chú: ${note}` : '',
       `  ${taskUrl(row.id)}`,
+      nextHint,
     ]
       .filter(Boolean)
       .join('\n');
@@ -479,6 +546,21 @@ export function createWmsServer(ctx: WmsContext): McpServer {
         due_from: z.string().optional().describe('Hạn từ ngày YYYY-MM-DD.'),
         due_to: z.string().optional().describe('Hạn đến ngày YYYY-MM-DD.'),
         query: z.string().optional().describe('Từ khoá trong tiêu đề hoặc mô tả, không cần dấu.'),
+        created_by: z
+          .string()
+          .optional()
+          .describe('Lọc theo người tạo việc: username, họ tên hoặc "me". Khi dùng mà không truyền assignee thì xem mọi người phụ trách.'),
+        delegated: z
+          .boolean()
+          .optional()
+          .describe('true = việc chủ token đã giao cho người khác (người tạo là chủ token, người phụ trách là người khác).'),
+        stale_days: z
+          .number()
+          .int()
+          .min(1)
+          .max(365)
+          .optional()
+          .describe('Chỉ lấy việc đang mở không được cập nhật từ N ngày trở lên.'),
         limit: z.number().int().min(1).max(200).optional().describe('Số việc tối đa, mặc định 40.'),
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
@@ -486,7 +568,12 @@ export function createWmsServer(ctx: WmsContext): McpServer {
     guard(async (args) => {
       const r = await refs();
       const today = vnToday(now());
-      const everyone = fold(args.assignee || '') === 'all';
+      const creator = args.delegated
+        ? r.actor
+        : args.created_by
+          ? unwrap(resolveMember(args.created_by, r.members, r.actor))
+          : null;
+      const everyone = fold(args.assignee || '') === 'all' || (Boolean(creator) && !args.assignee);
       const person = everyone ? null : unwrap(resolveMember(args.assignee, r.members, r.actor));
       const project = args.project ? unwrap(resolveProject(args.project, r.projects)) : null;
       const status = args.status ?? 'open';
@@ -506,7 +593,13 @@ export function createWmsServer(ctx: WmsContext): McpServer {
         projectId: project?.id,
         dueFrom,
         dueTo,
+        createdBy: creator?.name,
       });
+
+      if (args.delegated) rows = rows.filter((t) => fold(t.assignee) !== fold(r.actor.name));
+      if (args.stale_days) {
+        rows = rows.filter((t) => t.status !== 'Hoàn thành' && daysSinceUpdate(t, today) >= args.stale_days!);
+      }
 
       if (args.query) {
         const key = fold(args.query);
@@ -515,6 +608,8 @@ export function createWmsServer(ctx: WmsContext): McpServer {
 
       const scope = [
         person ? `của ${person.name}` : 'toàn bộ phận',
+        args.delegated ? `do ${r.actor.name} giao cho người khác` : creator ? `do ${creator.name} tạo` : '',
+        args.stale_days ? `không cập nhật từ ${args.stale_days} ngày` : '',
         project ? `dự án ${project.name}` : '',
         status === 'open' ? 'đang mở' : status === 'all' ? 'mọi trạng thái' : `trạng thái "${status}"`,
         args.due ? `hạn: ${args.due}` : '',
@@ -526,7 +621,10 @@ export function createWmsServer(ctx: WmsContext): McpServer {
       if (!rows.length) return `Không có việc nào (${scope}).`;
 
       const limit = args.limit ?? 40;
-      const render = (t: TaskRow) => taskLine(t, { today, projects: r.projects, showAssignee: !person });
+      const render = (t: TaskRow) => {
+        const line = taskLine(t, { today, projects: r.projects, showAssignee: !person });
+        return args.stale_days ? `${line}\n  Không cập nhật: ${daysSinceUpdate(t, today)} ngày` : line;
+      };
       const open = rows.filter((t) => t.status !== 'Hoàn thành');
       const done = rows
         .filter((t) => t.status === 'Hoàn thành')
@@ -731,6 +829,37 @@ export function createWmsServer(ctx: WmsContext): McpServer {
       const leave = onLeave(person.name);
 
       const head = `${person.name}, ${formatDate(today)}${weekend}: ${b.overdue.length} việc quá hạn · ${b.today.length} đến hạn hôm nay · ${b.soon.length} trong 3 ngày tới.`;
+
+      // Một việc nên làm trước: Khẩn cấp trước, rồi tới việc trễ lâu nhất, rồi việc đến hạn hôm nay.
+      const urgentFirst = (x: TaskRow, y: TaskRow) =>
+        Number(y.priority === 'Khẩn cấp') - Number(x.priority === 'Khẩn cấp') || byUrgency(x, y);
+      const firstPick = [...b.overdue, ...b.today].sort(urgentFirst)[0];
+      const pickReason = (t: TaskRow) => {
+        const late = t.due_date ? dayDiff(today, t.due_date.slice(0, 10)) : 0;
+        const why = late > 0 ? `quá hạn ${late} ngày` : 'đến hạn hôm nay';
+        return t.priority === 'Khẩn cấp' ? `Khẩn cấp, ${why}` : why;
+      };
+      const first = firstPick ? `Nên làm trước: ${firstPick.title} — ${pickReason(firstPick)} · id: ${firstPick.id}` : '';
+
+      const todayMinutes = b.today.reduce((sum, t) => sum + (Number(t.estimate_minutes) || 0), 0);
+      const todayUnestimated = b.today.filter((t) => !Number(t.estimate_minutes)).length;
+      const load = b.today.length
+        ? `Tải hôm nay: ${formatDuration(todayMinutes)} đã ước lượng${todayUnestimated ? ` · ${todayUnestimated} việc chưa ước lượng` : ''}.`
+        : '';
+
+      const shownIds = new Set([...b.overdue, ...b.today, ...b.soon].map((t) => t.id));
+      const stale = open
+        .filter((t) => !shownIds.has(t.id) && daysSinceUpdate(t, today) >= STALE_DAYS)
+        .sort((x, y) => daysSinceUpdate(y, today) - daysSinceUpdate(x, today));
+      const renderStale = (t: TaskRow) => `${taskLine(t, { today, projects: r.projects })}\n  Không cập nhật: ${daysSinceUpdate(t, today)} ngày`;
+
+      // Việc đã giao cho người khác đang cần đôn đốc: quá hạn hoặc im lặng từ 3 ngày.
+      const delegated = (await store.tasks({ openOnly: true, createdBy: person.name }))
+        .filter((t) => fold(t.assignee) !== fold(person.name))
+        .filter((t) => (t.due_date && t.due_date.slice(0, 10) < today) || daysSinceUpdate(t, today) >= NUDGE_DAYS)
+        .sort(byUrgency);
+      const renderDelegated = (t: TaskRow) =>
+        `${taskLine(t, { today, projects: r.projects, showAssignee: true })}\n  Không cập nhật: ${daysSinceUpdate(t, today)} ngày`;
       const dueToday = await store.tasks({ assignee: person.name, dueFrom: today, dueTo: today });
       const nudge =
         !hasWorkToday(open, dueToday, person.name, today) && !leave && !weekend
@@ -741,11 +870,16 @@ export function createWmsServer(ctx: WmsContext): McpServer {
         head,
         leave ? `Hôm nay nghỉ phép${leaveNote(leave.session)}.` : '',
         nudge,
+        first,
+        load,
         section('QUÁ HẠN', b.overdue, render),
         section('HÔM NAY', b.today, render),
         section('3 NGÀY TỚI', b.soon, render),
         section('ĐANG NGHẼN', blocked.filter((t) => !b.overdue.includes(t) && !b.today.includes(t) && !b.soon.includes(t)), render),
-        b.noDate.length ? `\nCòn ${b.noDate.length} việc chưa có hạn.` : '',
+        section(`LÂU KHÔNG CẬP NHẬT (từ ${STALE_DAYS} ngày)`, stale.slice(0, 8), renderStale),
+        section('ĐÃ GIAO, CẦN ĐÔN ĐỐC', delegated.slice(0, 10), renderDelegated),
+        delegated.length > 10 ? `Còn ${delegated.length - 10} việc đã giao khác (list_tasks với delegated = true).` : '',
+        b.noDate.length ? `\nCòn ${b.noDate.length} việc chưa có hạn (làm sau).` : '',
         `\nMở app: ${appUrl}/tasks`,
       ]
         .filter(Boolean)
@@ -802,6 +936,279 @@ export function createWmsServer(ctx: WmsContext): McpServer {
         (m) => `- ${m.name} (@${m.username || '—'}) · ${isProductMember(m) ? m.team : m.title || 'Stakeholder'}`
       );
       return `Bạn đang dùng tài khoản: ${r.actor.name} (@${r.actor.username}).\n${list.length} nhân sự:\n${lines.join('\n')}`;
+    })
+  );
+
+  // ----- Xoá, bình luận -----------------------------------------------------
+
+  server.registerTool(
+    'delete_task',
+    {
+      title: 'Xoá công việc (vào Thùng rác)',
+      description:
+        'Chuyển một công việc vào Thùng rác của WMS. Khôi phục được trong app (mục Thùng rác). Dùng khi việc tạo trùng hoặc không còn liên quan. Luôn hỏi người dùng trước khi xoá.',
+      inputSchema: {
+        id: z.string().describe('Id công việc, lấy từ list_tasks.'),
+        reason: z.string().max(500).optional().describe('Lý do xoá, lưu vào lịch sử. VD: "Tạo trùng với task-123".'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    guard(async (args) => {
+      const r = await refs();
+      const row = await store.task(args.id.trim());
+      if (!row) throw new ToolError(`Không tìm thấy việc id "${args.id}". Có thể việc đã được xoá.`);
+      const item = toTaskItem(row);
+      if (!canDeleteTask(toMemberItem(r.actor), item, r.projects.map(toProjectItem))) {
+        throw new ToolError(
+          `${r.actor.name} không có quyền xoá việc này (phụ trách: ${row.assignee}). Chỉ người tạo, PM phụ trách dự án hoặc Admin được xoá.`
+        );
+      }
+
+      const stamp = now().toISOString();
+      const reason = args.reason?.trim();
+      const history = (await store.allTaskLogs(row.id)).reverse().map((log: TaskLogRow) => ({
+        id: log.id,
+        author: log.author,
+        timestamp: log.created_at,
+        action: log.action,
+        changes: log.changes || [],
+        note: log.note || undefined,
+      }));
+      const deletionLog = {
+        id: `log-${Date.now()}-${randomSuffix()}`,
+        author: r.actor.name,
+        timestamp: stamp,
+        action: 'Chuyển vào Thùng rác',
+        changes: [{ field: 'Trạng thái', oldValue: row.status, newValue: 'Thùng rác' }],
+        note: `Công việc được xoá bởi ${r.actor.name}${reason ? `: ${reason}` : ''} (qua Claude)`,
+      };
+
+      await store.trashTask(row, {
+        id: `trash-${Date.now()}-${randomSuffix()}`,
+        original_id: row.id,
+        type: 'task',
+        title: row.title,
+        subtitle: `${row.project_name || row.folder_name || 'Chưa xác định'} • ${row.assignee}`,
+        data: { ...item, logs: [deletionLog, ...history] },
+        deleted_by: r.actor.name,
+        deleted_at: stamp,
+      });
+
+      return `Đã chuyển vào Thùng rác: ${row.title} — ${row.assignee} · id: ${row.id}\n  Khôi phục trong app: ${appUrl}/trash`;
+    })
+  );
+
+  server.registerTool(
+    'add_comment',
+    {
+      title: 'Bình luận, nhắc việc trên công việc',
+      description:
+        'Thêm bình luận vào một công việc, dùng để trao đổi hoặc đôn đốc. Gõ @username để nhắc đích danh: người được nhắc và người phụ trách nhận thông báo trong app. Soạn nội dung cho người dùng duyệt trước khi gửi.',
+      inputSchema: {
+        id: z.string().describe('Id công việc, lấy từ list_tasks.'),
+        text: z
+          .string()
+          .min(2)
+          .max(2000)
+          .describe('Nội dung bình luận, ngắn gọn, nêu rõ cần gì và hạn nào. VD: "@huyanh anh cần timeline box comment trước thứ Sáu."'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    guard(async (args) => {
+      const r = await refs();
+      const row = await store.task(args.id.trim());
+      if (!row) throw new ToolError(`Không tìm thấy việc id "${args.id}". Gọi list_tasks để tìm đúng id.`);
+
+      // Đổi @username thành @Họ Tên để app tô nổi bật, đồng thời gom người được nhắc.
+      const mentioned: MemberRow[] = [];
+      const unknown: string[] = [];
+      const body = args.text.trim().replace(/@([A-Za-z0-9_.-]+)/g, (whole, handle: string) => {
+        const member = r.members.find((m) => (m.username || '').toLowerCase() === handle.toLowerCase());
+        if (!member) {
+          unknown.push(handle);
+          return whole;
+        }
+        if (!mentioned.includes(member)) mentioned.push(member);
+        return `@${member.name}`;
+      });
+      if (unknown.length) {
+        throw new ToolError(
+          `Không có username: ${unknown.map((u) => `@${u}`).join(', ')}. Gọi list_members để lấy đúng username, hoặc bỏ dấu @.`
+        );
+      }
+
+      const stamp = now().toISOString();
+      await store.addLog({
+        id: `log-${Date.now()}-${randomSuffix()}`,
+        task_id: row.id,
+        author: r.actor.name,
+        action: 'Bình luận',
+        changes: [],
+        note: `${body} (qua Claude)`,
+        created_at: stamp,
+      });
+      await store.updateTask(row.id, { latest_update_note: body, updated_at: stamp });
+
+      const snippet = body.length > 120 ? `${body.slice(0, 117)}...` : body;
+      const notified: string[] = [];
+      const notify = async (member: MemberRow, title: string) => {
+        if (fold(member.name) === fold(r.actor.name) || notified.includes(member.name)) return;
+        notified.push(member.name);
+        await store.addNotification({
+          id: `notif-${Date.now()}-${randomSuffix()}`,
+          recipient_name: member.name,
+          recipient_id: member.username || member.id,
+          actor_name: r.actor.name,
+          project_id: row.project_id,
+          project_name: row.project_name || '',
+          task_id: row.id,
+          task_title: row.title,
+          type: 'task_comment',
+          title,
+          content: `${r.actor.name}: "${snippet}"`,
+          is_read: false,
+          created_at: stamp,
+        });
+      };
+      for (const member of mentioned) await notify(member, `Nhắc đến bạn: ${row.title}`);
+      const assignee = r.members.find((m) => fold(m.name) === fold(row.assignee));
+      if (assignee) await notify(assignee, `Trao đổi mới: ${row.title}`);
+
+      return [
+        `Đã bình luận: ${row.title} — ${row.assignee} · id: ${row.id}`,
+        `  "${body}"`,
+        notified.length ? `  Đã thông báo: ${notified.join(', ')}` : '  Không ai nhận thông báo (bạn là người phụ trách và không nhắc ai).',
+        `  ${taskUrl(row.id)}`,
+      ].join('\n');
+    })
+  );
+
+  // ----- Theo dõi nhân sự ---------------------------------------------------
+
+  server.registerTool(
+    'member_summary',
+    {
+      title: 'Tình hình công việc của một nhân sự',
+      description:
+        'Tổng hợp việc của một người: quá hạn, đến hạn hôm nay kèm tổng ước lượng, đang nghẽn, lâu không cập nhật, việc chủ token đang chờ người này, số việc xong 7 ngày qua. Dùng để chuẩn bị họp 1:1 hoặc trước khi đôn đốc.',
+      inputSchema: {
+        person: z.string().describe('Username hoặc họ tên.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    guard(async (args) => {
+      const r = await refs();
+      const today = vnToday(now());
+      const person = unwrap(resolveMember(args.person, r.members, r.actor));
+      const [open, done, leaves] = await Promise.all([
+        store.tasks({ openOnly: true, assignee: person.name }),
+        store.tasks({ statuses: ['Hoàn thành'], assignee: person.name, dueFrom: addDays(today, -30), limit: 300 }),
+        store.leavesOn(today),
+      ]);
+      const b = bucketByDue(open, today);
+      const blocked = open.filter((t) => t.status === 'Bị nghẽn');
+      const stale = open
+        .filter((t) => daysSinceUpdate(t, today) >= STALE_DAYS)
+        .sort((x, y) => daysSinceUpdate(y, today) - daysSinceUpdate(x, today));
+      const weekAgo = addDays(today, -7);
+      const doneThisWeek = done.filter((t) => vnToday(new Date(t.completed_at || t.updated_at)) >= weekAgo);
+      const waiting = open.filter((t) => fold(t.created_by || '') === fold(r.actor.name) && fold(person.name) !== fold(r.actor.name));
+      const leave = leaves.find((l) => fold(l.member_name) === fold(person.name));
+      const todayMinutes = b.today.reduce((sum, t) => sum + (Number(t.estimate_minutes) || 0), 0);
+      const unestimated = b.today.filter((t) => !Number(t.estimate_minutes)).length;
+      const render = (t: TaskRow) => taskLine(t, { today, projects: r.projects });
+      const renderStale = (t: TaskRow) => `${render(t)}\n  Không cập nhật: ${daysSinceUpdate(t, today)} ngày`;
+
+      return [
+        `${person.name} (@${person.username || '—'}) · ${person.team}, ${formatDate(today)}: ${open.length} việc đang mở · ${b.overdue.length} quá hạn · ${b.today.length} đến hạn hôm nay · ${blocked.length} nghẽn · ${doneThisWeek.length} việc xong 7 ngày qua.`,
+        leave ? `Hôm nay nghỉ phép${leave.session === 'morning' ? ' (sáng)' : leave.session === 'afternoon' ? ' (chiều)' : ''}.` : '',
+        b.today.length
+          ? `Tải hôm nay: ${formatDuration(todayMinutes)} đã ước lượng${unestimated ? ` · ${unestimated} việc chưa ước lượng` : ''}.`
+          : 'Chưa có việc đến hạn hôm nay.',
+        section('QUÁ HẠN', b.overdue, render),
+        section('HÔM NAY', b.today, render),
+        section('ĐANG NGHẼN', blocked.filter((t) => !b.overdue.includes(t) && !b.today.includes(t)), render),
+        section(`LÂU KHÔNG CẬP NHẬT (từ ${STALE_DAYS} ngày)`, stale.filter((t) => !b.overdue.includes(t)).slice(0, 8), renderStale),
+        section(`BẠN ĐANG CHỜ ${shortName(person).toUpperCase()}`, waiting.slice(0, 10), render),
+        section('3 NGÀY TỚI', b.soon, render),
+        b.noDate.length ? `\nCòn ${b.noDate.length} việc chưa có hạn.` : '',
+        `\nMở app: ${appUrl}/tasks`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })
+  );
+
+  server.registerTool(
+    'workload_today',
+    {
+      title: 'Tải công việc đăng ký trong ngày',
+      description:
+        'Soát việc từng người đăng ký cho một ngày: tổng ước lượng so với 8 giờ làm việc, việc chưa ước lượng, tiêu đề chung chung, ngày chỉ có việc nhỏ. Trả về danh sách cần hỏi lại, không phải kết luận. Executive chỉ xem được của mình; Manager và Admin xem cả bộ phận.',
+      inputSchema: {
+        date: z.string().optional().describe('Ngày cần soát YYYY-MM-DD. Mặc định hôm nay.'),
+        person: z.string().optional().describe('Chỉ xem một người: username hoặc họ tên.'),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    guard(async (args) => {
+      const r = await refs();
+      const today = vnToday(now());
+      const date = cleanDate(args.date, 'date') ?? today;
+      const role = getUserRole(toMemberItem(r.actor));
+      const only = args.person ? unwrap(resolveMember(args.person, r.members, r.actor)) : null;
+      if (role === 'Executive' && only && fold(only.name) !== fold(r.actor.name)) {
+        throw new ToolError('Tài khoản Executive chỉ xem được tải công việc của chính mình.');
+      }
+      const team = (only ? [only] : role === 'Executive' ? [r.actor] : r.members.filter(isProductMember));
+
+      const [dueRows, openRows, leaves] = await Promise.all([
+        store.tasks({ dueFrom: date, dueTo: date }),
+        store.tasks({ openOnly: true }),
+        store.leavesOn(date),
+      ]);
+
+      const reports = team.map((m) => {
+        const mine = dueRows.filter((t) => fold(t.assignee) === fold(m.name));
+        const minutes = mine.reduce((sum, t) => sum + (Number(t.estimate_minutes) || 0), 0);
+        const unestimated = mine.filter((t) => !Number(t.estimate_minutes));
+        const vague = mine.filter((t) => checkTitleQuality(t.title).isVague);
+        const inProgress = openRows.filter((t) => fold(t.assignee) === fold(m.name) && t.status === 'Đang làm' && !mine.includes(t));
+        const leave = leaves.find((l) => fold(l.member_name) === fold(m.name));
+        const halfDay = leave && (leave.session === 'morning' || leave.session === 'afternoon');
+        const threshold = halfDay ? LIGHT_DAY_MINUTES / 2 : LIGHT_DAY_MINUTES;
+
+        const flags: string[] = [];
+        if (leave && !halfDay) {
+          flags.push('nghỉ phép');
+        } else {
+          if (!mine.length) flags.push(inProgress.length ? `không có việc đến hạn, đang làm ${inProgress.length} việc khác` : 'chưa đăng ký việc');
+          else if (!unestimated.length && minutes < threshold) flags.push(`tải nhẹ: ${formatDuration(minutes)}/${halfDay ? 4 : 8} giờ`);
+          if (unestimated.length) flags.push(`${unestimated.length} việc chưa ước lượng`);
+          if (vague.length) flags.push(`${vague.length} tiêu đề chung chung`);
+          if (halfDay) flags.push(`nghỉ ${leave!.session === 'morning' ? 'sáng' : 'chiều'}`);
+        }
+        const needsAsk = flags.some((f) => !f.startsWith('nghỉ'));
+        return { m, mine, minutes, flags, needsAsk };
+      });
+
+      const order = [...reports].sort((x, y) => Number(y.needsAsk) - Number(x.needsAsk) || x.minutes - y.minutes);
+      const ask = reports.filter((x) => x.needsAsk).length;
+      const blocks = order.map(({ m, mine, minutes, flags }) => {
+        const head = `${shortName(m)} (@${m.username || '—'}): ${mine.length} việc · ${formatDuration(minutes)}${flags.length ? ` — ${flags.join(' · ')}` : ''}`;
+        const lines = mine.map((t) => {
+          const estimate = formatEstimate(Number(t.estimate_minutes)) || 'chưa ước lượng';
+          return `  - ${t.title} — ${estimate} · ${t.status} · id: ${t.id}`;
+        });
+        return [head, ...lines].join('\n');
+      });
+
+      return [
+        `Tải công việc ${dueLabel(date, today) === 'Hôm nay' ? 'hôm nay' : 'ngày'} ${formatDate(date)}: ${team.length} người · ${ask} người cần hỏi lại.`,
+        'Ngưỡng tải nhẹ: tổng ước lượng dưới 6 giờ khi mọi việc đã có ước lượng. Đây là tín hiệu để hỏi, không phải kết luận.',
+        '',
+        blocks.join('\n\n'),
+      ].join('\n');
     })
   );
 

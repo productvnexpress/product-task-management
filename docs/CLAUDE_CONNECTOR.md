@@ -11,25 +11,31 @@ Claude thêm, cập nhật, xem công việc thẳng trong app "Quản lý công
 
 | Công cụ | Việc làm | Ghi dữ liệu |
 |---|---|---|
-| `list_tasks` | Xem việc, lọc theo người, dự án, trạng thái, hạn, từ khoá không dấu | Không |
+| `list_tasks` | Xem việc, lọc theo người, dự án, trạng thái, hạn, từ khoá không dấu, người tạo (`created_by`), việc đã giao cho người khác (`delegated`), việc lâu không cập nhật (`stale_days`) | Không |
 | `get_task` | Xem chi tiết một việc kèm lịch sử gần nhất | Không |
 | `add_task` | Thêm một việc. Chỉ bắt buộc tiêu đề | Có |
 | `add_tasks` | Thêm tối đa 50 việc một lần (chuyển từ file, biên bản họp) | Có |
-| `update_task` | Đổi trạng thái, dời hạn, đổi người, thêm link, ghi chú tiến độ | Có |
-| `daily_brief` | Bản tin trong ngày cho một người hoặc cả bộ phận | Không |
+| `update_task` | Đổi trạng thái, dời hạn, đổi người, thêm link, ước lượng, ghi chú tiến độ. Khi hoàn thành: trả kèm dữ liệu dự án để gợi ý việc tiếp theo | Có |
+| `delete_task` | Chuyển việc vào Thùng rác, khôi phục được trong app | Có |
+| `add_comment` | Bình luận, đôn đốc trên một việc. `@username` để nhắc đích danh | Có |
+| `daily_brief` | Bản tin trong ngày: việc nên làm trước, tải hôm nay, quá hạn, đến hạn, nghẽn, lâu không cập nhật, việc đã giao cần đôn đốc | Không |
+| `member_summary` | Tình hình một người, dùng trước họp 1:1 hoặc trước khi đôn đốc | Không |
+| `workload_today` | Soát việc đăng ký trong ngày: tổng ước lượng so với 8 giờ, việc chưa ước lượng, tiêu đề chung chung | Không |
 | `list_projects` | Dự án kèm mã, PM, hạn, số việc mở | Không |
 | `list_members` | Nhân sự kèm username, nhóm chuyên môn | Không |
 
-Connector không xoá việc. Xoá thực hiện trong app.
+Connector chỉ xoá mềm: `delete_task` chuyển việc vào Thùng rác theo đúng quyền xoá của app. Xoá vĩnh viễn thực hiện trong app.
 
 Quy tắc nghiệp vụ giữ nguyên như app:
 
-- Mặc định khi thêm: giao cho chủ token, hạn hôm nay, trạng thái `Chưa làm`, dự án `Chưa xác định (Others)`.
+- Mặc định khi thêm: giao cho chủ token, hạn hôm nay, trạng thái `Chưa làm`, dự án `Chưa xác định (Others)`. Việc chưa có hạn: truyền `due_date = "none"`.
+- Ước lượng thời gian (`estimate_minutes`): không bắt buộc qua connector, thiếu thì connector nhắc Claude hỏi lại người dùng.
 - Chuyển `Hoàn thành` bắt buộc có link kết quả là URL hợp lệ. Chuyển `Bị nghẽn` bắt buộc có lý do.
 - Quyền sửa theo RBAC mục 4.9 của AGENTS.md: Executive sửa việc của mình, Manager sửa việc trong dự án phụ trách, Admin sửa mọi việc.
 - Mỗi thay đổi ghi một dòng lịch sử công việc, tác giả là chủ token, ghi chú có đuôi `(qua Claude)`.
 - Giao việc cho người khác: người nhận có thông báo `task_assigned` trong app.
-- Chống trùng: người phụ trách đã có việc đang mở trùng tiêu đề thì không tạo thêm.
+- Chống trùng: người phụ trách đã có việc trùng tiêu đề thì không tạo thêm. Tiêu đề gần giống một việc đang mở (cùng người, cùng từ khoá) thì dừng lại, liệt kê việc nghi trùng; chỉ tạo khi gọi lại với `allow_duplicate = true`.
+- `workload_today`: Executive chỉ xem của mình; Manager và Admin xem cả bộ phận.
 - Ngày giờ tính theo giờ Việt Nam.
 
 ## 2. Bảo mật
@@ -118,7 +124,7 @@ Chạy lại không tạo việc trùng. Việc đã xong được coi là trùn
 npm run test:mcp
 ```
 
-15 kiểm thử chạy trên dữ liệu trong bộ nhớ, không chạm Supabase. Gồm một bài mô phỏng cách Vercel nạp function (Node ESM thuần).
+25 kiểm thử chạy trên dữ liệu trong bộ nhớ, không chạm Supabase và không gọi API Claude. Gồm một bài mô phỏng cách Vercel nạp function (Node ESM thuần).
 
 ```bash
 WMS_MCP_TOKENS="tienngoc:<token>" SUPABASE_SERVICE_ROLE_KEY="<key>" npm run mcp:dev
@@ -128,10 +134,37 @@ Mở connector tại `http://localhost:3939/api/mcp`, thử bằng MCP Inspector
 
 ## 9. Cơ sở dữ liệu
 
-Không thêm bảng, không đổi schema. Connector đọc `members`, `projects`, `folders`, `tasks`, `task_logs`, `member_leaves`; ghi `tasks`, `task_logs`, `notifications`. App nhận thay đổi qua Supabase Realtime (kênh `wms-db-sync`) nên việc thêm từ Claude hiện ngay trên màn hình đang mở.
+Thay đổi schema nằm trong [sql/2026-11-claude-assist.sql](sql/2026-11-claude-assist.sql): cột `tasks.estimate_minutes`, cho phép `tasks.due_date` trống, bảng `ai_suggestion_log`. Chưa chạy file này thì connector vẫn hoạt động, chỉ không lưu ước lượng. Connector đọc `members`, `projects`, `project_phases`, `folders`, `tasks`, `task_logs`, `member_leaves`; ghi `tasks`, `task_logs`, `notifications`, `trash`. App nhận thay đổi qua Supabase Realtime (kênh `wms-db-sync`) nên việc thêm từ Claude hiện ngay trên màn hình đang mở.
 
 ## 10. Quy ước khi sửa code connector
 
 - Import tương đối trong `api/` và các file `src/utils` mà `api/` dùng phải có đuôi `.js` (Vercel chạy Node ESM, không tự thêm đuôi). `npm run test:mcp` bắt lỗi này.
 - Quy tắc nghiệp vụ dùng lại từ `src/utils` (`rbac`, `taskLogUtils`, `urlValidator`, `titleQuality`, `folderUtils`), không viết bản sao trong `api/`.
 - Thêm công cụ mới: khai báo trong `api/_wms/tools.ts`, thêm kiểm thử trong `scripts/test-mcp-connector.ts`, cập nhật bảng mục 1.
+
+## 11. Nhịp theo dõi và đôn đốc (Admin, Manager)
+
+Tạo các tác vụ định kỳ trong Claude, thứ Hai đến thứ Sáu:
+
+| Giờ | Nội dung tác vụ |
+|---|---|
+| 08:00 | `Gọi daily_brief của connector WMS VnExpress cho tôi. Tóm tắt vừa một màn hình điện thoại: việc nên làm trước, việc đến hạn, việc quá hạn, việc đã giao cần đôn đốc. Chỉ dùng số liệu công cụ trả về.` |
+| 08:40 | `Gọi workload_today của connector WMS VnExpress. Liệt kê người cần hỏi lại kèm lý do. Với mỗi người, soạn sẵn một bình luận ngắn để tôi duyệt. Không tự gửi.` |
+| 16:30 | `Gọi daily_brief với scope = "team". Liệt kê việc đến hạn hôm nay chưa đóng theo từng người. Hỏi tôi việc nào cần nhắc.` |
+
+Thang đôn đốc: quá hạn ngày 1 app tự nhắc; từ ngày 3 hoặc 5 ngày không cập nhật, việc hiện trong `daily_brief` của người giao; từ ngày 5 đưa vào nội dung họp 1:1 (`member_summary`).
+
+Claude chỉ gửi bình luận (`add_comment`) sau khi người dùng duyệt nội dung.
+
+## 12. Gợi ý việc tiếp theo trong app (Claude Haiku)
+
+Sau khi một người thêm hoặc đóng việc, app hiện tối đa 3 việc nên làm tiếp. Bấm "Thêm" mới tạo việc.
+
+- Điểm vào: `POST /api/suggest` ([api/suggest.ts](../api/suggest.ts)). Máy chủ gom dữ liệu thật của dự án (mốc giai đoạn, checklist còn dở, thành viên và vai trò, việc đang mở, việc vừa xong) rồi gọi Claude Haiku. Kết quả được lọc lại: bỏ gợi ý trùng việc đang có, tiêu đề chung chung, người không thuộc dự án.
+- Biến môi trường trên Vercel: `ANTHROPIC_API_KEY` (bắt buộc), `SUPABASE_SERVICE_ROLE_KEY` (đã có). Tuỳ chọn: `WMS_AI_MODEL` (mặc định `claude-haiku-5-5`), `WMS_AI_DAILY_PER_USER` (mặc định 30 lượt mỗi người mỗi ngày), `WMS_AI_DAILY_TOTAL` (mặc định 300).
+- Bảng `ai_suggestion_log` bắt buộc phải có: máy chủ đếm lượt dùng trong bảng này để chặn chi phí, thiếu bảng thì trả 503 và app tự tắt gợi ý.
+- Xác thực: app gửi username và chuỗi băm mật khẩu đang lưu, máy chủ đối chiếu với `member_credentials`. Mức bảo vệ này ngang với app hiện tại (anon key công khai, RLS mở). Nên đặt thêm hạn mức chi tiêu hằng tháng cho khoá API trong Anthropic Console.
+- Tiết kiệm token: chỉ gọi Claude cho việc gắn dự án thật có mốc, thành viên hoặc checklist; thêm hay đóng nhiều việc liên tiếp chỉ tính việc cuối (chờ 6 giây sau khi thêm, 2,5 giây sau khi đóng); người dùng bấm "Tắt hôm nay" hoặc hết lượt thì ngừng gọi; tắt suy luận mở rộng, trần đầu ra 700 token. Một lượt gọi khoảng 1.200 token vào, 300 token ra.
+- Thiếu khoá, thiếu bảng, hoặc API lỗi: app không hiện gợi ý, mọi thao tác khác chạy bình thường.
+- Đo hiệu quả: câu truy vấn tỷ lệ chấp nhận nằm cuối file SQL. Dưới 30% thì gợi ý đang nhiễu, cần chỉnh lời nhắc trong [api/_wms/suggest.ts](../api/_wms/suggest.ts).
+

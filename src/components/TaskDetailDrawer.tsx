@@ -11,6 +11,7 @@ import { formatMemberWithPhone, formatMemberNameOnly, formatDateWithEnDay } from
 import { checkTitleQuality } from '../utils/titleQuality';
 import { getProductMembers } from '../utils/memberPersonalization';
 import { canEditTask, canDeleteTask, getUserRole } from '../utils/rbac';
+import { EstimateSelect } from './tasks/EstimateField';
 import { sortProjectsAlphabetically } from '../utils/projectSortingUtils';
 import { getTodayDateString } from '../utils/dateUtils';
 import { analyzeTaskDiscipline, getTaskCompletionDate } from '../utils/reportUtils';
@@ -123,6 +124,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   const [poSearchQuery, setPoSearchQuery] = useState('');
   const [isPoDropdownOpen, setIsPoDropdownOpen] = useState(false);
   const [dueDate, setDueDate] = useState(task?.dueDate || '');
+  const [estimateMinutes, setEstimateMinutes] = useState<number | undefined>(task?.estimateMinutes);
   const [priority, setPriority] = useState<PriorityLevel>(task?.priority || 'Bình thường');
   const [details, setDetails] = useState(task?.details || '');
   const [blockerReason, setBlockerReason] = useState(task?.blockerReason || '');
@@ -203,6 +205,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       setPoSearchQuery('');
       setIsPoDropdownOpen(false);
       setDueDate(task.dueDate);
+      setEstimateMinutes(task.estimateMinutes);
       setPriority(task.priority);
       setDetails(task.details || '');
       setBlockerReason(task.blockerReason || '');
@@ -415,6 +418,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       assignee,
       productOwners: selectedProductOwners,
       dueDate,
+      estimateMinutes,
       priority,
       details,
       blockerReason: status === 'Bị nghẽn' ? blockerReason : '',
@@ -1154,6 +1158,17 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* 8.1 Ước lượng thời gian làm */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <label htmlFor="task-estimate" className="font-ui text-xs font-bold text-ink">
+                Ước lượng thời gian:
+              </label>
+              <EstimateSelect id="task-estimate" value={estimateMinutes} onChange={setEstimateMinutes} />
+              {!estimateMinutes && status !== 'Hoàn thành' && (
+                <span className="text-xs font-ui text-warning">Chưa ước lượng</span>
+              )}
             </div>
 
             {/* 9. Ưu tiên = Khẩn cấp (Checkbox) */}

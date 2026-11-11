@@ -533,6 +533,7 @@ export const wmsDataService = {
         status: t.status,
         priority: t.priority,
         dueDate: t.due_date || undefined,
+        estimateMinutes: Number(t.estimate_minutes) > 0 ? Number(t.estimate_minutes) : undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
         progress: t.progress !== null ? Number(t.progress) : 0,
@@ -574,6 +575,7 @@ export const wmsDataService = {
       status: task.status,
       priority: task.priority,
       due_date: task.dueDate ? task.dueDate.slice(0, 10) : null,
+      estimate_minutes: task.estimateMinutes ?? null,
       progress: task.progress !== undefined ? task.progress : (task.status === 'Hoàn thành' ? 100 : 0),
       details: task.details || null,
       blocker_reason: task.blockerReason || null,
@@ -589,6 +591,17 @@ export const wmsDataService = {
     };
 
     let { error: taskErr } = await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' });
+    // Cột tuỳ chọn mà cơ sở dữ liệu chưa có: bỏ đúng cột bị báo thiếu rồi ghi lại, không làm mất các trường khác.
+    const optionalCols = ['estimate_minutes', 'completed_at'];
+    for (let attempt = 0; attempt < optionalCols.length; attempt += 1) {
+      const isMissingColumn = taskErr && ((taskErr as any).code === 'PGRST204' || (taskErr as any).code === '42703');
+      const missing = isMissingColumn
+        ? optionalCols.find((c) => c in taskPayload && taskErr!.message?.includes(c))
+        : undefined;
+      if (!missing) break;
+      delete taskPayload[missing];
+      taskErr = (await supabase.from('tasks').upsert(taskPayload, { onConflict: 'id' })).error;
+    }
     if (taskErr && ((taskErr as any).code === '42703' || taskErr.message?.toLowerCase().includes('column'))) {
       if (taskErr.message?.toLowerCase().includes('completed_at') || (taskErr as any).code === '42703') {
         delete taskPayload.completed_at;

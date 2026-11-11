@@ -12,6 +12,7 @@
  *   @tên       người phụ trách (username, tên gọi, họ+tên không dấu)
  *   #mã/tên    dự án (mã VNE-XXX hoặc phần sau "VNE-", hoặc tên không dấu viết liền)
  *   !          khẩn cấp
+ *   ~2h        ước lượng thời gian (~30p, ~1,5h, ~1d)
  *   Hạn ở cuối câu: hôm nay, mai, ngày mai, ngày kia, mốt, thứ 2..thứ 7, t2..t7, chủ nhật, cn, tuần sau
  *   Hạn ở bất kỳ đâu: dd/mm hoặc dd/mm/yyyy
  */
@@ -19,8 +20,9 @@
 import { MemberItem, ProjectItem } from '../types';
 import { getTodayDateString } from './dateUtils';
 import { stripDiacritics } from './titleQuality';
+import { parseEstimateToken } from './estimate';
 
-export type QuickTokenType = 'assignee' | 'project' | 'date' | 'urgent';
+export type QuickTokenType = 'assignee' | 'project' | 'date' | 'urgent' | 'estimate';
 
 export interface QuickAddParseResult {
   title: string;
@@ -29,6 +31,8 @@ export interface QuickAddParseResult {
   dueDate?: string;
   dueLabel?: string;
   isUrgent: boolean;
+  /** Ước lượng thời gian (phút) từ token ~2h */
+  estimateMinutes?: number;
   /** Các token đã nhận diện (để hiển thị chip xem trước) */
   matched: QuickTokenType[];
 }
@@ -123,6 +127,7 @@ export function parseQuickAdd(
   let isUrgent = false;
   let dueDate: string | undefined;
   let dueLabel: string | undefined;
+  let estimateMinutes: number | undefined;
 
   const kept: string[] = [];
   for (const raw of input.split(/\s+/).filter(Boolean)) {
@@ -146,6 +151,14 @@ export function parseQuickAdd(
       if (!isUrgent) matched.push('urgent');
       isUrgent = true;
       continue;
+    }
+    if (!disabled.has('estimate') && estimateMinutes === undefined && raw.startsWith('~')) {
+      const minutes = parseEstimateToken(raw);
+      if (minutes !== undefined) {
+        estimateMinutes = minutes;
+        matched.push('estimate');
+        continue;
+      }
     }
     if (!disabled.has('date') && !dueDate) {
       const dm = raw.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
@@ -194,5 +207,5 @@ export function parseQuickAdd(
     }
   }
 
-  return { title: title.trim(), assignee, project, dueDate, dueLabel, isUrgent, matched };
+  return { title: title.trim(), assignee, project, dueDate, dueLabel, isUrgent, estimateMinutes, matched };
 }

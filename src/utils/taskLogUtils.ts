@@ -5,6 +5,7 @@
 
 import { TaskItem, TaskLogItem, TaskLogChange } from '../types';
 import { formatDateWithEnDay } from './formatters.js';
+import { formatEstimate } from './estimate.js';
 
 /**
  * Format timestamp into readable date & time conforming to RULE.md section 2.3
@@ -31,6 +32,7 @@ export function createCreationLog(task: TaskItem, authorName?: string): TaskLogI
       { field: 'Người phụ trách', newValue: task.assignee },
       { field: 'Hạn hoàn thành', newValue: task.dueDate ? formatDateWithEnDay(task.dueDate) : 'Chưa đặt hạn (Người nhận sẽ chọn)' },
       { field: 'Mức độ ưu tiên', newValue: task.priority },
+      ...(formatEstimate(task.estimateMinutes) ? [{ field: 'Ước lượng', newValue: formatEstimate(task.estimateMinutes) }] : []),
     ],
     note: task.details ? `Ghi chú: ${task.details}` : 'Công việc mới được thêm vào hệ thống.',
   };
@@ -138,6 +140,15 @@ export function recordTaskChanges(
       field: 'Mô tả chi tiết',
       oldValue: oldTask.details || '(Trống)',
       newValue: updatedTask.details || '(Trống)',
+    });
+  }
+
+  // Check Estimate (Ước lượng thời gian)
+  if ((oldTask.estimateMinutes || 0) !== (updatedTask.estimateMinutes || 0)) {
+    changes.push({
+      field: 'Ước lượng',
+      oldValue: formatEstimate(oldTask.estimateMinutes) || 'Chưa ước lượng',
+      newValue: formatEstimate(updatedTask.estimateMinutes) || 'Chưa ước lượng',
     });
   }
 
