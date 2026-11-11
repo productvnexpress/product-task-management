@@ -54,8 +54,13 @@ export default async function handler(req: Request, res: ServerResponse): Promis
   const tokens = parseTokens(process.env.WMS_MCP_TOKENS);
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!tokens.length || !serviceKey) {
-    console.error('[wms-mcp] Thiếu biến môi trường WMS_MCP_TOKENS hoặc SUPABASE_SERVICE_ROLE_KEY.');
-    sendJson(res, 503, rpcError('Connector chưa được cấu hình. Báo Admin WMS.'));
+    // Chỉ nêu tên biến, không lộ giá trị, để Admin biết cần sửa gì trên Vercel.
+    const missing: string[] = [];
+    if (!process.env.WMS_MCP_TOKENS) missing.push('WMS_MCP_TOKENS (chưa có)');
+    else if (!tokens.length) missing.push('WMS_MCP_TOKENS (sai định dạng, cần username:token, token ≥ 32 ký tự)');
+    if (!serviceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY (chưa có)');
+    console.error(`[wms-mcp] Thiếu cấu hình: ${missing.join('; ')}.`);
+    sendJson(res, 503, rpcError(`Connector chưa được cấu hình: ${missing.join('; ')}. Báo Admin WMS.`));
     return;
   }
 
