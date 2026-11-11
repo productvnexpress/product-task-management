@@ -291,6 +291,10 @@ export function createWmsServer(ctx: WmsContext): McpServer {
     cache.get(assignee.name)?.push(row);
 
     const initLog = createCreationLog(toTaskItem(row), r.actor.name);
+    // Lưu ngày hoàn thành vào nhật ký: production chưa có cột completed_at, app đọc ngày này từ log.
+    if (status === 'Hoàn thành') {
+      initLog.changes = [...(initLog.changes || []), { field: 'Thời điểm hoàn thành', newValue: completedDate || vnToday(now()) }];
+    }
     await store.addLog({
       id: `log-${row.id.replace(/^task-/, '')}-init`,
       task_id: row.id,

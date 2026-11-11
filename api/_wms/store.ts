@@ -131,8 +131,12 @@ export interface WmsStore {
 const MEMBER_COLUMNS = 'id,name,first_name,last_name,username,email,group_type,role,team,title';
 const PROJECT_COLUMNS = 'id,name,code,status,folder_id,lead_name,roles,target_date,created_by,is_strategic';
 
+const isMissingColumn = (error: { code?: string; message?: string }, column: string): boolean =>
+  (error.code === 'PGRST204' || error.code === '42703') && (error.message || '').includes(column);
+
 export class SupabaseStore implements WmsStore {
   private readonly db: SupabaseClient;
+  private noCompletedAt = false;
 
   constructor(url: string, serviceKey: string) {
     this.db = createClient(url, serviceKey, {
@@ -192,12 +196,31 @@ export class SupabaseStore implements WmsStore {
   }
 
   async insertTask(row: TaskRow): Promise<void> {
-    const { error } = await this.db.from('tasks').insert(row);
-    if (error) throw error;
+    await this.writeTask(row, (payload) => this.db.from('tasks').insert(payload));
   }
 
   async updateTask(id: string, patch: Partial<TaskRow>): Promise<void> {
-    const { error } = await this.db.from('tasks').update(patch).eq('id', id);
+    await this.writeTask(patch, (payload) => this.db.from('tasks').update(payload).eq('id', id));
+  }
+
+  /**
+   * Bảng `tasks` trên production chưa có cột `completed_at` (app cũng bỏ cột này khi ghi lỗi).
+   * Ngày hoàn thành khi đó suy ra từ nhật ký công việc (`getTaskCompletionDate`).
+   */
+  private async writeTask(
+    payload: Partial<TaskRow>,
+    run: (payload: Partial<TaskRow>) => PromiseLike<{ error: { code?: string; message?: string } | null }>
+  ): Promise<void> {
+    const send = { ...payload };
+    if (this.noCompletedAt) delete send.completed_at;
+    if (!Object.keys(send).length) return;
+    let { error } = await run(send);
+    if (error && 'completed_at' in send && isMissingColumn(error, 'completed_at')) {
+      this.noCompletedAt = true;
+      delete send.completed_at;
+      if (!Object.keys(send).length) return;
+      ({ error } = await run(send));
+    }
     if (error) throw error;
   }
 
