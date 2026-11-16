@@ -144,7 +144,14 @@ export function inferProjectFolderId(project: Partial<ProjectItem>): string {
   if (id === 'proj-dulich' || id === 'proj-vnego' || name.includes('du lịch') || name.includes('vnego')) {
     return 'folder-vne-dulich';
   }
-  if (id === 'proj-carawards' || name.includes('car awards') || name.includes('ô tô')) {
+  if (
+    id === 'proj-carawards' ||
+    code === 'vne-xe' ||
+    name.trim() === 'xe' ||
+    name.includes('car awards') ||
+    name.includes('mobility awards') ||
+    name.includes('ô tô')
+  ) {
     return 'folder-vne-xe';
   }
   if (
@@ -157,7 +164,16 @@ export function inferProjectFolderId(project: Partial<ProjectItem>): string {
   ) {
     return 'folder-vne-khoahoc';
   }
-  if (id === 'proj-spamvote' || id === 'proj-icontent' || name.includes('icontent') || name.includes('spam vote')) {
+  if (
+    id === 'proj-spamvote' ||
+    id === 'proj-icontent' ||
+    name.includes('icontent') ||
+    name.includes('spam vote') ||
+    name.includes('awards') ||
+    name.includes('giải thưởng') ||
+    name.includes('forum') ||
+    name.includes('diễn đàn')
+  ) {
     return 'folder-vne-sukien';
   }
   if (id === 'proj-overseas' || name.includes('overseas') || name.includes('english') || code.includes('en-')) {
@@ -177,7 +193,10 @@ export function inferProjectFolderId(project: Partial<ProjectItem>): string {
     name.includes('wms') ||
     name.includes('kpi') ||
     name.includes('newsletter') ||
-    name.includes('cá nhân hoá')
+    name.includes('cá nhân hoá') ||
+    name.includes('cá nhân hóa') ||
+    name.includes('editor') ||
+    name.includes('application')
   ) {
     return 'folder-vne-hethong';
   }

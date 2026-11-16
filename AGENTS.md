@@ -277,6 +277,8 @@ Mỗi lần công việc có chỉnh sửa (đổi trạng thái, đổi hạn, 
 # 2. NHÓM 2: QUẢN LÝ DỰ ÁN (PROJECTS SPECIFICATION)
 
 ### 2.1. Quy chuẩn Kiến trúc Giao diện Quản lý Dự án (Drawer Architecture)
+- **Chế độ xem gọn (View Mode)**: chỉ hiện thông tin đã có, dạng dòng phân cách bằng đường kẻ: Thời gian (kèm còn/quá N ngày), Mã · Thư mục, Đội ngũ (bỏ vai trò trống), Product Owner, Mô tả, Mục tiêu & KPI. Thiếu mục nào thì gộp một dòng `Còn thiếu: …` kèm link `Bổ sung`. Liên kết chỉ liệt kê đường dẫn đã có; Ghi chú ẩn form sau nút `Thêm ghi chú`. Thanh điều hướng mục và số thứ tự mục chỉ hiện khi sửa hoặc tạo mới.
+- **Đóng drawer**: nút `X` ở Header, nút `Đóng` ở Footer, phím `Esc`, bấm nền mờ. Dự án đang mở không còn trong danh sách thì drawer tự đóng.
 - **Single Unified Drawer**: Dùng chung một Right Sidebar Drawer (độ rộng ~60-65% màn hình) cho cả 2 thao tác: **Xem & Chỉnh sửa dự án** và **Tạo mới dự án**.
 - **Tuyệt đối không dùng modal pop-up giữa màn hình** để thao tác thông tin dự án.
 - **Header tinh gọn**: Bên trái là Tên dự án và biểu tượng **Lịch sử thay đổi (Audit History)**; bên phải là Mã dự án, Tag trạng thái, và nút Đóng `ESC`.
@@ -788,13 +790,14 @@ Hệ thống hoạt động trên nguyên tắc **Mặt phẳng chung (Unified W
 
 | Nhóm quyền | Đối tượng áp dụng | Công việc (a) | Dự án (b) | Nhân sự (c) | Thùng rác (d) | Ghi chú quyền hạn |
 |---|---|---|---|---|---|---|
-| **1. Executive** (Chuyên viên) | UX/UI Designer, SEO, Data Specialist | `a1234` | `b2` | `c2` | `d25` | • Chỉ sửa, xoá công việc do chính mình tạo (`createdBy`/`assignee`).<br>• Dự án & Nhân sự: Chỉ xem. **Riêng nhân sự UX/UI Designer có quyền chỉnh sửa thông tin các liên kết trong Dự án (Section 3: Liên kết) để hỗ trợ cho PM**.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá (`deletedBy`). |
+| **1. Executive** (Chuyên viên) | UX/UI Designer, SEO, Data Specialist | `a1234` | `b2` (riêng `binhminh`, `duytung`, `ngocson`: `b12345` với dự án do mình tạo) | `c2` | `d25` | • Chỉ sửa, xoá công việc do chính mình tạo (`createdBy`/`assignee`).<br>• Dự án & Nhân sự: Chỉ xem. **Riêng nhân sự UX/UI Designer có quyền chỉnh sửa thông tin các liên kết trong Dự án (Section 3: Liên kết) để hỗ trợ cho PM**.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá (`deletedBy`). |
 | **2. Manager** (Quản lý) | Product Manager (ngoại trừ Admin) | `a1234` | `b12345` | `c2` | `d25` | • Sửa, xoá công việc do mình tạo. **Có quyền chỉnh sửa việc của các nhân sự trong dự án mà mình phụ trách (`leadName`/PM/người tạo), không được phép chỉnh sửa dự án không phụ trách (trừ việc do mình tạo)**.<br>• Tạo dự án mới; chỉ sửa, xoá dự án do mình tạo/phụ trách.<br>• Nhân sự: Chỉ xem.<br>• Thùng rác: Chỉ khôi phục mục do chính mình đã xoá. |
 | **3. Admin** (Quản trị viên) | Tài khoản Đặng Tiến Ngọc (`tienngoc`) | `a1234` | `b12345` | `c12345` | `d245` | • Toàn quyền tối cao trên toàn bộ hệ thống: Tạo, Xem, Sửa, Xoá, Khôi phục mọi Công việc, Dự án, Nhân sự.<br>• Độc quyền thực hiện Xoá vĩnh viễn và Dọn sạch toàn bộ Thùng rác. |
 
 #### 4. Quy tắc Nghiệp vụ Quyền sở hữu (Ownership Rules)
 1. **Quyền sở hữu Công việc**: Xác định qua trường `createdBy` (hoặc log khởi tạo ban đầu, fallback về người phụ trách `assignee`). Riêng Manager phụ trách dự án có quyền sửa công việc của tất cả nhân sự trong dự án đó.
 2. **Quyền sở hữu Dự án**: Xác định qua trường `createdBy` (hoặc người phụ trách Lead, PM của dự án).
+   - **Executive được cấp quyền tạo dự án** (`PROJECT_CREATOR_USERNAMES` trong `src/utils/rbac.ts`: `binhminh`, `duytung`, `ngocson`): tạo dự án; sửa, xoá, quản lý giai đoạn chỉ với dự án do chính mình tạo (`createdBy`), không mở rộng theo Lead/PM.
 3. **Quyền chỉnh sửa Liên kết Dự án**: Cả Lead, PM và nhân sự UX/UI Designer đều có quyền cập nhật nhanh các đường dẫn làm việc/kết quả tại Section 3 của Chi tiết Dự án.
 4. **Quyền khôi phục Thùng rác**: Xác định qua trường `deletedBy` tự động lưu lại danh tính tài khoản tại thời điểm xoá.
 
@@ -850,14 +853,18 @@ Tại danh sách dự án thuộc Left Sidebar:
 3. **Quy tắc Sắp xếp Danh sách Dự án (Alphabetical Sorting & Others Pinning)**:
    - Danh sách dự án (cả ở chế độ *Đang triển khai* và *Toàn bộ dự án*) luôn được **sắp xếp theo thứ tự bảng chữ cái Alphabet (A-Z)** theo chuẩn tiếng Việt.
    - Dự án đặc biệt **"Chưa xác định (Others)"** luôn luôn được neo cố định ở **vị trí cuối cùng** của danh sách để người dùng tiện tra cứu và lọc các công việc phát sinh tự do.
-4. **Quy chuẩn Kích thước & Vị trí Icon Sao ⭐ (Sidebar Width & Star Position)**:
+4. **Cây Thư mục & Dự án gọn**:
+   - Chỉ hiện thư mục có dự án đang hiện hoặc có việc đang mở (tính cả thư mục con); thư mục trống ẩn. Bấm `Tất cả (xx)` hiện mọi thư mục và dự án, bấm `Thu gọn` để quay lại.
+   - Thư mục con mặc định thu gọn, hiện số dự án bên trong (`· 3 dự án`); tự mở khi đang chọn thư mục hoặc dự án bên trong.
+   - Dự án chưa gán thư mục được xếp theo `inferProjectFolderId` (`src/utils/folderUtils.ts`): Awards, Forum, Giải thưởng vào `Sự kiện & Giải thưởng`; Xe, Mobility Awards vào `Xe`; Editor, Application vào `Hệ thống & Nội bộ`.
+5. **Quy chuẩn Kích thước & Vị trí Icon Sao ⭐ (Sidebar Width & Star Position)**:
    - Chiều rộng của Left Sidebar được tối ưu thành `w-80` (320px) để đảm bảo không gian hiển thị rộng rãi, tránh cắt cụt các tên dự án dài.
    - Biểu tượng sao ⭐ của **Dự án chiến lược** được đặt **ngay liền kề sau tiêu đề dự án** (ví dụ: `Overseas ⭐`) thay vì căn xa về mép phải, trong khi badge số lượng công việc vẫn căn mép phải, vừa đảm bảo trục đọc dọc thẳng hàng vừa nhận diện dự án chiến lược tức thì.
-5. **Bỏ tiền tố Xưng hô cho Nhân sự Product & Thao tác Chọn Product Owner**:
+6. **Bỏ tiền tố Xưng hô cho Nhân sự Product & Thao tác Chọn Product Owner**:
    - Trong trang Dự án (`ProjectsManager`) và Chi tiết dự án (`ProjectDetailsDrawer`), các chức danh Product (PM, UX/UI Designer, SEO, Data, Lead) không kèm tiền tố danh xưng ("Anh", "Chị"), hiển thị dạng `"Họ và Tên - IP Phone"`.
    - Nhóm Stakeholder / Product Owner vẫn giữ nguyên tiền tố xưng hô.
    - Khi chỉnh sửa dự án, sau khi người dùng chọn xong Product Owner từ danh sách Stakeholder, hộp gợi ý lựa chọn tự động đóng lại để tối ưu hóa thao tác người dùng.
-6. **Đồng bộ Lọc Thời gian theo Góc nhìn Phân vai**:
+7. **Đồng bộ Lọc Thời gian theo Góc nhìn Phân vai**:
    - Các bộ đếm Quá hạn, Đến hạn hôm nay và danh sách công việc trên thanh `ReminderPanel` luôn tự động đồng bộ theo phạm vi góc nhìn đang chọn (`Của tôi`, `Dự án của tôi`, hoặc các điều kiện lọc Dự án / Thành viên đang kích hoạt).
 
 ---

@@ -260,11 +260,27 @@ export const canDeleteTask = (
 // B. QUYỀN TRÊN DỰ ÁN (PROJECTS - b)
 // ==========================================
 
+/**
+ * Executive được cấp riêng quyền tạo dự án (b1). Chỉ sửa, xoá dự án do chính mình tạo
+ * (theo `createdBy`), không mở rộng theo Lead/PM như Manager.
+ */
+export const PROJECT_CREATOR_USERNAMES = ['binhminh', 'duytung', 'ngocson'];
+
+const isGrantedProjectCreator = (user: MemberItem | null | undefined): boolean =>
+  Boolean(user?.username && PROJECT_CREATOR_USERNAMES.includes(user.username.trim().toLowerCase()));
+
+/** Chỉ xét người tạo (`createdBy`), không xét Lead/PM. */
+const isProjectAuthor = (project: ProjectItem, user: MemberItem): boolean => {
+  const cb = (project.createdBy || '').trim().toLowerCase();
+  if (!cb) return false;
+  return cb === (user.name || '').trim().toLowerCase() || cb === (user.username || '').trim().toLowerCase();
+};
+
 export const canCreateProject = (user: MemberItem | null | undefined): boolean => {
   if (!user) return false;
   const role = getUserRole(user);
-  // b1: Admin và Manager có quyền tạo dự án; Executive không có quyền tạo (b2)
-  return role === 'Admin' || role === 'Manager';
+  // b1: Admin, Manager và các Executive được cấp quyền (PROJECT_CREATOR_USERNAMES) tạo được dự án
+  return role === 'Admin' || role === 'Manager' || isGrantedProjectCreator(user);
 };
 
 export const canViewProject = (_user: MemberItem | null | undefined): boolean => {
@@ -280,8 +296,8 @@ export const canEditProject = (user: MemberItem | null | undefined, project: Pro
     // b3: Manager chỉ sửa dự án mình tạo
     return isProjectCreator(project, user);
   }
-  // Executive: b2 (chỉ xem, không sửa)
-  return false;
+  // Executive được cấp quyền tạo dự án: sửa dự án do chính mình tạo. Executive khác: chỉ xem (b2).
+  return isGrantedProjectCreator(user) && isProjectAuthor(project, user);
 };
 
 export const canDeleteProject = (user: MemberItem | null | undefined, project: ProjectItem): boolean => {
@@ -292,8 +308,8 @@ export const canDeleteProject = (user: MemberItem | null | undefined, project: P
     // b4: Manager chỉ xoá dự án mình tạo
     return isProjectCreator(project, user);
   }
-  // Executive: b2 (chỉ xem, không xoá)
-  return false;
+  // Executive được cấp quyền tạo dự án: xoá dự án do chính mình tạo. Executive khác: chỉ xem (b2).
+  return isGrantedProjectCreator(user) && isProjectAuthor(project, user);
 };
 
 /**

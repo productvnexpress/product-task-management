@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ActiveTab, ProjectItem, MemberItem, TeamType, TaskStatus, DueFilterType, FolderItem } from '../types';
 import { getMemberProjectRelation } from '../utils/memberPersonalization';
 import {
@@ -199,11 +199,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return sortProjectsAlphabetically(list);
   }, [baseProjects, showAllProjectsInSidebar, selectedProjectId]);
 
+  // Thư mục hiển thị: chỉ thư mục có dự án đang hiện hoặc có việc đang mở (kể cả trong thư mục con).
+  // Bấm "Tất cả" để hiện mọi thư mục, kể cả thư mục trống.
+  const projectFolderOf = (p: ProjectItem) => p.folderId || inferProjectFolderId(p);
+  const isFolderVisible = useCallback(
+    (folderId: string): boolean => {
+      if (showAllProjectsInSidebar || selectedFolderId === folderId) return true;
+      const ids = new Set([folderId, ...folders.filter((f) => f.parentId === folderId).map((f) => f.id)]);
+      if (displayedProjects.some((p) => ids.has(projectFolderOf(p)))) return true;
+      return [...ids].some((id) => (taskCountsByFolder[id] || 0) > 0);
+    },
+    [showAllProjectsInSidebar, selectedFolderId, folders, displayedProjects, taskCountsByFolder]
+  );
+
   const rootFolders = useMemo(() => {
     return folders
       .filter((f) => !f.parentId)
+      .filter((f) => isFolderVisible(f.id))
       .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
-  }, [folders]);
+  }, [folders, isFolderVisible]);
 
   // User activity persistence for collapse/expand
   const userKey = activeProductMember?.id || 'default_user';
@@ -713,7 +727,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => setShowAllProjectsInSidebar(!showAllProjectsInSidebar)}
                   className="text-[10px] font-ui font-bold text-accent hover:underline cursor-pointer normal-case"
                 >
-                  {showAllProjectsInSidebar ? 'Đang chạy' : `Tất cả (${baseProjects.length})`}
+                  {showAllProjectsInSidebar ? 'Thu gọn' : `Tất cả (${baseProjects.length})`}
                 </button>
               </div>
             </div>
@@ -750,7 +764,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Danh sách Cây Thư mục Cấp 1 (VnExpress, Ngôi sao, English, Tia sáng...) */}
               {rootFolders.map((root) => {
                 const subFolders = folders
-                  .filter((f) => f.parentId === root.id)
+                  .filter((f) => f.parentId === root.id && isFolderVisible(f.id))
                   .sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99) || a.name.localeCompare(b.name, 'vi'));
                 const directRootProjects = displayedProjects.filter(
                   (p) => (p.folderId || inferProjectFolderId(p)) === root.id
@@ -838,10 +852,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           );
                           const isSubSelected = selectedFolderId === sub.id && selectedProjectId === 'all';
                           const hasSubProjSelected = subProjects.some((p) => p.id === selectedProjectId);
+                          // Mặc định thu gọn: cây ngắn, chỉ mở thư mục đang chọn hoặc người dùng bấm mở.
                           const isSubExpanded = Boolean(
                             expandedFolderIds[sub.id] !== undefined
                               ? expandedFolderIds[sub.id]
-                              : isSubSelected || hasSubProjSelected || subProjects.length > 0
+                              : isSubSelected || hasSubProjSelected
                           );
                           const subTaskCount = taskCountsByFolder[sub.id] || 0;
 
@@ -882,6 +897,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                   >
                                     <Folder className="w-3 h-3 text-subdued shrink-0" />
                                     <span className="truncate">{sub.name}</span>
+                                    {subProjects.length > 0 && !isSubExpanded && (
+                                      <span className="text-[10px] text-subdued-lighter shrink-0">· {subProjects.length} dự án</span>
+                                    )}
                                   </button>
                                 </div>
 

@@ -626,6 +626,14 @@ const getDefaultPerspectiveForUser = (user: MemberItem | null) => {
     );
   }, [projects, selectedProjectIdForDrawer]);
 
+  // Dự án đang mở không còn trong danh sách (bị xoá, đổi mã khi đồng bộ lại): đóng hẳn drawer,
+  // tránh trạng thái "đang mở" mà không có gì để hiển thị.
+  useEffect(() => {
+    if (isProjectDrawerOpen && !isCreateProjectDrawer && selectedProjectIdForDrawer && !selectedProjectForDrawer) {
+      setIsProjectDrawerOpen(false);
+    }
+  }, [isProjectDrawerOpen, isCreateProjectDrawer, selectedProjectIdForDrawer, selectedProjectForDrawer]);
+
   const handleOpenProjectDetail = (projectId: string) => {
     setSelectedProjectIdForDrawer(projectId);
     setIsCreateProjectDrawer(false);

@@ -31,6 +31,8 @@ interface ProjectTimelineViewProps {
   onUpdatePhase?: (phaseId: string, updatedFields: Partial<ProjectPhase>) => void;
   onDeletePhase?: (phaseId: string) => void;
   onAddPhaseClick?: () => void;
+  /** Ẩn dòng tiêu đề khi nơi chứa đã có tiêu đề và nút thêm giai đoạn riêng. */
+  hideHeader?: boolean;
 }
 
 export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
@@ -41,6 +43,7 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   onUpdatePhase,
   onDeletePhase,
   onAddPhaseClick,
+  hideHeader = false,
 }) => {
   const projTasks = tasks.filter((t) => t.projectId === project.id || t.projectName === project.name);
   
@@ -125,6 +128,7 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
   return (
     <div className="space-y-4 font-body">
       {/* Header Bar */}
+      {!hideHeader && (
       <div className="flex items-center justify-between pb-2 border-b border-line">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-ink">
@@ -142,6 +146,7 @@ export const ProjectTimelineView: React.FC<ProjectTimelineViewProps> = ({
           </button>
         )}
       </div>
+      )}
 
       {/* Concise Vertical Timeline */}
       <div className="relative pl-6 space-y-3.5 before:absolute before:left-2.5 before:top-2.5 before:bottom-2.5 before:w-[2px] before:bg-surface-300">

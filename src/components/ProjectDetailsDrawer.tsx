@@ -76,7 +76,7 @@ import {
   sortPhasesByDate,
   normalizeAndNumberPhases,
 } from '../utils/phaseUtils';
-import { canEditProject, canEditProjectLinks } from '../utils/rbac';
+import { canCreateProject, canEditProject, canEditProjectLinks } from '../utils/rbac';
 import { normalizeProjectStatus, generateProjectCode } from '../utils/projectSortingUtils';
 
 interface ProjectDetailsDrawerProps {
@@ -114,7 +114,11 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 }) => {
   const effectiveUser = currentAuthUser || activeProductMember;
   const userRole = getUserRole(effectiveUser);
-  const canManagePhases = userRole === 'Admin' || userRole === 'Manager';
+  // Admin, Manager quản lý giai đoạn; Executive được cấp quyền tạo dự án quản lý giai đoạn của dự án mình tạo.
+  const canManagePhases =
+    userRole === 'Admin' ||
+    userRole === 'Manager' ||
+    (canCreateProject(effectiveUser) && (isCreateMode || (project ? canEditProject(effectiveUser, project) : false)));
   // Mode state: Default to false (View Mode) as requested
   const [isEditing, setIsEditing] = useState(false);
 
@@ -166,6 +170,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
 
   // Section 3: Links Editing State (cho phép UX/UI Designer và PM chỉnh sửa riêng phần Links)
   const [isEditingLinksSection, setIsEditingLinksSection] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState(false);
 
   // Quick Add Custom Link State
   const [isAddingCustomLink, setIsAddingCustomLink] = useState(false);
@@ -1171,10 +1176,144 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
     },
   ];
 
+  // ---------------------------------------------------------------------------
+  // Chế độ xem: chỉ hiện thông tin đã có, gọn theo dạng dòng, không hộp lồng hộp.
+  // ---------------------------------------------------------------------------
+  const daysToTarget = (() => {
+    if (!targetDate) return null;
+    const today = new Date();
+    const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const [y, m, d] = targetDate.slice(0, 10).split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return Math.round((Date.UTC(y, m - 1, d) - start) / 86_400_000);
+  })();
+
+  const renderSummaryRow = (label: string, value: React.ReactNode) => (
+    <div className="grid grid-cols-[96px_1fr] sm:grid-cols-[120px_1fr] gap-3 py-2.5">
+      <dt className="font-ui text-xs text-subdued">{label}</dt>
+      <dd className="font-ui text-xs text-ink min-w-0">{value}</dd>
+    </div>
+  );
+
+  const renderOverviewSummary = () => {
+    const team = [
+      { label: 'PM', names: pmMembers },
+      { label: 'Designer', names: designerMembers },
+      { label: 'SEO', names: seoMembers },
+      { label: 'Data', names: dataMembers },
+    ].filter((r) => r.names.length > 0);
+    const missing = [
+      !description.trim() && 'mô tả',
+      !objective.trim() && 'mục tiêu & KPI',
+      selectedPoList.length === 0 && 'Product Owner',
+      pmMembers.length === 0 && 'PM',
+    ].filter(Boolean) as string[];
+    const projectStatus = normalizeProjectStatus(status);
+    const isDone = projectStatus === 'Hoàn thành';
+
+    return (
+      <div className="space-y-1">
+        <dl className="divide-y divide-divider">
+          {renderSummaryRow(
+            'Thời gian',
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span>
+                {startDate ? formatDateShort(startDate) : 'Chưa có ngày bắt đầu'} → {targetDate ? formatDateShort(targetDate) : 'Chưa có hạn'}
+              </span>
+              {daysToTarget !== null && !isDone && (
+                <span
+                  className={
+                    daysToTarget < 0 ? 'text-negative font-semibold' : daysToTarget <= 7 ? 'text-warning font-semibold' : 'text-subdued'
+                  }
+                >
+                  {daysToTarget < 0
+                    ? `quá ${-daysToTarget} ngày`
+                    : daysToTarget === 0
+                    ? 'hết hạn hôm nay'
+                    : `còn ${daysToTarget} ngày`}
+                </span>
+              )}
+            </span>
+          )}
+          {renderSummaryRow(
+            'Mã · Thư mục',
+            <span>
+              {code || 'Chưa có mã'} · {getFolderPath(folderId, folders) || 'VnExpress'}
+            </span>
+          )}
+          {team.length > 0 &&
+            renderSummaryRow(
+              'Đội ngũ',
+              <ul className="space-y-0.5">
+                {team.map((r) => (
+                  <li key={r.label}>
+                    <span className="text-subdued">{r.label}:</span>{' '}
+                    {r.names.map((n) => formatProductMemberWithPhone(n, members)).join(', ')}
+                  </li>
+                ))}
+              </ul>
+            )}
+          {selectedPoList.length > 0 &&
+            renderSummaryRow('Product Owner', selectedPoList.map((po) => getFormattedPoName(po)).join(', '))}
+          {description.trim() &&
+            renderSummaryRow('Mô tả', <p className="font-body leading-relaxed whitespace-pre-wrap">{description}</p>)}
+          {objective.trim() &&
+            renderSummaryRow('Mục tiêu & KPI', <p className="font-body leading-relaxed whitespace-pre-wrap">{objective}</p>)}
+        </dl>
+        {missing.length > 0 && canEdit && (
+          <p className="pt-2 border-t border-divider font-ui text-xs text-subdued">
+            Còn thiếu: {missing.join(', ')}.{' '}
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="text-link underline decoration-1 underline-offset-2 cursor-pointer"
+            >
+              Bổ sung
+            </button>
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const renderLinkList = () => {
+    const all = [
+      ...linkItems
+        .filter((item) => Boolean(item.url && item.url.trim()))
+        .map((item) => ({ id: item.id, title: item.title, url: item.url })),
+      ...customLinks.filter((cl) => cl.url && cl.url.trim()).map((cl) => ({ id: cl.id, title: cl.title, url: cl.url })),
+    ];
+    if (!all.length) return <p className="font-ui text-xs text-subdued">Chưa có liên kết.</p>;
+    return (
+      <ul className="divide-y divide-divider">
+        {all.map((l) => (
+          <li key={l.id} className="flex items-center justify-between gap-3 py-2">
+            <span className="font-ui text-xs text-subdued shrink-0 w-28 truncate">{l.title}</span>
+            <a
+              href={l.url}
+              target="_blank"
+              rel="noreferrer"
+              className="min-w-0 flex-1 truncate font-ui text-xs text-link underline decoration-1 underline-offset-2"
+              title={l.url}
+            >
+              {l.url.replace(/^https?:\/\//, '')}
+            </a>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (project || isCreateMode) && (
-        <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
+        <motion.div
+          key="project-drawer"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 1, transition: { duration: 0.25 } }}
+          className="fixed inset-0 z-50 flex justify-end overflow-hidden"
+        >
           {/* Background overlay click to close */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -1240,13 +1379,6 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               </span>
             )}
 
-            {/* Tag Chiến lược */}
-            {isStrategic && (
-              <span className="text-xs font-ui font-bold px-2.5 py-1 rounded-full border bg-surface-warning text-warning border-line shrink-0 flex items-center gap-1">
-                ⭐ Chiến lược
-              </span>
-            )}
-
             {/* Tag Status */}
             <span
               className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
@@ -1279,24 +1411,25 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 ) : (
                   <Share2 className="w-3.5 h-3.5 text-subdued" />
                 )}
-                <span>{isCopied ? 'Đã chép link' : 'Sao chép link'}</span>
+                <span className="hidden sm:inline">{isCopied ? 'Đã chép' : 'Chép link'}</span>
               </button>
             )}
 
-            {/* Button Close kèm text "ESC để đóng" */}
-            <button
-              type="button"
+            {/* Nút Đóng (phím Esc) */}
+            <VdsButton
+              variant="ghost"
+              size="sm"
+              icon="Dismiss"
+              aria-label="Đóng (Esc)"
+              title="Đóng (Esc)"
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-ui font-semibold text-ink-lighter hover:text-ink bg-surface hover:bg-surface-200 rounded-vds-lg border border-line transition-colors cursor-pointer shrink-0"
-              title="Đóng ngăn chi tiết (Phím ESC)"
-            >
-              <X className="w-4 h-4 text-subdued" />
-              <span>ESC để đóng</span>
-            </button>
+              className="shrink-0"
+            />
           </div>
         </div>
 
-        {/* Sub-header: Pinned Section Quick Navigation Menu */}
+        {/* Sub-header: Pinned Section Quick Navigation Menu (chỉ khi sửa / tạo mới) */}
+        {(isEditing || isCreateMode) && (
         <div className="px-5 py-2 bg-surface-100 border-b border-line flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none z-10">
           <button
             type="button"
@@ -1368,6 +1501,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             </span>
           </button>
         </div>
+        )}
 
         {/* Drawer Body - Single Screen Scrollable Content */}
         <div ref={scrollBodyRef} className="p-5 overflow-y-auto font-body text-xs text-ink flex-1 space-y-6 scroll-smooth">
@@ -1380,7 +1514,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <FolderKanban className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="font-title text-sm font-bold text-accent">
-                  1. Tổng quan
+                  {isEditing || isCreateMode ? '1. Tổng quan' : 'Tổng quan'}
                 </h3>
               </div>
 
@@ -1423,6 +1557,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               </div>
             </div>
 
+            {!(isEditing || isCreateMode) ? renderOverviewSummary() : (<>
             {/* Tên dự án */}
             {isEditing ? (
               <div className="space-y-1">
@@ -2082,6 +2217,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 </div>
               </div>
             </div>
+            </>)}
           </div>
 
           {/* ==================== SECTION 2: GIAI ĐOẠN ==================== */}
@@ -2092,7 +2228,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <Calendar className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="font-title text-sm font-bold text-support">
-                  2. Giai đoạn ({phases.length})
+                  {isEditing || isCreateMode ? '2. ' : ''}Giai đoạn ({phases.length})
                 </h3>
               </div>
 
@@ -2107,9 +2243,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     <span>Thêm giai đoạn</span>
                   </button>
                 ) : (
-                  <span className="text-xs text-subdued font-ui italic">
-                    Chỉ Manager & Admin được thêm giai đoạn
-                  </span>
+                  null
                 )
               )}
             </div>
@@ -2121,7 +2255,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               onUpdatePhaseStatus={handleUpdatePhaseStatus}
               onUpdatePhase={handleUpdatePhase}
               onDeletePhase={handleDeletePhase}
-              onAddPhaseClick={canManagePhases ? () => setIsAddingPhase(true) : undefined}
+              hideHeader
             />
 
             {/* Form Thêm Phase */}
@@ -2205,7 +2339,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <ExternalLink className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="font-title text-sm font-bold text-positive">
-                  3. Liên kết
+                  {isEditing || isCreateMode ? '3. ' : ''}Liên kết
                 </h3>
               </div>
 
@@ -2241,9 +2375,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                     </div>
                   )
                 )}
-                <span className="text-xs text-subdued font-ui hidden sm:inline">
-                  {isEditing || isEditingLinksSection ? 'Nhập đường dẫn liên kết' : 'Chọn liên kết để truy cập trực tiếp'}
-                </span>
+
               </div>
             </div>
 
@@ -2294,54 +2426,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 })}
               </div>
             ) : (
-              /* VIEW MODE FOR 6 STANDARD LINKS */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {linkItems.map((item) => {
-                  const IconComp = item.icon;
-                  const hasUrl = Boolean(item.url && item.url.trim());
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-surface p-2.5 rounded-vds-lg border border-line flex items-center justify-between gap-2 hover:border-line-positive transition group"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`p-1.5 rounded-vds-lg ${item.badgeBg} ${item.badgeText} ${item.badgeBorder} border shrink-0`}>
-                          <IconComp className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-ui text-xs font-bold text-ink block truncate">
-                            {item.title}
-                          </span>
-                          <span className="text-xs text-subdued block truncate font-num">
-                            {hasUrl ? item.url : 'Chưa cập nhật liên kết'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {hasUrl ? (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2.5 py-1 rounded-vds-lg bg-surface-positive text-positive border border-line group-hover:bg-positive-solid group-hover:text-on-color font-ui text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
-                          title="Mở trong tab mới"
-                        >
-                          <span>Mở</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ) : (
-                        <span className="text-xs text-subdued-lighter font-ui px-2 py-0.5 bg-surface-200 rounded-vds-md shrink-0">
-                          Chưa có liên kết
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              /* VIEW MODE: chỉ liệt kê liên kết đã có, gồm cả liên kết bổ sung */
+              renderLinkList()
             )}
 
-            {/* Custom Links (Tự thêm liên kết theo nhu cầu gồm Title và Link) */}
+            {/* Custom Links (Tự thêm liên kết theo nhu cầu gồm Title và Link): chỉ khi sửa */}
+            {(isEditing || isEditingLinksSection) && (
             <div className="pt-2 border-t border-divider space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="font-ui text-xs font-bold text-ink flex items-center gap-1.5">
@@ -2457,11 +2547,12 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
               ) : (
                 !isAddingCustomLink && (
                   <p className="text-xs text-subdued bg-surface p-2.5 rounded-vds-lg border border-dashed border-line text-center">
-                    Chưa có liên kết tùy chọn nào. Bấm &quot;Thêm liên kết mới&quot; để bổ sung đường dẫn theo nhu cầu.
+                    Chưa có liên kết bổ sung.
                   </p>
                 )
               )}
             </div>
+            )}
           </div>
 
           {/* ==================== SECTION 4: GHI CHÚ ==================== */}
@@ -2472,40 +2563,28 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                   <MessageSquare className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="font-title text-sm font-bold text-accent">
-                  4. Ghi chú ({notes.length})
+                  {isEditing || isCreateMode ? '4. ' : ''}Ghi chú ({notes.length})
                 </h3>
               </div>
-              <span className="text-xs text-subdued font-ui">
-                Lưu vết thông tin trao đổi, quyết định nhanh và lưu ý dự án
-              </span>
+              {!isAddingNote && (
+                <VdsButton variant="ghost" size="sm" iconLeft="Add" onClick={() => setIsAddingNote(true)}>
+                  Thêm ghi chú
+                </VdsButton>
+              )}
             </div>
 
-            {/* Form Thêm Ghi chú */}
+            {/* Form Thêm Ghi chú: mở khi bấm "Thêm ghi chú" */}
+            {isAddingNote && (
             <div className="bg-surface p-3.5 rounded-vds-lg border border-line space-y-3 ">
-              <h4 className="font-title text-xs font-bold text-ink flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-accent" />
-                <span>Thêm ghi chú mới</span>
-              </h4>
-
               <div className="space-y-2">
-                {/* Người ghi chú - Cố định người đang đăng nhập */}
+                {/* Nội dung; người ghi cố định là tài khoản đang đăng nhập */}
                 <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-accent" />
-                    <span>Người ghi chú:</span>
-                  </label>
-                  <div className="px-3 py-1.5 bg-surface-100 border border-line rounded-vds-lg text-xs font-semibold text-ink">
-                    {currentActorName}
-                  </div>
-                </div>
-
-                {/* Nội dung */}
-                <div className="space-y-1">
-                  <label className="font-ui text-xs font-semibold text-ink flex items-center gap-1">
-                    <FileText className="w-3.5 h-3.5 text-support" />
-                    <span>Nội dung:</span>
+                  <label htmlFor="project-note-input" className="font-ui text-xs text-ink-lighter block">
+                    Ghi bởi <strong className="text-ink">{currentActorName}</strong>
                   </label>
                   <textarea
+                    id="project-note-input"
+                    autoFocus
                     rows={3}
                     placeholder="Nhập nội dung ghi chú, quyết định kỹ thuật, thống nhất thiết kế hoặc lưu ý quan trọng..."
                     value={newNoteContent}
@@ -2515,34 +2594,38 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 </div>
 
                 {/* Submit button */}
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-end gap-2 pt-1">
+                  <VdsButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingNote(false);
+                      setNewNoteContent('');
+                    }}
+                  >
+                    Hủy
+                  </VdsButton>
                   <button
                     type="button"
-                    onClick={handleAddNote}
+                    onClick={() => {
+                      handleAddNote();
+                      setIsAddingNote(false);
+                    }}
                     disabled={!newNoteContent.trim()}
                     className="px-4 py-2 rounded-vds-lg bg-accent-solid hover:bg-accent-solid-hover text-on-color text-xs font-ui font-bold flex items-center gap-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Thêm ghi chú</span>
+                    <span>Lưu ghi chú</span>
                   </button>
                 </div>
               </div>
             </div>
+            )}
 
             {/* Danh sách Ghi chú */}
             <div className="space-y-2.5">
-              <h4 className="font-ui text-xs font-bold text-ink">
-                Nhật ký ghi chú ({notes.length}):
-              </h4>
-
               {notes.length === 0 ? (
-                <div className="bg-surface p-5 rounded-vds-lg border border-line text-center space-y-1">
-                  <MessageSquare className="w-7 h-7 text-subdued-lighter mx-auto" />
-                  <p className="text-xs font-semibold text-ink-lighter">Chưa có ghi chú nào cho dự án này</p>
-                  <p className="text-xs text-subdued">
-                    Sử dụng biểu mẫu phía trên để lưu lại trao đổi, quyết định sản phẩm hoặc lưu ý triển khai.
-                  </p>
-                </div>
+                !isAddingNote && <p className="text-xs text-subdued">Chưa có ghi chú.</p>
               ) : (
                 <div className="space-y-2.5">
                   {notes.map((note) => {
@@ -2609,12 +2692,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 <span className="w-2 h-2 rounded-full bg-accent-solid animate-ping"></span>
                 Chế độ Chỉnh sửa
               </span>
-            ) : (
-              <span className="text-support font-semibold flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5 text-support" />
-                Chế độ Xem — Chọn liên kết để truy cập trực tiếp
-              </span>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
@@ -2645,14 +2723,10 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
                 >
                   Đóng
                 </button>
-                {canEdit ? (
+                {canEdit && (
                   <VdsButton variant="accent" size="sm" iconLeft="Edit" onClick={() => setIsEditing(true)}>
-                    Chỉnh sửa thông tin
+                    Chỉnh sửa
                   </VdsButton>
-                ) : (
-                  <span className="text-xs text-subdued font-ui bg-surface-200 px-2.5 py-1 rounded-vds-lg border border-line">
-                    🔒 Chế độ xem
-                  </span>
                 )}
               </>
             ) : (
@@ -2679,7 +2753,7 @@ export const ProjectDetailsDrawer: React.FC<ProjectDetailsDrawerProps> = ({
             />
           )}
         </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
