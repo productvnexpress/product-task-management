@@ -42,7 +42,7 @@ import {
 
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 
-const DEFAULT_SUPABASE_URL = 'https://hyhtykhfnyrrvydizwta.supabase.co';
+const DEFAULT_SUPABASE_URL = 'https://ukmtjpsyqcklrhrbywlv.supabase.co';
 const DEFAULT_MODEL = 'claude-haiku-5-5';
 const MAX_BODY_BYTES = 8_000;
 

@@ -4,9 +4,9 @@
  * Copyright (c) 2026 Ban Sản phẩm - Công nghệ VnExpress
  */
 
-const SUPABASE_URL = 'https://hyhtykhfnyrrvydizwta.supabase.co';
+const SUPABASE_URL = 'https://ukmtjpsyqcklrhrbywlv.supabase.co';
 const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5aHR5a2hmbnlycnZ5ZGl6d3RhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3Mzk5ODYsImV4cCI6MjEwNDMxNTk4Nn0.58KeAN-L1zkMD-gW-RJDe9akhMQgW8s5xeQbPJdZNcA';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrbXRqcHN5cWNrbHJocmJ5d2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwODEwMjksImV4cCI6MjExMDY1NzAyOX0.p2brfBmO1dS9Nn52eW6we1Jv5bbngI6q89AunYN5QOU';
 const DEFAULT_APP_URL = 'https://product-task-management-qr39.vercel.app';
 const ALARM_NAME = 'wms_check_notifications_alarm';
 const CHECK_INTERVAL_MINUTES = 1;

@@ -25,7 +25,7 @@ import { createWmsServer } from './_wms/tools.js';
 // Nhật ký công việc hiển thị giờ theo múi giờ Việt Nam, giống app.
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 
-const DEFAULT_SUPABASE_URL = 'https://hyhtykhfnyrrvydizwta.supabase.co';
+const DEFAULT_SUPABASE_URL = 'https://ukmtjpsyqcklrhrbywlv.supabase.co';
 
 type Request = IncomingMessage & { body?: unknown };
 
